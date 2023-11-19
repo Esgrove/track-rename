@@ -32,9 +32,9 @@ class Track:
 
 
 class Renamer:
-    def __init__(self, path: Path):
+    def __init__(self, path: Path, rename_files: bool, sort_files: bool):
         self.root: Path = path
-        self.file_list = []
+        self.file_list: list[Track] = []
         self.file_formats = (".mp3", ".flac", ".aif", ".aiff", ".m4a", ".mp4", ".wav")
         self.re_substitutes = (
             (r"[\[{]+", "("),
@@ -53,8 +53,8 @@ class Renamer:
         self.gather_files()
         self.track_rename()
 
-    def gather_files(self):
-        file_list = []
+    def gather_files(self) -> None:
+        file_list: list[Track] = []
         print_bold(f"Getting audio files from {get_color(str(self.root), color=Color.cyan)}")
         for file in self.root.rglob("*"):
             if file.suffix in self.file_formats:
@@ -113,7 +113,7 @@ class Renamer:
 
             self.print = False
 
-    def process_track(self, artist, title):
+    def process_track(self, artist: str, title: str) -> (str, str):
         if " - " in title and not re.search(r"\([^()]+-[^()]+\)", title):
             index = title.index(" - ")
             if " (" in title[index:]:
@@ -210,7 +210,7 @@ class Renamer:
 
         return artist, title
 
-    def check_print(self, number: int):
+    def check_print(self, number: int) -> None:
         if not self.print:
             print(f"{number}/{self.total_tracks}:")
             self.print = True
@@ -221,7 +221,7 @@ class Renamer:
         return ans.lower() != "n"
 
     @staticmethod
-    def show_diff(old, new):
+    def show_diff(old, new) -> None:
         # http://stackoverflow.com/a/788780
         sequence = difflib.SequenceMatcher(None, old, new)
         diff_old = []
@@ -247,7 +247,7 @@ class Renamer:
             print(new)
 
     @staticmethod
-    def add_missing_closing_parentheses(text):
+    def add_missing_closing_parentheses(text: str) -> str:
         open_count = 0
         result = []
 
@@ -271,7 +271,7 @@ class Renamer:
         return "".join(result)
 
     @staticmethod
-    def add_missing_opening_parentheses(text):
+    def add_missing_opening_parentheses(text: str) -> str:
         open_count = 0
         result = []
 
@@ -293,7 +293,7 @@ class Renamer:
         return "".join(reversed(result))
 
     @staticmethod
-    def wrap_text_after_parentheses(text):
+    def wrap_text_after_parentheses(text: str) -> str:
         if text.endswith(")"):
             return text
 
