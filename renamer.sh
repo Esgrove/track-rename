@@ -24,4 +24,4 @@ else
     python="python3"
 fi
 
-$python "$DIR/renamer.py" "$music_path"
+$python "$DIR/renamer.py" "$music_path" "$@"
