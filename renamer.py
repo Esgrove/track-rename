@@ -9,7 +9,7 @@ import colorama
 import taglib
 from titlecase import titlecase
 
-from colorprint import Color, get_color, print_bold, print_color
+from colorprint import Color, get_color, print_bold
 
 
 class Track:
@@ -17,10 +17,9 @@ class Track:
         self.name: str = name
         self.extension: str = extension
         self.path: Path = path
+
         if self.extension[0] != ".":
             self.extension = "." + self.extension
-
-        self.differ = difflib.Differ()
 
     @property
     def filename(self):
@@ -29,6 +28,34 @@ class Track:
     @property
     def full_path(self):
         return self.path / self.filename
+
+    def __eq__(self, other):
+        if isinstance(other, Track):
+            return self.name == other.name
+        if isinstance(other, str):
+            return self.name == other
+
+        return NotImplemented
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __lt__(self, other):
+        if isinstance(other, Track):
+            return self.name < other.name
+        if isinstance(other, str):
+            return self.name < other
+
+        return NotImplemented
+
+    def __le__(self, other):
+        return self.__lt__(other) or self.__eq__(other)
+
+    def __gt__(self, other):
+        return not self.__le__(other)
+
+    def __ge__(self, other):
+        return not self.__lt__(other)
 
 
 class Renamer:
@@ -49,6 +76,8 @@ class Renamer:
         )
         self.total_tracks = 0
         self.print = False
+        self.rename_files: bool = rename_files
+        self.sort_files: bool = sort_files
 
         self.gather_files()
         self.track_rename()
@@ -67,14 +96,19 @@ class Renamer:
         print(f"Found {self.total_tracks} tracks.\n")
         self.file_list = file_list
 
-    def track_rename(self):
+        if self.sort_files:
+            self.file_list.sort()
+
+    def track_rename(self) -> None:
         print_bold("Renaming tracks...")
         current_path = ""
         for number, file in enumerate(self.file_list):
+            # Print current directory
             if current_path != file.path:
                 current_path = file.path
                 print_bold(current_path, Color.magenta)
 
+            # Check tags
             tag_data = taglib.File(file.full_path)
             if not tag_data.tags.get("ARTIST") or not tag_data.tags.get("TITLE"):
                 continue
@@ -85,6 +119,7 @@ class Renamer:
             current_tags = artist + " - " + title
             artist, title = self.process_track(artist, title)
 
+            tag_changed = False
             new_tags = artist + " - " + title
             if current_tags != new_tags:
                 self.check_print(number)
@@ -94,22 +129,26 @@ class Renamer:
                     tag_data.tags["ARTIST"] = [artist]
                     tag_data.tags["TITLE"] = [title]
                     tag_data.save()
+                    tag_changed = True
                 print("-" * len(current_tags))
 
             tag_data.close()
 
+            # Check file name
             file_artist = re.sub('[\\/:"*?<>|]+', "", artist).strip()
             file_title = re.sub('[\\/:"*?<>|]+', "", title).strip()
             new_file = file_artist + " - " + file_title + file.extension
             new_path = file.path / new_file
 
             if not new_path.is_file():
-                self.check_print(number)
-                print_bold("Rename file:", Color.yellow)
-                self.show_diff(file.filename, new_file)
-                if self.confirm():
-                    os.rename(file.full_path, new_path)
-                print("-" * len(file.filename))
+                # Rename files if flag was given or if tags were not changed
+                if self.rename_files or not tag_changed:
+                    self.check_print(number)
+                    print_bold("Rename file:", Color.yellow)
+                    self.show_diff(file.filename, new_file)
+                    if self.confirm():
+                        os.rename(file.full_path, new_path)
+                    print("-" * len(file.filename))
 
             self.print = False
 
@@ -309,17 +348,20 @@ class Renamer:
 
 
 @click.command()
-@click.argument(
-    "directory",
-    type=click.Path(exists=True, file_okay=False, dir_okay=True),
-    default=".",
-)
-def main(directory):
-    """Check and rename audio files."""
+@click.help_option("-h", "--help")
+@click.argument("directory", type=click.Path(exists=True, file_okay=False, dir_okay=True), default=".")
+@click.option("--rename", "-r", is_flag=True, help="Rename audio files.")
+@click.option("--sort", "-s", is_flag=True, help="Sort audio files by name.")
+def main(directory: str, rename: bool, sort: bool):
+    """
+    Check and rename audio files.
+
+    DIRECTORY: Optional input directory for audio files.
+    """
     filepath = Path(directory).resolve()
 
     try:
-        Renamer(filepath)
+        Renamer(filepath, rename, sort)
     except KeyboardInterrupt:
         click.echo("\ncancelled...")
 
