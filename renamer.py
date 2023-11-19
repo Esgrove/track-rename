@@ -135,6 +135,11 @@ class Renamer:
         if '12"' in title:
             title = title.replace('12"', "12''")
 
+        if "Intro - Dirty" in title:
+            title = title.replace("Intro - Dirty", "Dirty Intro")
+        if "Intro - Clean" in title:
+            title = title.replace("Intro - Clean", "Clean Intro")
+
         if artist.islower():
             artist = titlecase(artist)
 
