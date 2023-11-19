@@ -73,7 +73,7 @@ class Renamer:
         for number, file in enumerate(self.file_list):
             if current_path != file.path:
                 current_path = file.path
-                print_color(current_path, Color.yellow)
+                print_bold(current_path, Color.magenta)
 
             tag_data = taglib.File(file.full_path)
             if not tag_data.tags.get("ARTIST") or not tag_data.tags.get("TITLE"):
@@ -94,7 +94,7 @@ class Renamer:
                     tag_data.tags["ARTIST"] = [artist]
                     tag_data.tags["TITLE"] = [title]
                     tag_data.save()
-                print("-------------------------------")
+                print("-" * len(current_tags))
 
             tag_data.close()
 
@@ -109,7 +109,7 @@ class Renamer:
                 self.show_diff(file.filename, new_file)
                 if self.confirm():
                     os.rename(file.full_path, new_path)
-                print("-------------------------------")
+                print("-" * len(file.filename))
 
             self.print = False
 
