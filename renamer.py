@@ -7,6 +7,7 @@ from pathlib import Path
 import click
 import colorama
 import taglib
+from titlecase import titlecase
 
 from colorprint import Color, get_color, print_bold, print_color
 
