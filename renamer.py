@@ -8,7 +8,7 @@ import click
 import colorama
 import taglib
 
-from colorprint import Color, get_color, print_bold, print_color, print_warn
+from colorprint import Color, get_color, print_bold, print_color
 
 
 class Track:
