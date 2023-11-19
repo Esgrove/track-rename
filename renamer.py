@@ -103,10 +103,11 @@ class Renamer:
         print_bold("Renaming tracks...")
         current_path = ""
         for number, file in enumerate(self.file_list):
-            # Print current directory
-            if current_path != file.path:
-                current_path = file.path
-                print_bold(current_path, Color.magenta)
+            if not self.sort_files:
+                # Print current directory when iterating in directory order
+                if current_path != file.path:
+                    current_path = file.path
+                    print_bold(current_path, Color.magenta)
 
             # Check tags
             tag_data = taglib.File(file.full_path)
