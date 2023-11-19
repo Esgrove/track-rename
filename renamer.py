@@ -61,9 +61,38 @@ class Track:
 class Renamer:
     def __init__(self, path: Path, rename_files: bool, sort_files: bool):
         self.root: Path = path
+        self.rename_files: bool = rename_files
+        self.sort_files: bool = sort_files
+
         self.file_list: list[Track] = []
         self.file_formats = (".mp3", ".flac", ".aif", ".aiff", ".m4a", ".mp4", ".wav")
-        self.re_substitutes = (
+        self.total_tracks = 0
+        self.print = False
+        self.common_substitutes = (
+            (" feat ", " feat. "),
+            (" ft. ", " feat. "),
+            (" Feat ", " feat. "),
+            (" featuring ", " feat. "),
+            (" Featuring ", " feat. "),
+            ("(feat ", "(feat. "),
+            ("(ft. ", "(feat. "),
+            ("(Feat ", "(feat. "),
+            ("(featuring ", "(feat. "),
+            ("(Featuring ", "(feat. "),
+            ("!!!", ""),
+            ("...", " "),
+        )
+        self.title_substitutes = (
+            (" (Original Mix)", ""),
+            ("DJcity ", ""),
+            (" DJcity", ""),
+            ("DJCity ", ""),
+            (" DJCity", ""),
+            ('12"', "12''"),
+            ("Intro - Dirty", "Dirty Intro"),
+            ("Intro - Clean", "Clean Intro"),
+        )
+        self.regex_substitutes = (
             (r"[\[{]+", "("),
             (r"[\]}]+", ")"),
             (r"\t", " "),
@@ -73,14 +102,13 @@ class Renamer:
             (r"\s{2,}", " "),
             (r"\.{2,}", "."),
             (r"\(\s*?\)", ""),
+            (r"(\S)\(", r"\1 ("),
         )
-        self.total_tracks = 0
-        self.print = False
-        self.rename_files: bool = rename_files
-        self.sort_files: bool = sort_files
 
+    def run(self):
+        """Gather and process audio files."""
         self.gather_files()
-        self.track_rename()
+        self.process_files()
 
     def gather_files(self) -> None:
         file_list: list[Track] = []
@@ -99,7 +127,7 @@ class Renamer:
         if self.sort_files:
             self.file_list.sort()
 
-    def track_rename(self) -> None:
+    def process_files(self) -> None:
         print_bold("Renaming tracks...")
         current_path = ""
         for number, file in enumerate(self.file_list):
@@ -117,7 +145,7 @@ class Renamer:
             artist = "".join(tag_data.tags["ARTIST"])
             title = "".join(tag_data.tags["TITLE"])
 
-            current_tags = artist + " - " + title
+            current_tags = f"{artist} - {title}"
             artist, title = self.process_track(artist, title)
 
             tag_changed = False
@@ -131,14 +159,16 @@ class Renamer:
                     tag_data.tags["TITLE"] = [title]
                     tag_data.save()
                     tag_changed = True
+
                 print("-" * len(current_tags))
 
             tag_data.close()
 
             # Check file name
+            # Remove forbidden characters
             file_artist = re.sub('[\\/:"*?<>|]+', "", artist).strip()
             file_title = re.sub('[\\/:"*?<>|]+', "", title).strip()
-            new_file = file_artist + " - " + file_title + file.extension
+            new_file = f"{file_artist} - {file_title}{file.extension}"
             new_path = file.path / new_file
 
             if not new_path.is_file():
@@ -154,87 +184,38 @@ class Renamer:
             self.print = False
 
     def process_track(self, artist: str, title: str) -> (str, str):
-        if " - " in title and not re.search(r"\([^()]+-[^()]+\)", title):
-            index = title.index(" - ")
-            if " (" in title[index:]:
-                title = title[:index] + title[index:].replace(" (", ") (", 1)
-            else:
-                title += ")"
-            title = title.replace(" - ", " (", 1)
-
-        if " (Original Mix)" in title:
-            title = title.replace(" (Original Mix)", "")
-        if "DJcity " in title:
-            title = title.replace("DJcity ", "")
-        if " DJcity" in title:
-            title = title.replace(" DJcity", "")
-        if "DJCity " in title:
-            title = title.replace("DJCity ", "")
-        if " DJCity" in title:
-            title = title.replace(" DJCity", "")
-        if '12"' in title:
-            title = title.replace('12"', "12''")
-
-        if "Intro - Dirty" in title:
-            title = title.replace("Intro - Dirty", "Dirty Intro")
-        if "Intro - Clean" in title:
-            title = title.replace("Intro - Clean", "Clean Intro")
-
+        """Return formatted artist and title string."""
         if artist.islower():
             artist = titlecase(artist)
 
         if title.islower():
             title = titlecase(title)
 
-        artist = artist.replace(" feat ", " feat. ").replace(" ft. ", " feat. ").replace(" Feat ", " feat. ")
-        title = title.replace(" feat ", " feat. ").replace(" ft. ", " feat. ").replace(" Feat ", " feat. ")
-        if " feat. " in title:
-            start = title.index(" feat. ")
-            end = len(title)
-            if " (" in title[start:]:
-                end = title.index(" (")
-            if " -" in title[start:]:
-                new = title.index(" -")
-                end = min(end, new)
-            if ")" in title[start:]:
-                new = title.index(")")
-                end = min(end, new)
-            feat = title[start:end]
-            if feat:
-                other = " ".join(feat.split()[1:])
-                if other in artist:
-                    if f", {other}" in artist:
-                        artist = artist.replace(f", {other}", "")
-                    elif f" & {other}" in artist:
-                        artist = artist.replace(f" & {other}", "")
-                if feat not in artist:
-                    artist += feat
-                title = title[:start] + title[end:]
+        title = self.use_parenthesis_for_mix(title)
 
-        if "((" in title:
-            title = title.replace("((", "(")
-        if "))" in title:
-            title = title.replace("))", ")")
-        if "..." in title:
-            title = title.replace("...", " ")
+        artist = self.format_artist(artist)
+        title = self.format_title(title)
 
-        for pattern, sub in self.re_substitutes:
-            artist = re.sub(pattern, sub, artist)
-            title = re.sub(pattern, sub, title)
+        artist, title = self.move_feat_from_title_to_artist(artist, title)
 
-        # Regular expression pattern: any non-whitespace character followed by '('
-        pattern = r"(\S)\("
-        # Replacement: the matched non-whitespace character, a space, then '('
-        replacement = r"\1 ("
-        # Perform the replacement
-        re.sub(pattern, replacement, title)
+        for pattern, replacement in self.regex_substitutes:
+            artist = re.sub(pattern, replacement, artist)
+            title = re.sub(pattern, replacement, title)
 
+        # Double check whitespace
         artist = artist.strip()
         title = title.strip()
+
         if title.endswith("."):
             title = title[:-1]
 
-        # Check parenthesis
+        title = self.balance_parenthesis(title)
+        title = self.wrap_text_after_parentheses(title)
+
+        return artist, title
+
+    def balance_parenthesis(self, title):
+        """Check parenthesis match and insert missing."""
         open_count = title.count("(")
         close_count = title.count(")")
         if open_count > close_count:
@@ -245,15 +226,71 @@ class Renamer:
         title = title.replace(")(", ") (")
         title = title.replace(" )", ")")
         title = title.replace("( ", "(")
-
-        title = self.wrap_text_after_parentheses(title)
-
-        return artist, title
+        title = title.replace("()", "")
+        return title
 
     def check_print(self, number: int) -> None:
         if not self.print:
             print(f"{number}/{self.total_tracks}:")
             self.print = True
+
+    def format_artist(self, artist):
+        for old, new in self.common_substitutes:
+            artist = artist.replace(old, new)
+
+        return artist
+
+    def format_title(self, title):
+        for old, new in self.common_substitutes:
+            title = title.replace(old, new)
+
+        for old, new in self.title_substitutes:
+            title = title.replace(old, new)
+
+        return title
+
+    @staticmethod
+    def use_parenthesis_for_mix(title):
+        # Fix DJCity formatting style for Remix / Edit
+        if " - " in title and not re.search(r"\([^()]+-[^()]+\)", title):
+            index = title.index(" - ")
+            if " (" in title[index:]:
+                title = title[:index] + title[index:].replace(" (", ") (", 1)
+            else:
+                title += ")"
+            title = title.replace(" - ", " (", 1)
+        return title
+
+    @staticmethod
+    def move_feat_from_title_to_artist(artist, title):
+        if "feat. " in title:
+            start = title.index("feat. ")
+            end = len(title)
+            if " (" in title[start:]:
+                end = title.index(" (")
+            if " -" in title[start:]:
+                new = title.index(" -")
+                end = min(end, new)
+            if ")" in title[start:]:
+                new = title.index(")")
+                end = min(end, new)
+
+            feat = title[start:end]
+            if feat:
+                other = " ".join(feat.split()[1:])
+                if other in artist:
+                    if f", {other}" in artist:
+                        artist = artist.replace(f", {other}", "")
+                    elif f" & {other}" in artist:
+                        artist = artist.replace(f" & {other}", "")
+                if feat not in artist:
+                    artist += " " + feat
+
+                title = title[:start] + title[end:]
+
+        title = title.replace("((", "(")
+        title = title.replace("))", ")")
+        return artist, title
 
     @staticmethod
     def confirm() -> bool:
@@ -362,7 +399,7 @@ def main(directory: str, rename: bool, sort: bool):
     filepath = Path(directory).resolve()
 
     try:
-        Renamer(filepath, rename, sort)
+        Renamer(filepath, rename, sort).run()
     except KeyboardInterrupt:
         click.echo("\ncancelled...")
 
