@@ -1,8 +1,9 @@
 mod renamer;
+mod track;
 
 extern crate colored;
 
-use crate::renamer;
+use crate::renamer::Renamer;
 
 use anyhow::{Context, Ok, Result};
 use clap::Parser;
@@ -44,6 +45,6 @@ fn main() -> Result<()> {
     }
     let absolute_input_path = fs::canonicalize(filepath)?;
 
-    let mut renamer = renamer::new(absolute_input_path, args.rename, args.sort, args.verbose);
-    Ok(())
+    let mut renamer = Renamer::new(absolute_input_path, args.rename, args.sort, args.verbose);
+    renamer.run()
 }

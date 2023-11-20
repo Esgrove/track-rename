@@ -2,10 +2,10 @@ use std::cmp::Ordering;
 use std::path::PathBuf;
 
 #[derive(Debug)]
-struct Track {
-    name: String,
-    extension: String,
-    path: PathBuf,
+pub struct Track {
+    pub name: String,
+    pub extension: String,
+    pub path: PathBuf,
 }
 
 impl Track {
