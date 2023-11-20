@@ -75,7 +75,7 @@ def test_whitespace(renamer):
         _check_format_track(renamer, artist, title, correct_artist, correct_title)
 
 
-def test_parenthesis(renamer):
+def test_add_parenthesis(renamer):
     test_cases = [
         (
             "Redbone",
@@ -113,6 +113,21 @@ def test_parenthesis(renamer):
         _check_format_track(renamer, artist, title, correct_artist, correct_title)
 
 
+
+def test_balance_parenthesis(renamer):
+    test_cases = [
+        (
+            "Janet Jackson",
+            "Janet Jackson",
+            "If (Kaytranada Edition (Live Set Version)",
+            "If (Kaytranada Edition) (Live Set Version)",
+        ),
+    ]
+
+    for artist, correct_artist, title, correct_title in test_cases:
+        _check_format_track(renamer, artist, title, correct_artist, correct_title)
+
+
 def test_feat(renamer):
     test_cases = [
         (
@@ -120,6 +135,18 @@ def test_feat(renamer):
             "Seige feat. Busta Rhymes, Little Brother, Kurupt, Crooked I, and Willie B",
             "Holla Remix (featuring Busta Rhymes, Little Brother, Kurupt, Crooked I, and Willie B)",
             "Holla Remix",
+        ),
+        (
+            "Fanu & Ane Brun",
+            "Fanu feat. Ane Brun",
+            "Taivaita ja Tarinoita (feat. Ane Brun)",
+            "Taivaita ja Tarinoita",
+        ),
+        (
+            "Lakim",
+            "Lakim feat. High Klassified",
+            "The Abyss (feat. High Klassified)",
+            "The Abyss",
         ),
     ]
 

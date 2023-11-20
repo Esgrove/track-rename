@@ -86,6 +86,7 @@ class Renamer:
         )
         self.title_substitutes = (
             (" (Original Mix)", ""),
+            ("(DJcity - ", "("),
             ("DJcity ", ""),
             (" DJcity", ""),
             ("DJCity ", ""),
