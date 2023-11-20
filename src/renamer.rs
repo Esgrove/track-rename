@@ -1,9 +1,12 @@
-use regex::Regex;
-use std::path::PathBuf;
-use anyhow::{Result, Context};
-use walkdir::WalkDir;
+use anyhow::{Context, Result};
 use colored::*;
 use difference::{Changeset, Difference};
+use id3::{Tag, TagLike};
+use regex::Regex;
+use std::io;
+use walkdir::WalkDir;
+
+use std::path::PathBuf;
 use std::string::String;
 
 use crate::track::Track;
@@ -12,6 +15,7 @@ pub struct Renamer {
     root: PathBuf,
     rename_files: bool,
     sort_files: bool,
+    print_only: bool,
     verbose: bool,
     file_list: Vec<Track>,
     file_formats: Vec<&'static str>,
@@ -22,14 +26,16 @@ pub struct Renamer {
 }
 
 impl Renamer {
-    pub fn new(path: PathBuf, rename_files: bool, sort_files: bool, verbose: bool) -> Renamer {
+    pub fn new(path: PathBuf, rename_files: bool, sort_files: bool, print_only: bool, verbose: bool) -> Renamer {
         Renamer {
             root: path,
             rename_files,
             sort_files,
+            print_only,
             verbose,
             file_list: Vec::new(),
-            file_formats: vec!["mp3", "flac", "aif", "aiff", "m4a", "mp4", "wav"],
+            // ID3 library supports these
+            file_formats: vec!["mp3", "aif", "aiff", "wav"], // "flac", "m4a", "mp4"
             total_tracks: 0,
             common_substitutes: vec![
                 (" feat ", " feat. "),
@@ -73,34 +79,22 @@ impl Renamer {
     }
 
     pub fn gather_files(&mut self) -> Result<()> {
-        println!("Getting audio files from {}", format!("{}", self.root.display()).magenta());
+        println!(
+            "Getting audio files from {}",
+            format!("{}", self.root.display()).magenta()
+        );
         let mut file_list: Vec<Track> = Vec::new();
 
-        for entry in WalkDir::new(&self.root)
-            .into_iter()
-            .filter_map(|e| e.ok())
-            .filter(|e| {
-                e.path().is_file()
-                    && self.file_formats.contains(
-                        &e.path()
-                            .extension()
-                            .unwrap_or_default()
-                            .to_string_lossy().as_ref()
-                    )
-            })
-        {
+        for entry in WalkDir::new(&self.root).into_iter().filter_map(|e| e.ok()).filter(|e| {
+            e.path().is_file()
+                && self
+                    .file_formats
+                    .contains(&e.path().extension().unwrap_or_default().to_string_lossy().as_ref())
+        }) {
             let file_path = entry.path();
             file_list.push(Track::new(
-                file_path
-                    .file_stem()
-                    .unwrap()
-                    .to_string_lossy()
-                    .into_owned(),
-                file_path
-                    .extension()
-                    .unwrap()
-                    .to_string_lossy()
-                    .into_owned(),
+                file_path.file_stem().unwrap().to_string_lossy().into_owned(),
+                file_path.extension().unwrap().to_string_lossy().into_owned(),
                 file_path.parent().unwrap().to_owned(),
             ));
         }
@@ -122,17 +116,20 @@ impl Renamer {
     }
 
     pub fn process_files(&mut self) -> Result<()> {
-        println!("Renaming tracks...");
+        println!("Checking tracks...");
         let mut current_path = self.root.clone();
         for (number, file) in self.file_list.iter().enumerate() {
             if !self.sort_files {
                 // Print current directory when iterating in directory order
                 if current_path != file.path {
                     current_path = file.path.clone();
-                    println!("{}", match current_path.strip_prefix(&self.root) {
-                        Ok(relative_path) => format!("{}",relative_path.display()).magenta(),
-                        Err(_) => format!("{}",current_path.display()).magenta(),
-                    });
+                    println!(
+                        "{}",
+                        match current_path.strip_prefix(&self.root) {
+                            Ok(relative_path) => format!("{}", relative_path.display()).magenta(),
+                            Err(_) => format!("{}", current_path.display()).magenta(),
+                        }
+                    );
                 }
             }
 
@@ -140,40 +137,63 @@ impl Renamer {
                 println!("{:>3}: {}", number, file.name);
             }
 
-            // Placeholder for tag processing
-            let (artist, title) = self.get_tags(file)?;
+            let tag = Tag::read_from_path(file.full_path())?;
+            if tag.artist().is_none() || tag.title().is_none() {
+                println!("Missing tags: {}", file.filename());
+                continue;
+            }
+
+            let artist: String = tag.artist().unwrap().to_string();
+            let title: String = tag.title().unwrap().to_string();
+
             let current_tags = format!("{} - {}", artist, title);
             let (formatted_artist, formatted_title) = self.format_track(&artist, &title);
             let new_tags = format!("{} - {}", formatted_artist, formatted_title);
 
             let mut tag_changed = false;
+            let mut track_printed = false;
             if current_tags != new_tags {
-                // Placeholder for check_print, show_diff, confirm, and tag saving
-                tag_changed = true;
+                println!("{}/{}:", number, self.total_tracks);
+                track_printed = true;
+                println!("{}", "Fix tags:".blue().bold());
+                Renamer::show_diff(&current_tags, &new_tags);
+                if Renamer::confirm() {
+                    // TODO
+                    tag_changed = true;
+                }
             }
 
             // Check file name and rename if necessary
             let forbidden_char_regex = Regex::new("[/:\"*?<>|]+").context("Invalid regex pattern")?;
-            let file_artist = forbidden_char_regex.replace_all(&formatted_artist, "").to_string().trim().to_string();
-            let file_title = forbidden_char_regex.replace_all(&formatted_title, "").to_string().trim().to_string();
+            let file_artist = forbidden_char_regex
+                .replace_all(&formatted_artist, "")
+                .to_string()
+                .trim()
+                .to_string();
+            let file_title = forbidden_char_regex
+                .replace_all(&formatted_title, "")
+                .to_string()
+                .trim()
+                .to_string();
             let new_file_name = format!("{} - {}{}", file_artist, file_title, file.extension);
             let new_path = file.path.join(&new_file_name);
 
             if !new_path.is_file() {
                 // Rename files if flag was given or if tags were not changed
                 if self.rename_files || !tag_changed {
-                    // Placeholder for check_print, show_diff, confirm, and file renaming
+                    if !track_printed {
+                        println!("{}/{}:", number, self.total_tracks);
+                    }
+                    println!("{}", "Rename file:".yellow().bold());
+                    Renamer::show_diff(&file.filename(), &new_file_name);
+                    if Renamer::confirm() {
+                        // TODO
+                    }
                 }
             }
         }
 
         Ok(())
-    }
-
-    // Placeholder implementations for helper methods
-    fn get_tags(&self, file: &Track) -> Result<(String, String)> {
-        // Placeholder for tag reading logic
-        Ok(("Artist".to_string(), "Title".to_string()))
     }
 
     fn format_track(&self, artist: &str, title: &str) -> (String, String) {
@@ -204,17 +224,35 @@ impl Renamer {
         (formatted_artist.to_string(), formatted_title.to_string())
     }
 
+    fn confirm() -> bool {
+        //println!("Proceed (y/n)? ");
+        //let mut ans = String::new();
+
+        //io::stdin()
+        //    .read_line(&mut ans)
+        //    .expect("Failed to read line");
+
+        //ans.trim().to_lowercase() != "n"
+        false
+    }
+
     fn show_diff(old: &str, new: &str) {
         let changeset = Changeset::new(old, new, "");
+        let mut old_string = String::new();
+        let mut new_string = String::new();
 
         for diff in changeset.diffs {
             match diff {
-                Difference::Same(ref x) => print!("{}", x),
-                Difference::Add(ref x) => print!("{}", x.green()),
-                Difference::Rem(ref x) => print!("{}", x.red()),
+                Difference::Same(ref x) => {
+                    old_string.push_str(x);
+                    new_string.push_str(x);
+                }
+                Difference::Add(ref x) => new_string.push_str(&x.green().to_string()),
+                Difference::Rem(ref x) => old_string.push_str(&x.red().to_string()),
             }
         }
 
-        println!();
+        println!("{}", old_string);
+        println!("{}", new_string);
     }
 }

@@ -21,11 +21,11 @@ impl Track {
         }
     }
 
-    fn filename(&self) -> String {
+    pub fn filename(&self) -> String {
         format!("{}{}", self.name, self.extension)
     }
 
-    fn full_path(&self) -> PathBuf {
+    pub fn full_path(&self) -> PathBuf {
         self.path.join(&self.filename())
     }
 }

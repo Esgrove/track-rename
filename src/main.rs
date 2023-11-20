@@ -17,6 +17,10 @@ struct Args {
     /// Input directory with audio files to rename
     input_dir: String,
 
+    /// Only print changes
+    #[arg(short, long)]
+    print: bool,
+
     /// Rename audio files
     #[arg(short, long)]
     rename: bool,
@@ -45,6 +49,6 @@ fn main() -> Result<()> {
     }
     let absolute_input_path = fs::canonicalize(filepath)?;
 
-    let mut renamer = Renamer::new(absolute_input_path, args.rename, args.sort, args.verbose);
+    let mut renamer = Renamer::new(absolute_input_path, args.rename, args.sort, args.print, args.verbose);
     renamer.run()
 }
