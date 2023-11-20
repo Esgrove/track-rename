@@ -1,0 +1,28 @@
+# https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[package]
+name = "track-renamer"
+version = "0.1.0"
+edition = "2021"
+authors = ["Esgrove <esgrove@outlook.com>"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/Esgrove/track-rename"
+keywords = ["cli", "music", "audio", "rename"]
+categories = ["command-line-utilities"]
+
+[dependencies]
+anyhow = { version = "1.0.75", features = ["backtrace"] }
+clap = { version = "4.4.8", features = ["derive"] }
+colored = "2.0.4"
+regex = "1.10.2"
+
+[[bin]]
+name = "track-renamer"
+path = "src/main.rs"
+
+[profile.release]
+lto = true
+incremental = true
+# https://doc.rust-lang.org/rustc/codegen-options/index.html#codegen-units
+codegen-units = 1
