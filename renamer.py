@@ -5,7 +5,6 @@ import sys
 from pathlib import Path
 
 import click
-import colorama
 import taglib
 from titlecase import titlecase
 
@@ -59,18 +58,18 @@ class Track:
 
 
 class Renamer:
-    def __init__(self, path: Path, rename_files: bool, sort_files: bool, print_only: bool):
+    def __init__(self, path: Path, rename_files: bool, sort_files: bool, print_only: bool, tags_only: bool):
         self.root: Path = path
         self.rename_files: bool = rename_files
         self.sort_files: bool = sort_files
         self.print_only: bool = print_only
+        self.tags_only: bool = tags_only
 
         self.file_list: list[Track] = []
         self.file_formats = (".mp3", ".flac", ".aif", ".aiff", ".m4a", ".mp4", ".wav")
         self.total_tracks = 0
         self.num_renamed = 0
         self.num_tags_fixed = 0
-        self.print = False
         self.common_substitutes = (
             (" feat ", " feat. "),
             (" ft. ", " feat. "),
@@ -122,14 +121,13 @@ class Renamer:
             sys.exit("no audio files found!")
 
         self.total_tracks = len(file_list)
-        print(f"Found {self.total_tracks} tracks.\n")
         self.file_list = file_list
 
         if self.sort_files:
             self.file_list.sort()
 
     def process_files(self) -> None:
-        print_bold("Checking tracks...")
+        print_bold(f"Checking {self.total_tracks} tracks...")
         current_path = self.root
         for number, file in enumerate(self.file_list):
             if not self.sort_files:
@@ -152,8 +150,10 @@ class Renamer:
             new_tags = f"{artist} - {title}"
 
             tag_changed = False
+            track_printed = False
             if current_tags != new_tags:
-                self.check_print(number)
+                print(f"{number}/{self.total_tracks}:")
+                track_printed = True
                 print_bold("Fix tags:", Color.blue)
                 self.show_diff(current_tags, new_tags)
                 self.num_tags_fixed += 1
@@ -162,29 +162,37 @@ class Renamer:
                     tag_data.tags["TITLE"] = [title]
                     tag_data.save()
                     tag_changed = True
+
                 print("-" * len(current_tags))
 
             tag_data.close()
+
+            if self.tags_only:
+                continue
 
             # Check file name
             # Remove forbidden characters
             file_artist = re.sub('[\\/:"*?<>|]+', "", artist).strip()
             file_title = re.sub('[\\/:"*?<>|]+', "", title).strip()
+            file_artist = re.sub(r"\s+", " ", file_artist)
+            file_title = re.sub(r"\s+", " ", file_title)
             new_file = f"{file_artist} - {file_title}{file.extension}"
             new_path = file.path / new_file
 
             if not new_path.is_file():
                 # Rename files if flag was given or if tags were not changed
                 if self.rename_files or not tag_changed:
-                    self.check_print(number)
+                    if not track_printed:
+                        print(f"{number}/{self.total_tracks}:")
+
                     print_bold("Rename file:", Color.yellow)
                     self.show_diff(file.filename, new_file)
                     self.num_renamed += 1
                     if not self.print_only and self.confirm():
                         os.rename(file.full_path, new_path)
+
                     print("-" * len(file.filename))
 
-            self.print = False
 
     def format_track(self, artist: str, title: str) -> (str, str):
         """Return formatted artist and title string."""
@@ -194,26 +202,32 @@ class Renamer:
         if title.islower():
             title = titlecase(title)
 
-        title = self.use_parenthesis_for_mix(title)
+        for pattern, replacement in self.common_substitutes:
+            artist = artist.replace(pattern, replacement)
+            title = title.replace(pattern, replacement)
 
-        artist = self.format_artist(artist)
-        title = self.format_title(title)
-
-        artist, title = self.move_feat_from_title_to_artist(artist, title)
+        for pattern, replacement in self.title_substitutes:
+            title = title.replace(pattern, replacement)
 
         for pattern, replacement in self.regex_substitutes:
             artist = re.sub(pattern, replacement, artist)
             title = re.sub(pattern, replacement, title)
 
-        # Double check whitespace
-        artist = artist.strip()
-        title = title.strip()
+        title = self.use_parenthesis_for_mix(title)
+
+        artist, title = self.move_feat_from_title_to_artist(artist, title)
 
         if title.endswith("."):
             title = title[:-1]
 
         title = self.balance_parenthesis(title)
         title = self.wrap_text_after_parentheses(title)
+
+        # Double check whitespace
+        artist = artist.strip()
+        title = title.strip()
+        artist = re.sub(r"\s+", " ", artist)
+        title = re.sub(r"\s+", " ", title)
 
         return artist, title
 
@@ -232,26 +246,6 @@ class Renamer:
         title = title.replace("()", "")
         return title
 
-    def check_print(self, number: int) -> None:
-        """Helper method to only print the info once per track."""
-        if not self.print:
-            print(f"{number}/{self.total_tracks}:")
-            self.print = True
-
-    def format_artist(self, artist: str) -> str:
-        for old, new in self.common_substitutes:
-            artist = artist.replace(old, new)
-
-        return artist
-
-    def format_title(self, title: str) -> str:
-        for old, new in self.common_substitutes:
-            title = title.replace(old, new)
-
-        for old, new in self.title_substitutes:
-            title = title.replace(old, new)
-
-        return title
 
     @staticmethod
     def use_parenthesis_for_mix(title: str) -> str:
@@ -324,9 +318,8 @@ class Renamer:
 
         old = "".join(diff_old)
         new = "".join(diff_new)
-        if old != new:
-            print(old)
-            print(new)
+        print(old)
+        print(new)
 
     @staticmethod
     def add_missing_closing_parentheses(text: str) -> str:
@@ -401,7 +394,8 @@ class Renamer:
 @click.option("--print", "-p", "print_only", is_flag=True, help="Only print changes")
 @click.option("--rename", "-r", is_flag=True, help="Rename audio files")
 @click.option("--sort", "-s", is_flag=True, help="Sort audio files by name")
-def main(directory: str, rename: bool, sort: bool, print_only: bool):
+@click.option("--tags", "-t", is_flag=True, help="Only fix tags")
+def main(directory: str, rename: bool, sort: bool, print_only: bool, tags: bool):
     """
     Check and rename audio files.
 
@@ -410,7 +404,7 @@ def main(directory: str, rename: bool, sort: bool, print_only: bool):
     filepath = Path(directory).resolve()
 
     try:
-        Renamer(filepath, rename, sort, print_only).run()
+        Renamer(filepath, rename, sort, print_only, tags).run()
     except KeyboardInterrupt:
         click.echo("\ncancelled...")
 

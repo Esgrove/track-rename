@@ -7,7 +7,7 @@ from renamer import Renamer
 
 @pytest.fixture(scope="module")
 def renamer():
-    renamer = Renamer(Path(""), False, False)
+    renamer = Renamer(Path(""), False, False, True, False)
     yield renamer
 
 
