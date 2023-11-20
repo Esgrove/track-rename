@@ -90,19 +90,19 @@ impl Renamer {
             })
         {
             let file_path = entry.path();
-            file_list.push(Track {
-                name: file_path
+            file_list.push(Track::new(
+                file_path
                     .file_stem()
                     .unwrap()
                     .to_string_lossy()
                     .into_owned(),
-                extension: file_path
+                file_path
                     .extension()
                     .unwrap()
                     .to_string_lossy()
                     .into_owned(),
-                path: file_path.parent().unwrap().to_owned(),
-            });
+                file_path.parent().unwrap().to_owned(),
+            ));
         }
 
         if file_list.is_empty() {
@@ -136,7 +136,9 @@ impl Renamer {
                 }
             }
 
-            println!("{:>3}: {}", number, file.name);
+            if self.verbose {
+                println!("{:>3}: {}", number, file.name);
+            }
 
             // Placeholder for tag processing
             let (artist, title) = self.get_tags(file)?;
