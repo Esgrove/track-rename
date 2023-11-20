@@ -9,7 +9,7 @@ import colorama
 import taglib
 from titlecase import titlecase
 
-from colorprint import Color, get_color, print_bold
+from colorprint import Color, get_color, print_bold, print_warn
 
 
 class Track:
@@ -59,14 +59,17 @@ class Track:
 
 
 class Renamer:
-    def __init__(self, path: Path, rename_files: bool, sort_files: bool):
+    def __init__(self, path: Path, rename_files: bool, sort_files: bool, print_only: bool):
         self.root: Path = path
         self.rename_files: bool = rename_files
         self.sort_files: bool = sort_files
+        self.print_only: bool = print_only
 
         self.file_list: list[Track] = []
         self.file_formats = (".mp3", ".flac", ".aif", ".aiff", ".m4a", ".mp4", ".wav")
         self.total_tracks = 0
+        self.num_renamed = 0
+        self.num_tags_fixed = 0
         self.print = False
         self.common_substitutes = (
             (" feat ", " feat. "),
@@ -106,6 +109,7 @@ class Renamer:
         """Gather and process audio files."""
         self.gather_files()
         self.process_files()
+        self.print_stats()
 
     def gather_files(self) -> None:
         file_list: list[Track] = []
@@ -125,18 +129,19 @@ class Renamer:
             self.file_list.sort()
 
     def process_files(self) -> None:
-        print_bold("Renaming tracks...")
-        current_path = ""
+        print_bold("Checking tracks...")
+        current_path = self.root
         for number, file in enumerate(self.file_list):
             if not self.sort_files:
                 # Print current directory when iterating in directory order
                 if current_path != file.path:
                     current_path = file.path
-                    print_bold(current_path, Color.magenta)
+                    print_bold(str(current_path), Color.magenta)
 
             # Check tags
             tag_data = taglib.File(file.full_path)
             if not tag_data.tags.get("ARTIST") or not tag_data.tags.get("TITLE"):
+                print_warn(f"Missing tags: {file.full_path}")
                 continue
 
             artist = "".join(tag_data.tags["ARTIST"])
@@ -151,7 +156,8 @@ class Renamer:
                 self.check_print(number)
                 print_bold("Fix tags:", Color.blue)
                 self.show_diff(current_tags, new_tags)
-                if self.confirm():
+                self.num_tags_fixed += 1
+                if not self.print_only and self.confirm():
                     tag_data.tags["ARTIST"] = [artist]
                     tag_data.tags["TITLE"] = [title]
                     tag_data.save()
@@ -173,7 +179,8 @@ class Renamer:
                     self.check_print(number)
                     print_bold("Rename file:", Color.yellow)
                     self.show_diff(file.filename, new_file)
-                    if self.confirm():
+                    self.num_renamed += 1
+                    if not self.print_only and self.confirm():
                         os.rename(file.full_path, new_path)
                     print("-" * len(file.filename))
 
@@ -382,13 +389,19 @@ class Renamer:
         # Using regex substitution to wrap the text after the last closing parenthesis
         return re.sub(pattern, r"\1 (\2)", text)
 
+    def print_stats(self):
+        print_bold("Finished", Color.green)
+        print(f"Tags:   {self.num_tags_fixed}")
+        print(f"Rename: {self.num_renamed}")
+
 
 @click.command()
 @click.help_option("-h", "--help")
 @click.argument("directory", type=click.Path(exists=True, file_okay=False, dir_okay=True), default=".")
+@click.option("--print", "-p", "print_only", is_flag=True, help="Only print changes")
 @click.option("--rename", "-r", is_flag=True, help="Rename audio files")
 @click.option("--sort", "-s", is_flag=True, help="Sort audio files by name")
-def main(directory: str, rename: bool, sort: bool):
+def main(directory: str, rename: bool, sort: bool, print_only: bool):
     """
     Check and rename audio files.
 
@@ -397,7 +410,7 @@ def main(directory: str, rename: bool, sort: bool):
     filepath = Path(directory).resolve()
 
     try:
-        Renamer(filepath, rename, sort).run()
+        Renamer(filepath, rename, sort, print_only).run()
     except KeyboardInterrupt:
         click.echo("\ncancelled...")
 
