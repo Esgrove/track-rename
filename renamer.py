@@ -146,10 +146,10 @@ class Renamer:
             title = "".join(tag_data.tags["TITLE"])
 
             current_tags = f"{artist} - {title}"
-            artist, title = self.process_track(artist, title)
+            artist, title = self.format_track(artist, title)
+            new_tags = f"{artist} - {title}"
 
             tag_changed = False
-            new_tags = artist + " - " + title
             if current_tags != new_tags:
                 self.check_print(number)
                 print_bold("Fix tags:", Color.blue)
@@ -159,7 +159,6 @@ class Renamer:
                     tag_data.tags["TITLE"] = [title]
                     tag_data.save()
                     tag_changed = True
-
                 print("-" * len(current_tags))
 
             tag_data.close()
@@ -183,7 +182,7 @@ class Renamer:
 
             self.print = False
 
-    def process_track(self, artist: str, title: str) -> (str, str):
+    def format_track(self, artist: str, title: str) -> (str, str):
         """Return formatted artist and title string."""
         if artist.islower():
             artist = titlecase(artist)
@@ -230,17 +229,18 @@ class Renamer:
         return title
 
     def check_print(self, number: int) -> None:
+        """Helper method to only print the info once per track."""
         if not self.print:
             print(f"{number}/{self.total_tracks}:")
             self.print = True
 
-    def format_artist(self, artist):
+    def format_artist(self, artist: str) -> str:
         for old, new in self.common_substitutes:
             artist = artist.replace(old, new)
 
         return artist
 
-    def format_title(self, title):
+    def format_title(self, title: str) -> str:
         for old, new in self.common_substitutes:
             title = title.replace(old, new)
 
@@ -250,7 +250,7 @@ class Renamer:
         return title
 
     @staticmethod
-    def use_parenthesis_for_mix(title):
+    def use_parenthesis_for_mix(title: str) -> str:
         # Fix DJCity formatting style for Remix / Edit
         if " - " in title and not re.search(r"\([^()]+-[^()]+\)", title):
             index = title.index(" - ")
@@ -259,10 +259,11 @@ class Renamer:
             else:
                 title += ")"
             title = title.replace(" - ", " (", 1)
+
         return title
 
     @staticmethod
-    def move_feat_from_title_to_artist(artist, title):
+    def move_feat_from_title_to_artist(artist: str, title: str) -> (str, str):
         if "feat. " in title:
             start = title.index("feat. ")
             end = len(title)
@@ -298,7 +299,7 @@ class Renamer:
         return ans.lower() != "n"
 
     @staticmethod
-    def show_diff(old, new) -> None:
+    def show_diff(old: str, new: str) -> None:
         # http://stackoverflow.com/a/788780
         sequence = difflib.SequenceMatcher(None, old, new)
         diff_old = []
@@ -308,14 +309,14 @@ class Renamer:
                 diff_old.append(old[a0:a1])
                 diff_new.append(new[b0:b1])
             elif opcode == "insert":
-                diff_new.append(get_color(new[b0:b1], colorama.Back.GREEN))
+                diff_new.append(get_color(new[b0:b1], Color.green))
             elif opcode == "delete":
-                diff_old.append(get_color(old[a0:a1], colorama.Back.RED))
+                diff_old.append(get_color(old[a0:a1], Color.red))
             elif opcode == "replace":
-                diff_old.append(get_color(old[a0:a1], colorama.Back.RED))
-                diff_new.append(get_color(new[b0:b1], colorama.Back.GREEN))
+                diff_old.append(get_color(old[a0:a1], Color.red))
+                diff_new.append(get_color(new[b0:b1], Color.green))
             else:
-                raise RuntimeError("unexpected opcode")
+                raise RuntimeError("unexpected diff opcode")
 
         old = "".join(diff_old)
         new = "".join(diff_new)
@@ -388,8 +389,8 @@ class Renamer:
 @click.command()
 @click.help_option("-h", "--help")
 @click.argument("directory", type=click.Path(exists=True, file_okay=False, dir_okay=True), default=".")
-@click.option("--rename", "-r", is_flag=True, help="Rename audio files.")
-@click.option("--sort", "-s", is_flag=True, help="Sort audio files by name.")
+@click.option("--rename", "-r", is_flag=True, help="Rename audio files")
+@click.option("--sort", "-s", is_flag=True, help="Sort audio files by name")
 def main(directory: str, rename: bool, sort: bool):
     """
     Check and rename audio files.
