@@ -49,16 +49,30 @@ def test_formatting(renamer):
             "FNF Let's Go (Nick Bike 'Humble' Edit)(Acap In Out)(Clean)",
             "FNF Let's Go (Nick Bike 'Humble' Edit) (Acap In Out) (Clean)",
         ),
+    ]
+
+    for artist, correct_artist, title, correct_title in test_cases:
+        _check_format_track(renamer, artist, title, correct_artist, correct_title)
+
+
+def test_whitespace(renamer):
+    test_cases = [
         (
             "That Chick Angel, Casa Di & Steve Terrell\n",
             "That Chick Angel, Casa Di & Steve Terrell",
             "One Margarita\t(Margarita Song) (Clean)",
             "One Margarita (Margarita Song) (Clean)",
         ),
+        (
+            " That Chick Angel, Casa Di &  Steve Terrell   ",
+            "That Chick Angel, Casa Di & Steve Terrell",
+            "One      \t\tMargarita(Margarita Song )( Clean)",
+            "One Margarita (Margarita Song) (Clean)",
+        ),
     ]
 
     for artist, correct_artist, title, correct_title in test_cases:
-        _check_process_track(renamer, artist, title, correct_artist, correct_title)
+        _check_format_track(renamer, artist, title, correct_artist, correct_title)
 
 
 def test_parenthesis(renamer):
@@ -81,10 +95,22 @@ def test_parenthesis(renamer):
             "You Make Me Feel (Mighty Real) (Clean)",
             "You Make Me Feel (Mighty Real) (Clean)",
         ),
+        (
+            "Sylvester",
+            "Sylvester",
+            "You Make Me Feel (Mighty Real) Clean",
+            "You Make Me Feel (Mighty Real) (Clean)",
+        ),
+        (
+            "Sylvester",
+            "Sylvester",
+            "(You Make Me Feel) Mighty Real",
+            "(You Make Me Feel) Mighty Real",
+        ),
     ]
 
     for artist, correct_artist, title, correct_title in test_cases:
-        _check_process_track(renamer, artist, title, correct_artist, correct_title)
+        _check_format_track(renamer, artist, title, correct_artist, correct_title)
 
 
 def test_feat(renamer):
@@ -98,10 +124,10 @@ def test_feat(renamer):
     ]
 
     for artist, correct_artist, title, correct_title in test_cases:
-        _check_process_track(renamer, artist, title, correct_artist, correct_title)
+        _check_format_track(renamer, artist, title, correct_artist, correct_title)
 
 
-def _check_process_track(renamer, artist, title, correct_artist, correct_title):
-    formatted_artist, formatted_title = renamer.process_track(artist, title)
-    assert correct_artist == formatted_artist
-    assert correct_title == formatted_title
+def _check_format_track(renamer, artist, title, correct_artist, correct_title):
+    formatted_artist, formatted_title = renamer.format_track(artist, title)
+    assert formatted_artist == correct_artist
+    assert formatted_title == correct_title
