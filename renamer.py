@@ -164,7 +164,7 @@ class Renamer:
                     tag_data.save()
                     tag_changed = True
 
-                print("-" * len(current_tags))
+                print("-" * len(new_tags))
 
             tag_data.close()
 
@@ -192,7 +192,7 @@ class Renamer:
                     if not self.print_only and self.confirm():
                         os.rename(file.full_path, new_path)
 
-                    print("-" * len(file.filename))
+                    print("-" * len(new_file))
 
 
     def format_track(self, artist: str, title: str) -> (str, str):
