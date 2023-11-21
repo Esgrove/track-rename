@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use colored::*;
 use difference::{Changeset, Difference};
-use id3::{Tag, TagLike};
+use audiotags::{Tag};
 use regex::Regex;
 use std::io;
 use walkdir::WalkDir;
@@ -35,7 +35,7 @@ impl Renamer {
             verbose,
             file_list: Vec::new(),
             // ID3 library supports these
-            file_formats: vec!["mp3", "aif", "aiff", "wav"], // "flac", "m4a", "mp4"
+            file_formats: vec!["mp3", "aif", "aiff", "flac", "m4a", "mp4"],
             total_tracks: 0,
             common_substitutes: vec![
                 (" feat ", " feat. "),
@@ -137,7 +137,7 @@ impl Renamer {
                 println!("{:>3}: {}", number, file.name);
             }
 
-            let tag = Tag::read_from_path(file.full_path())?;
+            let mut tag = Tag::new().read_from_path(file.full_path())?;
             if tag.artist().is_none() || tag.title().is_none() {
                 println!("Missing tags: {}", file.filename());
                 continue;
@@ -158,9 +158,12 @@ impl Renamer {
                 println!("{}", "Fix tags:".blue().bold());
                 Renamer::show_diff(&current_tags, &new_tags);
                 if Renamer::confirm() {
-                    // TODO
+                    tag.set_artist(formatted_artist.as_ref());
+                    tag.set_title(formatted_title.as_ref());
+                    tag.write_to_path(file.full_path().to_string_lossy().as_ref()).context("Failed to write tags")?;
                     tag_changed = true;
                 }
+                println!("{}", "-".repeat(new_tags.len()));
             }
 
             // Check file name and rename if necessary
@@ -189,6 +192,7 @@ impl Renamer {
                     if Renamer::confirm() {
                         // TODO
                     }
+                    println!("{}", "-".repeat(new_file_name.len()));
                 }
             }
         }
