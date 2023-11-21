@@ -69,6 +69,12 @@ def test_whitespace(renamer):
             "One      \t\tMargarita(Margarita Song )( Clean)",
             "One Margarita (Margarita Song) (Clean)",
         ),
+        (
+            "A.D.  ",
+            "A.D.",
+            " Through the Shuffle ",
+            "Through the Shuffle",
+        ),
     ]
 
     for artist, correct_artist, title, correct_title in test_cases:
@@ -107,11 +113,16 @@ def test_add_parenthesis(renamer):
             "(You Make Me Feel) Mighty Real",
             "(You Make Me Feel) Mighty Real",
         ),
+        (
+            "The Bucketheads",
+            "The Bucketheads",
+            "The Bomb (These Sounds Fall Into My Mind) - KARYO, LPACA & James August Remix",
+            "The Bomb (These Sounds Fall Into My Mind) (KARYO, LPACA & James August Remix)",
+        ),
     ]
 
     for artist, correct_artist, title, correct_title in test_cases:
         _check_format_track(renamer, artist, title, correct_artist, correct_title)
-
 
 
 def test_balance_parenthesis(renamer):
@@ -147,6 +158,24 @@ def test_feat(renamer):
             "Lakim feat. High Klassified",
             "The Abyss (feat. High Klassified)",
             "The Abyss",
+        ),
+        (
+            "Audiojack",
+            "Audiojack feat. Kevin Knapp",
+            "Stay Glued (Feat Kevin Knapp - Zds Remix)",
+            "Stay Glued (Zds Remix)",
+        ),
+        (
+            "Fatima Njai, Jerome Sydenham",
+            "Jerome Sydenham feat. Fatima Njai",
+            "Waiting For You (Club Remix feat. Fatima Njai)",
+            "Waiting For You (Club Remix)",
+        ),
+        (
+            "Mike Dunn & Riva Starr",
+            "Riva Starr feat. Mike Dunn",
+            "Feel The Heat feat. Mike Dunn (Extended Mix)",
+            "Feel The Heat (Extended Mix)",
         ),
     ]
 

@@ -81,6 +81,13 @@ class Renamer:
             ("(Feat ", "(feat. "),
             ("(featuring ", "(feat. "),
             ("(Featuring ", "(feat. "),
+            (") - (", ""),
+            (" - (", " ("),
+            (") - ", ") "),
+            ("(- ", "("),
+            ("( - ", "("),
+            (" -)", " )"),
+            (" - ) ", ")"),
             ("!!!", ""),
             ("...", " "),
         )
@@ -194,7 +201,6 @@ class Renamer:
 
                     print("-" * len(new_file))
 
-
     def format_track(self, artist: str, title: str) -> (str, str):
         """Return formatted artist and title string."""
         if artist.islower():
@@ -247,7 +253,6 @@ class Renamer:
         title = title.replace("()", "")
         return title
 
-
     @staticmethod
     def use_parenthesis_for_mix(title: str) -> str:
         # Fix DJCity formatting style for Remix / Edit
@@ -264,6 +269,7 @@ class Renamer:
     @staticmethod
     def move_feat_from_title_to_artist(artist: str, title: str) -> (str, str):
         if "feat. " in title:
+            # Narrow index range of feat artist(s)
             start = title.index("feat. ")
             end = len(title)
             if " (" in title[start:]:
@@ -277,12 +283,16 @@ class Renamer:
 
             feat = title[start:end]
             if feat:
-                other = " ".join(feat.split()[1:])
-                if other in artist:
-                    if f", {other}" in artist:
-                        artist = artist.replace(f", {other}", "")
-                    elif f" & {other}" in artist:
-                        artist = artist.replace(f" & {other}", "")
+                feat_artist = " ".join(feat.split()[1:])
+                if feat_artist in artist:
+                    if f", {feat_artist}" in artist:
+                        artist = artist.replace(f", {feat_artist}", "")
+                    elif f" & {feat_artist}" in artist:
+                        artist = artist.replace(f" & {feat_artist}", "")
+                    elif f"{feat_artist}, " in artist:
+                        artist = artist.replace(f"{feat_artist}, ", "")
+                    elif f"{feat_artist} & " in artist:
+                        artist = artist.replace(f"{feat_artist} & ", "")
                 if feat not in artist:
                     artist += " " + feat
 
@@ -290,6 +300,10 @@ class Renamer:
 
         title = title.replace("((", "(")
         title = title.replace("))", ")")
+        title = title.replace("(- ", "(")
+        title = title.replace("( - ", "(")
+        title = title.replace(" -)", ")")
+        title = title.replace(" - )", ")")
         return artist, title
 
     @staticmethod
