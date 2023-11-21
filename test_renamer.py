@@ -49,6 +49,12 @@ def test_formatting(renamer):
             "FNF Let's Go (Nick Bike 'Humble' Edit)(Acap In Out)(Clean)",
             "FNF Let's Go (Nick Bike 'Humble' Edit) (Acap In Out) (Clean)",
         ),
+        (
+            "Big Sean",
+            "Big Sean",
+            "Dance (A$$) - Tall Boys Remix (DJcity Intro - Dirty)",
+            "Dance (A$$) (Tall Boys Remix) (Dirty Intro)",
+        ),
     ]
 
     for artist, correct_artist, title, correct_title in test_cases:
