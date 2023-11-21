@@ -66,7 +66,7 @@ class Renamer:
         self.tags_only: bool = tags_only
 
         self.file_list: list[Track] = []
-        self.file_formats = (".mp3", ".flac", ".aif", ".aiff", ".m4a", ".mp4", ".wav")
+        self.file_formats = (".mp3", ".flac", ".aif", ".aiff", ".m4a", ".mp4")
         self.total_tracks = 0
         self.num_renamed = 0
         self.num_tags_fixed = 0
