@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 import click
+import colorama
 import taglib
 from titlecase import titlecase
 
@@ -321,7 +322,12 @@ class Renamer:
                 diff_old.append(old[a0:a1])
                 diff_new.append(new[b0:b1])
             elif opcode == "insert":
-                diff_new.append(get_color(new[b0:b1], Color.green))
+                text = new[b0:b1]
+                if not text.strip():
+                    # whitespace, color background
+                    diff_new.append(get_color(text, colorama.Back.GREEN))
+                else:
+                    diff_new.append(get_color(text, Color.green))
             elif opcode == "delete":
                 diff_old.append(get_color(old[a0:a1], Color.red))
             elif opcode == "replace":
