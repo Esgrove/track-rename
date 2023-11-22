@@ -9,7 +9,7 @@ import colorama
 import taglib
 from titlecase import titlecase
 
-from colorprint import Color, get_color, print_bold, print_warn
+from colorprint import Color, get_color, print_bold, print_warn, print_error
 
 
 class Track:
@@ -146,16 +146,22 @@ class Renamer:
 
             # Check tags
             tag_data = taglib.File(file.full_path)
-            if not tag_data.tags.get("ARTIST") or not tag_data.tags.get("TITLE"):
-                print_warn(f"Missing tags: {file.full_path}")
-                continue
-
-            artist = "".join(tag_data.tags["ARTIST"])
-            title = "".join(tag_data.tags["TITLE"])
-
+            artist = "".join(tag_data.tags.get("ARTIST", []))
+            title = "".join(tag_data.tags.get("TITLE", []))
             current_tags = f"{artist} - {title}"
-            artist, title = self.format_track(artist, title)
-            new_tags = f"{artist} - {title}"
+
+            if not artist and not title:
+                print_warn(f"Missing tags: {file.full_path}")
+                artist, title = self.get_tags_from_filename(file.name)
+            elif not artist:
+                print_warn(f"Missing artist tag: {file.full_path}")
+                artist, _ = self.get_tags_from_filename(file.name)
+            elif not title:
+                print_warn(f"Missing title tag: {file.full_path}")
+                _, title = self.get_tags_from_filename(file.name)
+
+            formatted_artist, formatted_title = self.format_track(artist, title)
+            new_tags = f"{formatted_artist} - {formatted_title}"
 
             tag_changed = False
             track_printed = False
@@ -166,8 +172,8 @@ class Renamer:
                 self.show_diff(current_tags, new_tags)
                 self.num_tags_fixed += 1
                 if not self.print_only and self.confirm():
-                    tag_data.tags["ARTIST"] = [artist]
-                    tag_data.tags["TITLE"] = [title]
+                    tag_data.tags["ARTIST"] = [formatted_artist]
+                    tag_data.tags["TITLE"] = [formatted_title]
                     tag_data.save()
                     tag_changed = True
 
@@ -180,8 +186,8 @@ class Renamer:
 
             # Check file name
             # Remove forbidden characters
-            file_artist = re.sub('[\\/:"*?<>|]+', "", artist).strip()
-            file_title = re.sub('[\\/:"*?<>|]+', "", title).strip()
+            file_artist = re.sub('[\\/:"*?<>|]+', "", formatted_artist).strip()
+            file_title = re.sub('[\\/:"*?<>|]+', "", formatted_title).strip()
             file_artist = re.sub(r"\s+", " ", file_artist)
             file_title = re.sub(r"\s+", " ", file_title)
             new_file = f"{file_artist} - {file_title}{file.extension}"
@@ -200,6 +206,15 @@ class Renamer:
                         os.rename(file.full_path, new_path)
 
                     print("-" * len(new_file))
+
+    @staticmethod
+    def get_tags_from_filename(filename: str) -> (str, str):
+        if " - " not in filename:
+            print_error(f"Can't parse tag data from malformed filename: {filename}")
+            return "", ""
+
+        artist, title = filename.split(" - ", 1)
+        return artist, title
 
     def format_track(self, artist: str, title: str) -> (str, str):
         """Return formatted artist and title string."""
