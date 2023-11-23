@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from renamer import Renamer
+from rename.renamer import Renamer
 
 
 @pytest.fixture(scope="module")

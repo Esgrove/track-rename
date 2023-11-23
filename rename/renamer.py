@@ -6,56 +6,15 @@ from pathlib import Path
 
 import click
 import colorama
-import taglib
 from titlecase import titlecase
 
 from colorprint import Color, get_color, print_bold, print_warn, print_error
+from rename.track import Track
 
-
-class Track:
-    def __init__(self, name: str, extension: str, path: Path):
-        self.name: str = name
-        self.extension: str = extension
-        self.path: Path = path
-
-        if self.extension[0] != ".":
-            self.extension = "." + self.extension
-
-    @property
-    def filename(self):
-        return self.name + self.extension
-
-    @property
-    def full_path(self):
-        return self.path / self.filename
-
-    def __eq__(self, other):
-        if isinstance(other, Track):
-            return self.name == other.name
-        if isinstance(other, str):
-            return self.name == other
-
-        return NotImplemented
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-    def __lt__(self, other):
-        if isinstance(other, Track):
-            return self.name < other.name
-        if isinstance(other, str):
-            return self.name < other
-
-        return NotImplemented
-
-    def __le__(self, other):
-        return self.__lt__(other) or self.__eq__(other)
-
-    def __gt__(self, other):
-        return not self.__le__(other)
-
-    def __ge__(self, other):
-        return not self.__lt__(other)
+try:
+    import taglib
+except ImportError:
+    pass
 
 
 class Renamer:
@@ -207,15 +166,6 @@ class Renamer:
 
                     print("-" * len(new_file))
 
-    @staticmethod
-    def get_tags_from_filename(filename: str) -> (str, str):
-        if " - " not in filename:
-            print_error(f"Can't parse tag data from malformed filename: {filename}")
-            return "", ""
-
-        artist, title = filename.split(" - ", 1)
-        return artist, title
-
     def format_track(self, artist: str, title: str) -> (str, str):
         """Return formatted artist and title string."""
         if artist.islower():
@@ -269,7 +219,17 @@ class Renamer:
         return title
 
     @staticmethod
+    def get_tags_from_filename(filename: str) -> (str, str):
+        if " - " not in filename:
+            print_error(f"Can't parse tag data from malformed filename: {filename}")
+            return "", ""
+
+        artist, title = filename.split(" - ", 1)
+        return artist, title
+
+    @staticmethod
     def use_parenthesis_for_mix(title: str) -> str:
+        """Wrap the mix version in parentheses."""
         # Fix DJCity formatting style for Remix / Edit
         if " - " in title and not re.search(r"\([^()]+-[^()]+\)", title):
             index = title.index(" - ")
@@ -283,22 +243,24 @@ class Renamer:
 
     @staticmethod
     def move_feat_from_title_to_artist(artist: str, title: str) -> (str, str):
+        """Move featuring artist(s) to the artist field and remove duplicate info."""
         if "feat. " in title:
             # Narrow index range of feat artist(s)
             start = title.index("feat. ")
+            feat = title[start:]
             end = len(title)
-            if " (" in title[start:]:
-                end = title.index(" (")
-            if " -" in title[start:]:
-                new = title.index(" -")
-                end = min(end, new)
-            if ")" in title[start:]:
-                new = title.index(")")
-                end = min(end, new)
+            if " (" in feat:
+                end = start + feat.index(" (")
+            if " -" in feat:
+                end = min(end, start + feat.index(" -"))
+            if ")" in feat:
+                end = min(end, start + feat.index(")"))
 
+            # feat should now contain 'feat. <artist>'
             feat = title[start:end]
             if feat:
                 feat_artist = " ".join(feat.split()[1:])
+                # remove duplicate feat artist names
                 if feat_artist in artist:
                     if f", {feat_artist}" in artist:
                         artist = artist.replace(f", {feat_artist}", "")
@@ -309,7 +271,7 @@ class Renamer:
                     elif f"{feat_artist} & " in artist:
                         artist = artist.replace(f"{feat_artist} & ", "")
                 if feat not in artist:
-                    artist += " " + feat
+                    artist += f" {feat}"
 
                 title = title[:start] + title[end:]
 
@@ -323,33 +285,35 @@ class Renamer:
 
     @staticmethod
     def confirm() -> bool:
+        """
+        Ask user to confim action.
+        Note: everything except 'n' is a yes.
+        """
         ans = input("Proceed (*/n)? ").strip()
         return ans.lower() != "n"
 
     @staticmethod
     def show_diff(old: str, new: str) -> None:
+        """Print a stacked diff of the changes."""
         # http://stackoverflow.com/a/788780
         sequence = difflib.SequenceMatcher(None, old, new)
         diff_old = []
         diff_new = []
-        for opcode, a0, a1, b0, b1 in sequence.get_opcodes():
-            if opcode == "equal":
-                diff_old.append(old[a0:a1])
-                diff_new.append(new[b0:b1])
-            elif opcode == "insert":
-                text = new[b0:b1]
-                if not text.strip():
-                    # whitespace, color background
-                    diff_new.append(get_color(text, colorama.Back.GREEN))
-                else:
-                    diff_new.append(get_color(text, Color.green))
-            elif opcode == "delete":
-                diff_old.append(get_color(old[a0:a1], Color.red))
-            elif opcode == "replace":
-                diff_old.append(get_color(old[a0:a1], Color.red))
-                diff_new.append(get_color(new[b0:b1], Color.green))
-            else:
-                raise RuntimeError("unexpected diff opcode")
+        for opcode, i1, i2, j1, j2 in sequence.get_opcodes():
+            match opcode:
+                case "equal":
+                    diff_old.append(old[i1:i2])
+                    diff_new.append(new[j1:j2])
+                case "insert":
+                    # use background color for whitespace changes
+                    diff_new.append(
+                        get_color(new[j1:j2], colorama.Back.GREEN if not new[j1:j2].strip() else Color.green)
+                    )
+                case "delete":
+                    diff_old.append(get_color(old[i1:i2], colorama.Back.RED if not old[i1:i2].strip() else Color.red))
+                case "replace":
+                    diff_old.append(get_color(old[i1:i2], Color.red))
+                    diff_new.append(get_color(new[j1:j2], Color.green))
 
         old = "".join(diff_old)
         new = "".join(diff_new)
@@ -404,10 +368,8 @@ class Renamer:
 
     @staticmethod
     def wrap_text_after_parentheses(text: str) -> str:
-        if text.endswith(")"):
-            return text
-
-        if text.startswith("("):
+        """Add parenthesis around text following a (*)."""
+        if text.endswith(")") or text.startswith("("):
             return text
 
         # Regex pattern to match text after the last closing parenthesis
