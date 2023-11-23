@@ -6,8 +6,8 @@ WHITESPACE_TEST_DATA = [
         "One Margarita (Margarita Song) (Clean)",
     ),
     (
-        " That Chick Angel, Casa Di &  Steve Terrell   ",
-        "That Chick Angel, Casa Di & Steve Terrell",
+        " That Chick Angel,  Steve Terrell   ",
+        "That Chick Angel, Steve Terrell",
         "One      \t\tMargarita(Margarita Song )( Clean)",
         "One Margarita (Margarita Song) (Clean)",
     ),
@@ -19,7 +19,7 @@ WHITESPACE_TEST_DATA = [
     ),
 ]
 
-WHITESPACE_IDS = tuple(case[0] for case in WHITESPACE_TEST_DATA)
+WHITESPACE_IDS = tuple(case[1] for case in WHITESPACE_TEST_DATA)
 
 
 FORMATTING_TEST_DATA = [
@@ -67,7 +67,7 @@ FORMATTING_TEST_DATA = [
     ),
 ]
 
-FORMATTING_IDS = tuple(case[0] for case in FORMATTING_TEST_DATA)
+FORMATTING_IDS = tuple(case[1] for case in FORMATTING_TEST_DATA)
 
 FEAT_TEST_DATA = [
     (
@@ -126,7 +126,7 @@ FEAT_TEST_DATA = [
     ),
 ]
 
-FEAT_IDS = tuple(case[0] for case in FEAT_TEST_DATA)
+FEAT_IDS = tuple(case[1] for case in FEAT_TEST_DATA)
 
 PARENTHESES_TEST_DATA = [
     (
@@ -154,8 +154,8 @@ PARENTHESES_TEST_DATA = [
         "You Make Me Feel (Mighty Real) (Clean)",
     ),
     (
-        "a",
-        "A",
+        "abc",
+        "Abc",
         "(You Make Me Feel) Mighty Real",
         "(You Make Me Feel) Mighty Real",
     ),
@@ -167,7 +167,7 @@ PARENTHESES_TEST_DATA = [
     ),
 ]
 
-PARENTHESES_IDS = tuple(case[0] for case in PARENTHESES_TEST_DATA)
+PARENTHESES_IDS = tuple(case[1] for case in PARENTHESES_TEST_DATA)
 
 BALANCE_PARENTHESES_DATA = [
     (
@@ -184,4 +184,4 @@ BALANCE_PARENTHESES_DATA = [
     ),
 ]
 
-BALANCE_PARENTHESES_IDS = tuple(case[0] for case in BALANCE_PARENTHESES_DATA)
+BALANCE_PARENTHESES_IDS = tuple(case[1] for case in BALANCE_PARENTHESES_DATA)
