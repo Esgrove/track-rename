@@ -293,7 +293,7 @@ class Renamer:
     @staticmethod
     def confirm() -> bool:
         """
-        Ask user to confim action.
+        Ask user to confirm action.
         Note: everything except 'n' is a yes.
         """
         ans = input("Proceed (*/n)? ").strip()
