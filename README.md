@@ -1,6 +1,6 @@
 # Track Renamer
 
-CLI Tool for renaming audio tracks.
+CLI Tool for formatting and renaming audio files.
 
 ## Dependencies
 
