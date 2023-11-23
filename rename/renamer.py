@@ -6,12 +6,12 @@ from pathlib import Path
 
 import click
 import colorama
+from colorprint import Color, get_color, print_bold, print_error, print_warn
 from titlecase import titlecase
-
-from colorprint import Color, get_color, print_bold, print_warn, print_error
-from rename.track import Track
+from track import Track
 
 try:
+    # Workaround to be able to run tests on Apple Silicon while pytaglib is broken
     import taglib
 except ImportError:
     pass
