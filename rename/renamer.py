@@ -244,36 +244,19 @@ class Renamer:
     @staticmethod
     def move_feat_from_title_to_artist(artist: str, title: str) -> (str, str):
         """Move featuring artist(s) to the artist field and remove duplicate info."""
-        if "feat. " in title:
-            # Narrow index range of feat artist(s)
-            start = title.index("feat. ")
-            feat = title[start:]
-            end = len(title)
-            if " (" in feat:
-                end = start + feat.index(" (")
-            if " -" in feat:
-                end = min(end, start + feat.index(" -"))
-            if ")" in feat:
-                end = min(end, start + feat.index(")"))
-
-            # feat should now contain 'feat. <artist>'
-            feat = title[start:end]
-            if feat:
+        if " feat. " in title or "(feat. " in title:
+            feat_match = re.search(r"feat\. [^)(-]+", title)
+            if feat_match:
+                feat = feat_match.group()
                 feat_artist = " ".join(feat.split()[1:])
-                # remove duplicate feat artist names
-                if feat_artist in artist:
-                    if f", {feat_artist}" in artist:
-                        artist = artist.replace(f", {feat_artist}", "")
-                    elif f" & {feat_artist}" in artist:
-                        artist = artist.replace(f" & {feat_artist}", "")
-                    elif f"{feat_artist}, " in artist:
-                        artist = artist.replace(f"{feat_artist}, ", "")
-                    elif f"{feat_artist} & " in artist:
-                        artist = artist.replace(f"{feat_artist} & ", "")
+                title = title.replace(feat, "")
+
+                # Remove duplicate feat artist names from the artist string
+                for delimiter in [", ", " & ", " and ", " + "]:
+                    artist = artist.replace(f"{delimiter}{feat_artist}", "").replace(f"{feat_artist}{delimiter}", "")
+
                 if feat not in artist:
                     artist += f" {feat}"
-
-                title = title[:start] + title[end:]
 
         title = title.replace("((", "(")
         title = title.replace("))", ")")
@@ -281,6 +264,7 @@ class Renamer:
         title = title.replace("( - ", "(")
         title = title.replace(" -)", ")")
         title = title.replace(" - )", ")")
+        title = title.replace("()", "")
         return artist, title
 
     @staticmethod
