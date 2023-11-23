@@ -177,6 +177,15 @@ class Renamer:
 
     def format_track(self, artist: str, title: str) -> (str, str):
         """Return formatted artist and title string."""
+        artist = artist.strip()
+        title = title.strip()
+        if not artist and not title:
+            return artist, title
+
+        # check if artist name is duplicated
+        if title.startswith(f"{artist} - "):
+            title = title.replace(f"{artist} - ", "", 1)
+
         if artist.islower():
             artist = titlecase(artist)
 
@@ -198,11 +207,11 @@ class Renamer:
 
         artist, title = self.move_feat_from_title_to_artist(artist, title)
 
-        if title.endswith("."):
-            title = title[:-1]
-
         title = self.balance_parenthesis(title)
         title = self.wrap_text_after_parentheses(title)
+
+        if title.endswith("."):
+            title = title[:-1]
 
         # Double-check whitespace
         artist = artist.strip()
