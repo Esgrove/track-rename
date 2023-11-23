@@ -3,6 +3,18 @@ from pathlib import Path
 import pytest
 
 from rename.renamer import Renamer
+from tests.test_data import (
+    BALANCE_PARENTHESES_DATA,
+    BALANCE_PARENTHESES_IDS,
+    FEAT_IDS,
+    FEAT_TEST_DATA,
+    FORMATTING_IDS,
+    FORMATTING_TEST_DATA,
+    PARENTHESES_IDS,
+    PARENTHESES_TEST_DATA,
+    WHITESPACE_IDS,
+    WHITESPACE_TEST_DATA,
+)
 
 
 @pytest.fixture(scope="module")
@@ -11,200 +23,31 @@ def renamer():
     yield renamer
 
 
-def test_formatting(renamer):
-    test_cases = [
-        (
-            "ACA",
-            "ACA",
-            "Azn Danza - Myles Club Edit",
-            "Azn Danza (Myles Club Edit)",
-        ),
-        (
-            "ASAP Ferg x A-Ha",
-            "ASAP Ferg x A-Ha",
-            "Plain Jane (Nick Bike Edit + Acap In & Out)[Clean]",
-            "Plain Jane (Nick Bike Edit + Acapella In & Out) (Clean)",
-        ),
-        (
-            "Aazar ft. French Montana",
-            "Aazar feat. French Montana",
-            "The Carnival (Inst)",
-            "The Carnival (Instrumental)",
-        ),
-        (
-            "Aitch & AJ Tracey ft. Tay Keith",
-            "Aitch & AJ Tracey feat. Tay Keith",
-            "Rain (DJcity Intro - Clean)",
-            "Rain (Clean Intro)",
-        ),
-        (
-            "Lizzo",
-            "Lizzo",
-            "About Damn Time - Purple Disco Machine (Dirty Intro)",
-            "About Damn Time (Purple Disco Machine) (Dirty Intro)",
-        ),
-        (
-            "GloRilla x Kendrick Lamar",
-            "GloRilla x Kendrick Lamar",
-            "FNF Let's Go (Nick Bike 'Humble' Edit)(Acap In Out)(Clean)",
-            "FNF Let's Go (Nick Bike 'Humble' Edit) (Acapella In Out) (Clean)",
-        ),
-        (
-            "Big Sean",
-            "Big Sean",
-            "Dance (A$$) - Tall Boys Remix (DJcity Intro - Dirty)",
-            "Dance (A$$) (Tall Boys Remix) (Dirty Intro)",
-        ),
-    ]
-
-    for artist, correct_artist, title, correct_title in test_cases:
-        _check_format_track(renamer, artist, title, correct_artist, correct_title)
+@pytest.mark.parametrize("artist, correct_artist, title, correct_title", FORMATTING_TEST_DATA, ids=FORMATTING_IDS)
+def test_formatting(renamer, artist, correct_artist, title, correct_title):
+    _check_format_track(renamer, artist, title, correct_artist, correct_title)
 
 
-def test_whitespace(renamer):
-    test_cases = [
-        (
-            "That Chick Angel, Casa Di & Steve Terrell\n",
-            "That Chick Angel, Casa Di & Steve Terrell",
-            "One Margarita\t(Margarita Song) (Clean)",
-            "One Margarita (Margarita Song) (Clean)",
-        ),
-        (
-            " That Chick Angel, Casa Di &  Steve Terrell   ",
-            "That Chick Angel, Casa Di & Steve Terrell",
-            "One      \t\tMargarita(Margarita Song )( Clean)",
-            "One Margarita (Margarita Song) (Clean)",
-        ),
-        (
-            "A.D.  ",
-            "A.D.",
-            " Through the Shuffle ",
-            "Through the Shuffle",
-        ),
-    ]
-
-    for artist, correct_artist, title, correct_title in test_cases:
-        _check_format_track(renamer, artist, title, correct_artist, correct_title)
+@pytest.mark.parametrize("artist, correct_artist, title, correct_title", WHITESPACE_TEST_DATA, ids=WHITESPACE_IDS)
+def test_whitespace(renamer, artist, correct_artist, title, correct_title):
+    _check_format_track(renamer, artist, title, correct_artist, correct_title)
 
 
-def test_add_parenthesis(renamer):
-    test_cases = [
-        (
-            "Redbone",
-            "Redbone",
-            "Come And Get Your Love (Nick Bike Extended Mix) (Instrumental) 2.2",
-            "Come And Get Your Love (Nick Bike Extended Mix) (Instrumental) (2.2)",
-        ),
-        (
-            "Patrick Adams",
-            "Patrick Adams",
-            "I'm A Big Freak (R U 1 2) Alkalino re-edit",
-            "I'm A Big Freak (R U 1 2) (Alkalino re-edit)",
-        ),
-        (
-            "Sylvester",
-            "Sylvester",
-            "You Make Me Feel (Mighty Real) (Clean)",
-            "You Make Me Feel (Mighty Real) (Clean)",
-        ),
-        (
-            "Sylvester",
-            "Sylvester",
-            "You Make Me Feel (Mighty Real) Clean",
-            "You Make Me Feel (Mighty Real) (Clean)",
-        ),
-        (
-            "Sylvester",
-            "Sylvester",
-            "(You Make Me Feel) Mighty Real",
-            "(You Make Me Feel) Mighty Real",
-        ),
-        (
-            "The Bucketheads",
-            "The Bucketheads",
-            "The Bomb (These Sounds Fall Into My Mind) - KARYO, LPACA & James August Remix",
-            "The Bomb (These Sounds Fall Into My Mind) (KARYO, LPACA & James August Remix)",
-        ),
-    ]
-
-    for artist, correct_artist, title, correct_title in test_cases:
-        _check_format_track(renamer, artist, title, correct_artist, correct_title)
+@pytest.mark.parametrize("artist, correct_artist, title, correct_title", PARENTHESES_TEST_DATA, ids=PARENTHESES_IDS)
+def test_add_parenthesis(renamer, artist, correct_artist, title, correct_title):
+    _check_format_track(renamer, artist, title, correct_artist, correct_title)
 
 
-def test_balance_parenthesis(renamer):
-    test_cases = [
-        (
-            "Janet Jackson",
-            "Janet Jackson",
-            "If (Kaytranada Edition (Live Set Version)",
-            "If (Kaytranada Edition) (Live Set Version)",
-        ),
-    ]
-
-    for artist, correct_artist, title, correct_title in test_cases:
-        _check_format_track(renamer, artist, title, correct_artist, correct_title)
+@pytest.mark.parametrize(
+    "artist, correct_artist, title, correct_title", BALANCE_PARENTHESES_DATA, ids=BALANCE_PARENTHESES_IDS
+)
+def test_balance_parenthesis(renamer, artist, correct_artist, title, correct_title):
+    _check_format_track(renamer, artist, title, correct_artist, correct_title)
 
 
-def test_feat(renamer):
-    test_cases = [
-        (
-            "seige",
-            "Seige feat. Busta Rhymes, Little Brother, Kurupt, Crooked I, and Willie B",
-            "Holla Remix (featuring Busta Rhymes, Little Brother, Kurupt, Crooked I, and Willie B)",
-            "Holla Remix",
-        ),
-        (
-            "Fanu & Ane Brun",
-            "Fanu feat. Ane Brun",
-            "Taivaita ja Tarinoita (feat. Ane Brun)",
-            "Taivaita ja Tarinoita",
-        ),
-        (
-            "Lakim",
-            "Lakim feat. High Klassified",
-            "The Abyss (feat. High Klassified)",
-            "The Abyss",
-        ),
-        (
-            "Audiojack",
-            "Audiojack feat. Kevin Knapp",
-            "Stay Glued (Feat Kevin Knapp - Zds Remix)",
-            "Stay Glued (Zds Remix)",
-        ),
-        (
-            "Fatima Njai, Jerome Sydenham",
-            "Jerome Sydenham feat. Fatima Njai",
-            "Waiting For You (Club Remix feat. Fatima Njai)",
-            "Waiting For You (Club Remix)",
-        ),
-        (
-            "Mike Dunn & Riva Starr",
-            "Riva Starr feat. Mike Dunn",
-            "Feel The Heat feat. Mike Dunn (Extended Mix)",
-            "Feel The Heat (Extended Mix)",
-        ),
-        (
-            "DJ Chus & David Penn",
-            "DJ Chus & David Penn feat. Concha Buika",
-            "Will I (Discover Love - feat. Concha Buika - Mediterranean Club Mix)",
-            "Will I (Discover Love) (Mediterranean Club Mix)",
-        ),
-        (
-            "Furry Phreaks",
-            "Furry Phreaks feat. Terra Deva",
-            "Want Me (Like Water) (feat. Terra Deva - Charles Webster Club Mix 1 - 2013 Re-Edit)",
-            "Want Me (Like Water) (Charles Webster Club Mix 1) (2013 Re-Edit)",
-        ),
-        (
-            "Spiller & Sophie Ellis-Bextor",
-            "Spiller feat. Sophie Ellis-Bextor",
-            "Groovejet (If This Ain't Love) feat. Sophie Ellis-Bextor (Riva Starr Skylight Hard Dub)",
-            "Groovejet (If This Ain't Love) (Riva Starr Skylight Hard Dub)",
-        ),
-    ]
-
-    for artist, correct_artist, title, correct_title in test_cases:
-        _check_format_track(renamer, artist, title, correct_artist, correct_title)
+@pytest.mark.parametrize("artist, correct_artist, title, correct_title", FEAT_TEST_DATA, ids=FEAT_IDS)
+def test_feat_formatting(renamer, artist, correct_artist, title, correct_title):
+    _check_format_track(renamer, artist, title, correct_artist, correct_title)
 
 
 def _check_format_track(renamer, artist, title, correct_artist, correct_title):
