@@ -6,15 +6,20 @@ from pathlib import Path
 
 import click
 import colorama
-from colorprint import Color, get_color, print_bold, print_error, print_warn
 from titlecase import titlecase
-from track import Track
+
+try:
+    from colorprint import Color, get_color, print_bold, print_error, print_warn
+    from track import Track
+except ModuleNotFoundError:
+    from rename.colorprint import Color, get_color, print_bold, print_error, print_warn
+    from rename.track import Track
 
 try:
     # Workaround to be able to run tests on Apple Silicon while pytaglib is broken
     import taglib
 except ImportError:
-    pass
+    taglib = None
 
 
 class Renamer:
@@ -26,7 +31,7 @@ class Renamer:
         self.tags_only: bool = tags_only
 
         self.file_list: list[Track] = []
-        self.file_formats = (".mp3", ".flac", ".aif", ".aiff", ".m4a", ".mp4")
+        self.file_formats = (".mp3", ".flac", ".aif", ".aiff", ".m4a")
         self.total_tracks = 0
         self.num_renamed = 0
         self.num_tags_fixed = 0
@@ -60,6 +65,10 @@ class Renamer:
             ('12"', "12''"),
             ("Intro - Dirty", "Dirty Intro"),
             ("Intro - Clean", "Clean Intro"),
+            ("Acap - DIY", "Acapella DIY"),
+            ("(Acap)", "(Acapella)"),
+            ("Acap ", "Acapella "),
+            ("(Inst)", "(Instrumental)"),
         )
         self.regex_substitutes = (
             (r"[\[{]+", "("),
@@ -195,7 +204,7 @@ class Renamer:
         title = self.balance_parenthesis(title)
         title = self.wrap_text_after_parentheses(title)
 
-        # Double check whitespace
+        # Double-check whitespace
         artist = artist.strip()
         title = title.strip()
         artist = re.sub(r"\s+", " ", artist)
@@ -245,7 +254,7 @@ class Renamer:
     def move_feat_from_title_to_artist(artist: str, title: str) -> (str, str):
         """Move featuring artist(s) to the artist field and remove duplicate info."""
         if " feat. " in title or "(feat. " in title:
-            feat_match = re.search(r"feat\. [^)(-]+", title)
+            feat_match = re.search(r"feat\. .*?(?=( -|\(|\)|$))", title)
             if feat_match:
                 feat = feat_match.group()
                 feat_artist = " ".join(feat.split()[1:])
@@ -257,6 +266,11 @@ class Renamer:
 
                 if feat not in artist:
                     artist += f" {feat}"
+
+        # Replace ' - - ' or ' - ' inside parentheses
+        title = re.sub(
+            r"\([^)]*( - - | - )[^)]*\)", lambda m: m.group().replace(" - - ", ") (").replace(" - ", ") ("), title
+        )
 
         title = title.replace("((", "(")
         title = title.replace("))", ")")

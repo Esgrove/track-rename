@@ -23,13 +23,13 @@ def test_formatting(renamer):
             "ASAP Ferg x A-Ha",
             "ASAP Ferg x A-Ha",
             "Plain Jane (Nick Bike Edit + Acap In & Out)[Clean]",
-            "Plain Jane (Nick Bike Edit + Acap In & Out) (Clean)",
+            "Plain Jane (Nick Bike Edit + Acapella In & Out) (Clean)",
         ),
         (
             "Aazar ft. French Montana",
             "Aazar feat. French Montana",
             "The Carnival (Inst)",
-            "The Carnival (Inst)",
+            "The Carnival (Instrumental)",
         ),
         (
             "Aitch & AJ Tracey ft. Tay Keith",
@@ -47,7 +47,7 @@ def test_formatting(renamer):
             "GloRilla x Kendrick Lamar",
             "GloRilla x Kendrick Lamar",
             "FNF Let's Go (Nick Bike 'Humble' Edit)(Acap In Out)(Clean)",
-            "FNF Let's Go (Nick Bike 'Humble' Edit) (Acap In Out) (Clean)",
+            "FNF Let's Go (Nick Bike 'Humble' Edit) (Acapella In Out) (Clean)",
         ),
         (
             "Big Sean",
@@ -182,6 +182,24 @@ def test_feat(renamer):
             "Riva Starr feat. Mike Dunn",
             "Feel The Heat feat. Mike Dunn (Extended Mix)",
             "Feel The Heat (Extended Mix)",
+        ),
+        (
+            "DJ Chus & David Penn",
+            "DJ Chus & David Penn feat. Concha Buika",
+            "Will I (Discover Love - feat. Concha Buika - Mediterranean Club Mix)",
+            "Will I (Discover Love) (Mediterranean Club Mix)",
+        ),
+        (
+            "Furry Phreaks",
+            "Furry Phreaks feat. Terra Deva",
+            "Want Me (Like Water) (feat. Terra Deva - Charles Webster Club Mix 1 - 2013 Re-Edit)",
+            "Want Me (Like Water) (Charles Webster Club Mix 1) (2013 Re-Edit)",
+        ),
+        (
+            "Spiller & Sophie Ellis-Bextor",
+            "Spiller feat. Sophie Ellis-Bextor",
+            "Groovejet (If This Ain't Love) feat. Sophie Ellis-Bextor (Riva Starr Skylight Hard Dub)",
+            "Groovejet (If This Ain't Love) (Riva Starr Skylight Hard Dub)",
         ),
     ]
 
