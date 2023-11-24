@@ -1,73 +1,21 @@
-WHITESPACE_TEST_DATA = [
+def _get_test_ids(data: list[tuple[str, str, str, str]]) -> tuple[str]:
+    return tuple(name[1][:32] for name in data)
+
+
+BALANCE_PARENTHESES_TEST_DATA = [
     (
-        "That Chick Angel, Casa Di & Steve Terrell\n",
-        "That Chick Angel, Casa Di & Steve Terrell",
-        "One Margarita\t(Margarita Song) (Clean)",
-        "One Margarita (Margarita Song) (Clean)",
+        "Janet Jackson",
+        "Janet Jackson",
+        "If (Kaytranada Edition (Live Set Version)",
+        "If (Kaytranada Edition) (Live Set Version)",
     ),
     (
-        " That Chick Angel,  Steve Terrell   ",
-        "That Chick Angel, Steve Terrell",
-        "One      \t\tMargarita(Margarita Song )( Clean)",
-        "One Margarita (Margarita Song) (Clean)",
-    ),
-    (
-        "A.D.  ",
-        "A.D.",
-        " Through the Shuffle ",
-        "Through the Shuffle",
+        "Another Jackson",
+        "Another Jackson",
+        "If (Kaytranada Edition) (Live Set Version",
+        "If (Kaytranada Edition) (Live Set Version)",
     ),
 ]
-
-WHITESPACE_IDS = tuple(case[1] for case in WHITESPACE_TEST_DATA)
-
-
-FORMATTING_TEST_DATA = [
-    (
-        "ACA",
-        "ACA",
-        "Azn Danza - Myles Club Edit",
-        "Azn Danza (Myles Club Edit)",
-    ),
-    (
-        "ASAP Ferg x A-Ha",
-        "ASAP Ferg x A-Ha",
-        "Plain Jane (Nick Bike Edit + Acap In & Out)[Clean]",
-        "Plain Jane (Nick Bike Edit + Acapella In & Out) (Clean)",
-    ),
-    (
-        "Aazar ft. French Montana",
-        "Aazar feat. French Montana",
-        "The Carnival (Inst)",
-        "The Carnival (Instrumental)",
-    ),
-    (
-        "Aitch & AJ Tracey ft. Tay Keith",
-        "Aitch & AJ Tracey feat. Tay Keith",
-        "Rain (DJcity Intro - Clean)",
-        "Rain (Clean Intro)",
-    ),
-    (
-        "Lizzo",
-        "Lizzo",
-        "About Damn Time - Purple Disco Machine (Dirty Intro)",
-        "About Damn Time (Purple Disco Machine) (Dirty Intro)",
-    ),
-    (
-        "GloRilla x Kendrick Lamar",
-        "GloRilla x Kendrick Lamar",
-        "FNF Let's Go (Nick Bike 'Humble' Edit)(Acap In Out)(Clean)",
-        "FNF Let's Go (Nick Bike 'Humble' Edit) (Acapella In Out) (Clean)",
-    ),
-    (
-        "Big Sean",
-        "Big Sean",
-        "Dance (A$$) - Tall Boys Remix (DJcity Intro - Dirty)",
-        "Dance (A$$) (Tall Boys Remix) (Dirty Intro)",
-    ),
-]
-
-FORMATTING_IDS = tuple(case[1] for case in FORMATTING_TEST_DATA)
 
 FEAT_TEST_DATA = [
     (
@@ -126,7 +74,50 @@ FEAT_TEST_DATA = [
     ),
 ]
 
-FEAT_IDS = tuple(case[1] for case in FEAT_TEST_DATA)
+FORMATTING_TEST_DATA = [
+    (
+        "ACA",
+        "ACA",
+        "Azn Danza - Myles Club Edit",
+        "Azn Danza (Myles Club Edit)",
+    ),
+    (
+        "ASAP Ferg x A-Ha",
+        "ASAP Ferg x A-Ha",
+        "Plain Jane (Nick Bike Edit + Acap In & Out)[Clean]",
+        "Plain Jane (Nick Bike Edit + Acapella In & Out) (Clean)",
+    ),
+    (
+        "Aazar ft. French Montana",
+        "Aazar feat. French Montana",
+        "The Carnival (Inst)",
+        "The Carnival (Instrumental)",
+    ),
+    (
+        "Aitch & AJ Tracey ft. Tay Keith",
+        "Aitch & AJ Tracey feat. Tay Keith",
+        "Rain (DJcity Intro - Clean)",
+        "Rain (Clean Intro)",
+    ),
+    (
+        "Lizzo",
+        "Lizzo",
+        "About Damn Time - Purple Disco Machine (Dirty Intro)",
+        "About Damn Time (Purple Disco Machine) (Dirty Intro)",
+    ),
+    (
+        "GloRilla x Kendrick Lamar",
+        "GloRilla x Kendrick Lamar",
+        "FNF Let's Go (Nick Bike 'Humble' Edit)(Acap In Out)(Clean)",
+        "FNF Let's Go (Nick Bike 'Humble' Edit) (Acapella In Out) (Clean)",
+    ),
+    (
+        "Big Sean",
+        "Big Sean",
+        "Dance (A$$) - Tall Boys Remix (DJcity Intro - Dirty)",
+        "Dance (A$$) (Tall Boys Remix) (Dirty Intro)",
+    ),
+]
 
 PARENTHESES_TEST_DATA = [
     (
@@ -167,21 +158,29 @@ PARENTHESES_TEST_DATA = [
     ),
 ]
 
-PARENTHESES_IDS = tuple(case[1] for case in PARENTHESES_TEST_DATA)
-
-BALANCE_PARENTHESES_DATA = [
+WHITESPACE_TEST_DATA = [
     (
-        "Janet Jackson",
-        "Janet Jackson",
-        "If (Kaytranada Edition (Live Set Version)",
-        "If (Kaytranada Edition) (Live Set Version)",
+        "That Chick Angel, Casa Di & Steve Terrell\n",
+        "That Chick Angel, Casa Di & Steve Terrell",
+        "One Margarita\t(Margarita Song) (Clean)",
+        "One Margarita (Margarita Song) (Clean)",
     ),
     (
-        "Another Jackson",
-        "Another Jackson",
-        "If (Kaytranada Edition) (Live Set Version",
-        "If (Kaytranada Edition) (Live Set Version)",
+        " That Chick Angel,  Steve Terrell   ",
+        "That Chick Angel, Steve Terrell",
+        "One      \t\tMargarita(Margarita Song )( Clean)",
+        "One Margarita (Margarita Song) (Clean)",
+    ),
+    (
+        "A.D.  ",
+        "A.D.",
+        " Through the Shuffle ",
+        "Through the Shuffle",
     ),
 ]
 
-BALANCE_PARENTHESES_IDS = tuple(case[1] for case in BALANCE_PARENTHESES_DATA)
+BALANCE_PARENTHESES_IDS = _get_test_ids(BALANCE_PARENTHESES_TEST_DATA)
+FEAT_IDS = _get_test_ids(FEAT_TEST_DATA)
+FORMATTING_IDS = _get_test_ids(FORMATTING_TEST_DATA)
+PARENTHESES_IDS = _get_test_ids(PARENTHESES_TEST_DATA)
+WHITESPACE_IDS = _get_test_ids(WHITESPACE_TEST_DATA)
