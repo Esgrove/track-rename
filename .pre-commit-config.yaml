@@ -6,7 +6,7 @@ default_language_version:
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: "v4.5.0"
     # https://github.com/pre-commit/pre-commit-hooks
     hooks:
       - id: check-added-large-files
@@ -30,14 +30,14 @@ repos:
         args: [--fix, --exit-non-zero-on-fix]
 
   - repo: https://github.com/psf/black-pre-commit-mirror
-    rev: 23.11.0
+    rev: "23.11.0"
     hooks:
       - id: black
         name: python black
         language_version: python3.11
 
   - repo: https://github.com/pycqa/isort
-    rev: 5.12.0
+    rev: "5.12.0"
     hooks:
       - id: isort
         name: python isort
