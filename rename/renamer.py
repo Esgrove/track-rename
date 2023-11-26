@@ -384,7 +384,7 @@ class Renamer:
 
     @staticmethod
     def wrap_text_after_parentheses(text: str) -> str:
-        """Add parenthesis around text following a (*)."""
+        """Add parentheses around text following text in parentheses."""
         if text.endswith(")") or text.startswith("("):
             return text
 
