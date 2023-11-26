@@ -195,7 +195,7 @@ class Renamer:
         if artist.islower():
             artist = titlecase(artist)
 
-        if title.islower():
+        if title.islower() or (title.isupper() and len(title) > 5):
             title = titlecase(title)
 
         for pattern, replacement in self.common_substitutes:
@@ -221,9 +221,12 @@ class Renamer:
 
         # Double-check whitespace
         artist = artist.strip()
-        title = title.strip()
         artist = re.sub(r"\s+", " ", artist)
+        artist = artist.replace(" )", ")").replace("( ", "(")
+
+        title = title.strip()
         title = re.sub(r"\s+", " ", title)
+        title = title.replace(" )", ")").replace("( ", "(")
 
         return artist, title
 
