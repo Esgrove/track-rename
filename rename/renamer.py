@@ -11,10 +11,10 @@ import colorama
 from titlecase import titlecase
 
 try:
-    from colorprint import Color, get_color, print_bold, print_error, print_warn
+    from colorprint import Color, get_color, print_bold, print_error, print_warn, print_yellow
     from track import Track
 except ModuleNotFoundError:
-    from rename.colorprint import Color, get_color, print_bold, print_error, print_warn
+    from rename.colorprint import Color, get_color, print_bold, print_error, print_warn, print_yellow
     from rename.track import Track
 
 try:
@@ -84,8 +84,12 @@ class Renamer:
 
     def run(self):
         """Gather and process audio files."""
-        self.gather_files()
-        self.process_files()
+        try:
+            self.gather_files()
+            self.process_files()
+        except KeyboardInterrupt:
+            print_yellow("\ncancelled...")
+
         self.print_stats()
 
     def gather_files(self) -> None:
