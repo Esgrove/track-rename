@@ -71,6 +71,7 @@ class Renamer:
             ("(Acap)", "(Acapella)"),
             ("Acap ", "Acapella "),
             ("(Inst)", "(Instrumental)"),
+            (" 12 Inch ", " 12'' "),
         )
         self.regex_substitutes = (
             (r"[\[{]+", "("),
