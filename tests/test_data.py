@@ -20,7 +20,7 @@ BALANCE_PARENTHESES_TEST_DATA = [
 FEAT_TEST_DATA = [
     (
         "seige",
-        "Seige feat. Busta Rhymes, Little Brother, Kurupt, Crooked I, and Willie B",
+        "Seige feat. Busta Rhymes, Little Brother, Kurupt, Crooked I & Willie B",
         "Holla Remix (featuring Busta Rhymes, Little Brother, Kurupt, Crooked I, and Willie B)",
         "Holla Remix",
     ),
