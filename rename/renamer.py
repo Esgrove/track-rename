@@ -276,8 +276,11 @@ class Renamer:
             feat_match = re.search(r"feat\. .*?(?=( -|\(|\)|$))", title)
             if feat_match:
                 feat = feat_match.group()
-                feat_artist = " ".join(feat.split()[1:])
                 title = title.replace(feat, "")
+
+                # Join is used to remove extra whitespace
+                feat_artist = " ".join(feat.split()[1:])
+                feat_artist = feat_artist.replace(", and ", " & ").replace(" and ", " & ")
 
                 # Remove duplicate feat artist names from the artist string
                 for delimiter in [", ", " & ", " and ", " + "]:

@@ -72,6 +72,12 @@ FEAT_TEST_DATA = [
         "Groovejet (If This Ain't Love) feat. Sophie Ellis-Bextor (Riva Starr Skylight Hard Dub)",
         "Groovejet (If This Ain't Love) (Riva Starr Skylight Hard Dub)",
     ),
+    (
+        "Daft Punk, Pharrell Williams & Nile Rodgers",
+        "Daft Punk feat. Pharrell Williams & Nile Rodgers",
+        "Get Lucky (Drumless Edition) (feat. Pharrell Williams and Nile Rodgers)",
+        "Get Lucky (Drumless Edition)",
+    ),
 ]
 
 FORMATTING_TEST_DATA = [
