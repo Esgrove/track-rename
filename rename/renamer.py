@@ -278,7 +278,7 @@ class Renamer:
                 feat = feat_match.group()
                 title = title.replace(feat, "")
 
-                # Join is used to remove extra whitespace
+                # Get artist names without "feat". Join is used to remove extra whitespace.
                 feat_artist = " ".join(feat.split()[1:])
                 feat_artist = feat_artist.replace(", and ", " & ").replace(" and ", " & ")
 
@@ -286,8 +286,9 @@ class Renamer:
                 for delimiter in [", ", " & ", " and ", " + "]:
                     artist = artist.replace(f"{delimiter}{feat_artist}", "").replace(f"{feat_artist}{delimiter}", "")
 
-                if feat not in artist:
-                    artist += f" {feat}"
+                new_feat = f" feat. {feat_artist}"
+                if new_feat not in artist:
+                    artist += new_feat
 
         # Replace ' - - ' or ' - ' inside parentheses
         title = re.sub(
