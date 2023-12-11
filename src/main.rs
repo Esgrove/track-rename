@@ -5,11 +5,11 @@ extern crate colored;
 
 use crate::renamer::Renamer;
 
-use anyhow::{Context, Ok, Result};
+use anyhow::Result;
 use clap::Parser;
-use colored::Colorize;
+
+use std::fs;
 use std::path::Path;
-use std::{env, fs};
 
 #[derive(Parser)]
 #[command(author, about, version, arg_required_else_help = true)]

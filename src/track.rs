@@ -10,15 +10,11 @@ pub struct Track {
 
 impl Track {
     pub fn new(name: String, mut extension: String, path: PathBuf) -> Track {
-        if !extension.starts_with(".") {
+        if !extension.starts_with('.') {
             extension.insert(0, '.');
         }
 
-        Track {
-            name,
-            extension,
-            path,
-        }
+        Track { name, extension, path }
     }
 
     pub fn filename(&self) -> String {
@@ -26,7 +22,7 @@ impl Track {
     }
 
     pub fn full_path(&self) -> PathBuf {
-        self.path.join(&self.filename())
+        self.path.join(self.filename())
     }
 }
 

@@ -225,11 +225,11 @@ impl Renamer {
         }
 
         for (regex, replacement) in &self.regex_substitutes {
-            formatted_artist = regex.replace_all(&artist, *replacement).to_string();
+            formatted_artist = regex.replace_all(artist, *replacement).to_string();
         }
 
         for (regex, replacement) in &self.regex_substitutes {
-            formatted_title = regex.replace_all(&title, *replacement).to_string();
+            formatted_title = regex.replace_all(title, *replacement).to_string();
         }
 
         (formatted_artist.to_string(), formatted_title.to_string())
