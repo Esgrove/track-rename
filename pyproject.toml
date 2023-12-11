@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "track-ranamer"
-version = "2.0.0"
+version = "2.1.0"
 description = "Tool for renaming audio tracks."
 authors = ["Esgrove <esgrove@outlook.com>"]
 license = "MIT"
