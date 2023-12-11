@@ -17,28 +17,39 @@ pub struct Renamer {
     rename_files: bool,
     sort_files: bool,
     print_only: bool,
+    tags_only: bool,
     verbose: bool,
     file_list: Vec<Track>,
     file_formats: [&'static str; 6],
     total_tracks: usize,
+    num_tags_fixed: usize,
+    num_renamed: usize,
     common_substitutes: Vec<(&'static str, &'static str)>,
     title_substitutes: Vec<(&'static str, &'static str)>,
     regex_substitutes: Vec<(Regex, &'static str)>,
-    num_tags_fixed: usize,
-    num_renamed: usize,
 }
 
 impl Renamer {
-    pub fn new(path: PathBuf, rename_files: bool, sort_files: bool, print_only: bool, verbose: bool) -> Renamer {
+    pub fn new(
+        path: PathBuf,
+        rename_files: bool,
+        sort_files: bool,
+        print_only: bool,
+        tags_only: bool,
+        verbose: bool,
+    ) -> Renamer {
         Renamer {
             root: path,
             rename_files,
             sort_files,
             print_only,
+            tags_only,
             verbose,
             file_list: Vec::new(),
             file_formats: ["mp3", "aif", "aiff", "flac", "m4a", "mp4"],
             total_tracks: 0,
+            num_tags_fixed: 0,
+            num_renamed: 0,
             common_substitutes: vec![
                 (" feat ", " feat. "),
                 (" ft. ", " feat. "),
@@ -50,18 +61,30 @@ impl Renamer {
                 ("(Feat ", "(feat. "),
                 ("(featuring ", "(feat. "),
                 ("(Featuring ", "(feat. "),
+                (") - (", ""),
+                (" - (", " ("),
+                ("(- ", "("),
+                ("( - ", "("),
+                (" -)", " )"),
+                (" - ) ", ")"),
                 ("!!!", ""),
                 ("...", " "),
             ],
             title_substitutes: vec![
                 (" (Original Mix)", ""),
-                ("DJcity ", ""),
                 (" DJcity", ""),
-                ("DJCity ", ""),
                 (" DJCity", ""),
+                ("(DJcity - ", "("),
+                ("DJcity ", ""),
+                ("DJCity ", ""),
                 ("12\"", "12''"),
                 ("Intro - Dirty", "Dirty Intro"),
                 ("Intro - Clean", "Clean Intro"),
+                ("Acap - DIY", "Acapella DIY"),
+                ("(Acap)", "(Acapella)"),
+                ("Acap ", "Acapella "),
+                ("(Inst)", "(Instrumental)"),
+                (" 12 Inch ", " 12'' "),
             ],
             regex_substitutes: vec![
                 (Regex::new(r"[\[{]+").unwrap(), "("),
@@ -72,21 +95,18 @@ impl Renamer {
                 (Regex::new(r"\(\s*?\)").unwrap(), ""),
                 (Regex::new(r"(\S)\(").unwrap(), "$1 ("),
             ],
-            num_tags_fixed: 0,
-            num_renamed: 0,
         }
     }
 
+    /// Gather and process audio files.
     pub fn run(&mut self) -> Result<()> {
         self.gather_files()?;
         self.process_files()
     }
 
+    /// Get all audio files recursively from the root path.
     pub fn gather_files(&mut self) -> Result<()> {
-        println!(
-            "Getting audio files from {}",
-            format!("{}", self.root.display()).magenta()
-        );
+        println!("Getting audio files from {}", format!("{}", self.root.display()).cyan());
         let mut file_list: Vec<Track> = Vec::new();
 
         for entry in WalkDir::new(&self.root).into_iter().filter_map(|e| e.ok()).filter(|e| {
@@ -108,7 +128,6 @@ impl Renamer {
         }
 
         self.total_tracks = file_list.len();
-        println!("Found {} tracks", self.total_tracks);
 
         if self.sort_files {
             file_list.sort();
@@ -119,8 +138,9 @@ impl Renamer {
         Ok(())
     }
 
+    /// Format all tracks.
     pub fn process_files(&mut self) -> Result<()> {
-        println!("Checking tracks...");
+        println!("Formatting {} tracks...", self.total_tracks);
         let mut current_path = self.root.clone();
         for (number, file) in self.file_list.iter().enumerate() {
             if !self.sort_files {
@@ -142,15 +162,41 @@ impl Renamer {
             }
 
             let mut tag = Tag::new().read_from_path(file.full_path())?;
-            if tag.artist().is_none() || tag.title().is_none() {
-                println!("Missing tags: {}", file.filename());
-                continue;
+            let mut artist = String::new();
+            let mut title = String::new();
+            let mut current_tags = " - ".to_string();
+
+            match (tag.artist(), tag.title()) {
+                (Some(a), Some(t)) => {
+                    artist = a.to_string();
+                    title = t.to_string();
+                    current_tags = format!("{} - {}", artist, title);
+                }
+                (None, None) => {
+                    eprintln!("Missing tags: {}", file.full_path().display());
+                    if let Some((a, t)) = Renamer::get_tags_from_filename(&file.name) {
+                        artist = a;
+                        title = t;
+                    }
+                }
+                (None, Some(t)) => {
+                    eprintln!("Missing artist tag: {}", file.full_path().display());
+                    if let Some((a, _)) = Renamer::get_tags_from_filename(&file.name) {
+                        artist = a;
+                    }
+                    title = t.to_string();
+                    current_tags = format!(" - {}", title);
+                }
+                (Some(a), None) => {
+                    eprintln!("Missing title tag: {}", file.full_path().display());
+                    artist = a.to_string();
+                    if let Some((_, t)) = Renamer::get_tags_from_filename(&file.name) {
+                        title = t;
+                    }
+                    current_tags = format!("{} - ", artist);
+                }
             }
 
-            let artist: String = tag.artist().unwrap().to_string();
-            let title: String = tag.title().unwrap().to_string();
-
-            let current_tags = format!("{} - {}", artist, title);
             let (formatted_artist, formatted_title) = self.format_track(&artist, &title);
             let new_tags = format!("{} - {}", formatted_artist, formatted_title);
 
@@ -172,6 +218,10 @@ impl Renamer {
                 println!("{}", "-".repeat(new_tags.len()));
             }
 
+            if self.tags_only {
+                continue;
+            }
+
             // Check file name and rename if necessary
             let forbidden_char_regex = Regex::new("[/:\"*?<>|]+").context("Invalid regex pattern")?;
             let file_artist = forbidden_char_regex
@@ -184,6 +234,7 @@ impl Renamer {
                 .to_string()
                 .trim()
                 .to_string();
+
             let new_file_name = format!("{} - {}{}", file_artist, file_title, file.extension);
             let new_path = file.path.join(&new_file_name);
 
@@ -207,16 +258,13 @@ impl Renamer {
         Ok(())
     }
 
+    /// Return formatted artist and title string.
     fn format_track(&self, artist: &str, title: &str) -> (String, String) {
-        // Placeholder for format logic
         let mut formatted_artist = artist.to_string();
         let mut formatted_title = title.to_string();
 
         for (pattern, replacement) in &self.common_substitutes {
             formatted_artist = formatted_artist.replace(pattern, replacement);
-        }
-
-        for (pattern, replacement) in &self.common_substitutes {
             formatted_title = formatted_title.replace(pattern, replacement);
         }
 
@@ -226,15 +274,14 @@ impl Renamer {
 
         for (regex, replacement) in &self.regex_substitutes {
             formatted_artist = regex.replace_all(artist, *replacement).to_string();
-        }
-
-        for (regex, replacement) in &self.regex_substitutes {
             formatted_title = regex.replace_all(title, *replacement).to_string();
         }
 
         (formatted_artist.to_string(), formatted_title.to_string())
     }
 
+    /// Ask user to confirm action.
+    /// Note: everything except `n` is a yes.
     fn confirm() -> bool {
         println!("Proceed (y/n)? ");
         let mut ans = String::new();
@@ -242,6 +289,23 @@ impl Renamer {
         ans.trim().to_lowercase() != "n"
     }
 
+    fn get_tags_from_filename(filename: &str) -> Option<(String, String)> {
+        if !filename.contains(" - ") {
+            eprintln!("Can't parse tag data from malformed filename: {filename}");
+            return None;
+        }
+
+        let parts: Vec<&str> = filename.splitn(2, " - ").collect();
+        if parts.len() == 2 {
+            let artist = parts[0].to_string();
+            let title = parts[1].to_string();
+            Some((artist, title))
+        } else {
+            None
+        }
+    }
+
+    /// Print a stacked diff of the changes.
     fn show_diff(old: &str, new: &str) {
         let changeset = Changeset::new(old, new, "");
         let mut old_string = String::new();

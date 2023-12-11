@@ -25,6 +25,8 @@ except ImportError:
 
 
 class Renamer:
+    """Audio track tag and filename formatting."""
+
     def __init__(self, path: Path, rename_files: bool, sort_files: bool, print_only: bool, tags_only: bool):
         self.root: Path = path
         self.rename_files: bool = rename_files
@@ -59,11 +61,11 @@ class Renamer:
         )
         self.title_substitutes = (
             (" (Original Mix)", ""),
+            (" DJcity", ""),
+            (" DJCity", ""),
             ("(DJcity - ", "("),
             ("DJcity ", ""),
-            (" DJcity", ""),
             ("DJCity ", ""),
-            (" DJCity", ""),
             ('12"', "12''"),
             ("Intro - Dirty", "Dirty Intro"),
             ("Intro - Clean", "Clean Intro"),
@@ -94,8 +96,10 @@ class Renamer:
         self.print_stats()
 
     def gather_files(self) -> None:
-        file_list: list[Track] = []
+        """Get all audio files recursively from the root path."""
         print_bold(f"Getting audio files from {get_color(str(self.root), color=Color.cyan)}")
+        file_list: list[Track] = []
+
         for file in self.root.rglob("*"):
             if file.suffix in self.file_formats:
                 file_list.append(Track(file.stem, file.suffix, file.parent))
@@ -104,13 +108,15 @@ class Renamer:
             sys.exit("no audio files found!")
 
         self.total_tracks = len(file_list)
-        self.file_list = file_list
 
         if self.sort_files:
-            self.file_list.sort()
+            file_list.sort()
+
+        self.file_list = file_list
 
     def process_files(self) -> None:
-        print_bold(f"Checking {self.total_tracks} tracks...")
+        """Format all tracks."""
+        print_bold(f"Formatting {self.total_tracks} tracks...")
         current_path = self.root
         for number, file in enumerate(self.file_list):
             if not self.sort_files:
@@ -161,10 +167,7 @@ class Renamer:
 
             # Check file name
             # Remove forbidden characters
-            file_artist = re.sub('[\\/:"*?<>|]+', "", formatted_artist).strip()
-            file_title = re.sub('[\\/:"*?<>|]+', "", formatted_title).strip()
-            file_artist = re.sub(r"\s+", " ", file_artist)
-            file_title = re.sub(r"\s+", " ", file_title)
+            file_artist, file_title = self.format_filename(formatted_artist, formatted_title)
             new_file = f"{file_artist} - {file_title}{file.extension}"
             new_path = file.path / new_file
 
@@ -230,6 +233,19 @@ class Renamer:
         title = title.replace(" )", ")").replace("( ", "(")
 
         return artist, title
+
+    def format_filename(self, artist: str, title: str) -> (str, str):
+        """Return formatted artist and title string for filename."""
+        # Remove forbidden characters
+        file_artist = re.sub('[\\/"<>|]+', "", artist).strip()
+        file_artist = re.sub(":*?", "-", file_artist)
+        file_artist = re.sub(r"\s+", " ", file_artist)
+
+        file_title = re.sub('[\\/"<>|]+', "", title).strip()
+        file_title = re.sub(":*?", "-", file_title)
+        file_title = re.sub(r"\s+", " ", file_title)
+
+        return file_artist, file_title
 
     def balance_parenthesis(self, title):
         """Check parenthesis match and insert missing."""
@@ -417,7 +433,7 @@ def main(directory: str, rename: bool, sort: bool, print_only: bool, tags: bool)
     """
     Check and rename audio files.
 
-    DIRECTORY: Optional input directory for audio files.
+    DIRECTORY: Optional input directory for audio files to format.
     """
     filepath = Path(directory).resolve()
 
