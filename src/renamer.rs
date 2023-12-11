@@ -1,11 +1,12 @@
 use anyhow::{Context, Result};
+use audiotags::Tag;
 use colored::*;
 use difference::{Changeset, Difference};
-use audiotags::{Tag};
 use regex::Regex;
 use std::io;
 use walkdir::WalkDir;
 
+use std::fs;
 use std::path::PathBuf;
 use std::string::String;
 
@@ -18,11 +19,13 @@ pub struct Renamer {
     print_only: bool,
     verbose: bool,
     file_list: Vec<Track>,
-    file_formats: Vec<&'static str>,
+    file_formats: [&'static str; 6],
     total_tracks: usize,
     common_substitutes: Vec<(&'static str, &'static str)>,
     title_substitutes: Vec<(&'static str, &'static str)>,
     regex_substitutes: Vec<(Regex, &'static str)>,
+    num_tags_fixed: usize,
+    num_renamed: usize,
 }
 
 impl Renamer {
@@ -34,8 +37,7 @@ impl Renamer {
             print_only,
             verbose,
             file_list: Vec::new(),
-            // ID3 library supports these
-            file_formats: vec!["mp3", "aif", "aiff", "flac", "m4a", "mp4"],
+            file_formats: ["mp3", "aif", "aiff", "flac", "m4a", "mp4"],
             total_tracks: 0,
             common_substitutes: vec![
                 (" feat ", " feat. "),
@@ -70,6 +72,8 @@ impl Renamer {
                 (Regex::new(r"\(\s*?\)").unwrap(), ""),
                 (Regex::new(r"(\S)\(").unwrap(), "$1 ("),
             ],
+            num_tags_fixed: 0,
+            num_renamed: 0,
         }
     }
 
@@ -157,10 +161,12 @@ impl Renamer {
                 track_printed = true;
                 println!("{}", "Fix tags:".blue().bold());
                 Renamer::show_diff(&current_tags, &new_tags);
-                if Renamer::confirm() {
+                self.num_tags_fixed += 1;
+                if !self.print_only && Renamer::confirm() {
                     tag.set_artist(formatted_artist.as_ref());
                     tag.set_title(formatted_title.as_ref());
-                    tag.write_to_path(file.full_path().to_string_lossy().as_ref()).context("Failed to write tags")?;
+                    tag.write_to_path(file.full_path().to_string_lossy().as_ref())
+                        .context("Failed to write tags")?;
                     tag_changed = true;
                 }
                 println!("{}", "-".repeat(new_tags.len()));
@@ -189,8 +195,9 @@ impl Renamer {
                     }
                     println!("{}", "Rename file:".yellow().bold());
                     Renamer::show_diff(&file.filename(), &new_file_name);
-                    if Renamer::confirm() {
-                        // TODO
+                    self.num_renamed += 1;
+                    if !self.print_only && Renamer::confirm() {
+                        fs::rename(&file.full_path(), &new_path)?;
                     }
                     println!("{}", "-".repeat(new_file_name.len()));
                 }
@@ -229,15 +236,10 @@ impl Renamer {
     }
 
     fn confirm() -> bool {
-        //println!("Proceed (y/n)? ");
-        //let mut ans = String::new();
-
-        //io::stdin()
-        //    .read_line(&mut ans)
-        //    .expect("Failed to read line");
-
-        //ans.trim().to_lowercase() != "n"
-        false
+        println!("Proceed (y/n)? ");
+        let mut ans = String::new();
+        io::stdin().read_line(&mut ans).expect("Failed to read line");
+        ans.trim().to_lowercase() != "n"
     }
 
     fn show_diff(old: &str, new: &str) {
