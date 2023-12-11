@@ -20,7 +20,6 @@ colorama = "^0.4.6"
 click = "^8.1.7"
 pytaglib = "^2.1.0"
 titlecase = "^2.4.1"
-mutagen = "^1.47.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.11.0"
