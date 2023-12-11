@@ -238,11 +238,11 @@ class Renamer:
         """Return formatted artist and title string for filename."""
         # Remove forbidden characters
         file_artist = re.sub('[\\/"<>|]+', "", artist).strip()
-        file_artist = re.sub(":*?", "-", file_artist)
+        file_artist = re.sub(r"[:\*\?]", "-", file_artist)
         file_artist = re.sub(r"\s+", " ", file_artist)
 
         file_title = re.sub('[\\/"<>|]+', "", title).strip()
-        file_title = re.sub(":*?", "-", file_title)
+        file_title = re.sub(r"[:\*\?]", "-", file_title)
         file_title = re.sub(r"\s+", " ", file_title)
 
         return file_artist, file_title
