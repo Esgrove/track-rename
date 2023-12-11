@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use audiotags::Tag;
+use id3::{Tag, TagLike};
 use colored::*;
 use difference::{Changeset, Difference};
 use regex::Regex;
@@ -20,7 +20,7 @@ pub struct Renamer {
     tags_only: bool,
     verbose: bool,
     file_list: Vec<Track>,
-    file_formats: [&'static str; 6],
+    file_formats: [&'static str; 3],
     total_tracks: usize,
     num_tags_fixed: usize,
     num_renamed: usize,
@@ -46,7 +46,7 @@ impl Renamer {
             tags_only,
             verbose,
             file_list: Vec::new(),
-            file_formats: ["mp3", "aif", "aiff", "flac", "m4a", "mp4"],
+            file_formats: ["mp3", "aif", "aiff"], // "flac", "m4a", "mp4"
             total_tracks: 0,
             num_tags_fixed: 0,
             num_renamed: 0,
@@ -161,7 +161,7 @@ impl Renamer {
                 println!("{:>3}: {}", number, file.name);
             }
 
-            let mut tag = Tag::new().read_from_path(file.full_path())?;
+            let mut tag = Tag::read_from_path(file.full_path())?;
             let mut artist = String::new();
             let mut title = String::new();
             let mut current_tags = " - ".to_string();
@@ -209,9 +209,9 @@ impl Renamer {
                 Renamer::show_diff(&current_tags, &new_tags);
                 self.num_tags_fixed += 1;
                 if !self.print_only && Renamer::confirm() {
-                    tag.set_artist(formatted_artist.as_ref());
-                    tag.set_title(formatted_title.as_ref());
-                    tag.write_to_path(file.full_path().to_string_lossy().as_ref())
+                    tag.set_artist(formatted_artist.clone());
+                    tag.set_title(formatted_title.clone());
+                    tag.write_to_path(file.full_path(), tag.version())
                         .context("Failed to write tags")?;
                     tag_changed = true;
                 }
