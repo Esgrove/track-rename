@@ -127,6 +127,10 @@ class Renamer:
 
             # Check tags
             tag_data = taglib.File(file.full_path)
+            if not tag_data:
+                print_error(f"Failed to load tags for: '{file.full_path}'")
+                continue
+
             artist = "".join(tag_data.tags.get("ARTIST", []))
             title = "".join(tag_data.tags.get("TITLE", []))
             current_tags = f"{artist} - {title}"
