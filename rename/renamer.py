@@ -58,6 +58,9 @@ class Renamer:
             (" - ) ", ")"),
             ("!!!", ""),
             ("...", " "),
+            ("***", ""),
+            ("**", ""),
+            ("*", ""),
         )
         self.title_substitutes = (
             (" (Original Mix)", ""),
@@ -200,11 +203,16 @@ class Renamer:
         if title.startswith(f"{artist} - "):
             title = title.replace(f"{artist} - ", "", 1)
 
-        if artist.islower():
+        if artist.islower() or (artist.isupper() and len(artist) > 6):
             artist = titlecase(artist)
 
-        if title.islower() or (title.isupper() and len(title) > 5):
+        if title.islower() or (title.isupper() and len(title) > 6):
             title = titlecase(title)
+
+        if " clean" in title.lower():
+            title = self.replace_clean_suffix(title)
+        if " dirty" in title.lower():
+            title = self.replace_dirty_suffix(title)
 
         for pattern, replacement in self.common_substitutes:
             artist = artist.replace(pattern, replacement)
@@ -237,6 +245,16 @@ class Renamer:
         title = title.replace(" )", ")").replace("( ", "(")
 
         return artist, title
+
+    def replace_dirty_suffix(self, text: str) -> str:
+        pattern = re.compile(r'\s*-\s*dirty$', re.IGNORECASE)
+        # Replace the matched part with " (Clean)"
+        return pattern.sub(" (Dirty)", text)
+
+    def replace_clean_suffix(self, text: str) -> str:
+        pattern = re.compile(r'\s*-\s*clean$', re.IGNORECASE)
+        # Replace the matched part with " (Clean)"
+        return pattern.sub(" (Clean)", text)
 
     def format_filename(self, artist: str, title: str) -> (str, str):
         """Return formatted artist and title string for filename."""
