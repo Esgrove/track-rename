@@ -52,6 +52,12 @@ FEAT_TEST_DATA = [
         "The Abyss",
     ),
     (
+        "Rihanna feat. Drake",
+        "Rihanna feat. Drake",
+        "Whats My Name (Trayze Intro) feat. Drake",
+        "Whats My Name (Trayze Intro)",
+    ),
+    (
         "Audiojack",
         "Audiojack feat. Kevin Knapp",
         "Stay Glued (Feat Kevin Knapp - Zds Remix)",
@@ -137,6 +143,24 @@ FORMATTING_TEST_DATA = [
         "Big Sean",
         "Dance (A$$) - Tall Boys Remix (DJcity Intro - Dirty)",
         "Dance (A$$) (Tall Boys Remix) (Dirty Intro)",
+    ),
+    (
+        "Toosii",
+        "Toosii",
+        "Favorite Song (Trayze My Boo Edit) 130 11a",
+        "Favorite Song (Trayze My Boo Edit)",
+    ),
+    (
+        "Tori Kelly",
+        "Tori Kelly",
+        "Cut (Trayze Acap Out) 136",
+        "Cut (Trayze Acapella Out)",
+    ),
+    (
+        "Stevie Wonder",
+        "Stevie Wonder",
+        "Signed, Sealed, Delivered - Trayze Nola Bounce Flip - 102 4a",
+        "Signed, Sealed, Delivered (Trayze Nola Bounce Flip)",
     ),
 ]
 

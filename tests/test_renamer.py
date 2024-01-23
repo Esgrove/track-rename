@@ -21,7 +21,7 @@ from tests.test_data import (
 
 @pytest.fixture(scope="module")
 def renamer():
-    renamer = Renamer(Path(""), False, False, True, False)
+    renamer = Renamer(Path(""), False, False, True, False, False)
     yield renamer
 
 

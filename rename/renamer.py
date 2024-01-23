@@ -236,6 +236,7 @@ class Renamer:
         title = self.fix_nested_parentheses(title)
         title = self.balance_parenthesis(title)
         title = self.wrap_text_after_parentheses(title)
+        title = self.remove_bpm_in_parentheses_from_end(title)
 
         if title.endswith("."):
             title = title[:-1]
@@ -318,6 +319,10 @@ class Renamer:
         title = title.replace("( ", "(")
         title = title.replace("()", "")
         return title
+
+    def remove_bpm_in_parentheses_from_end(self, text):
+        pattern = r" \((\d{2,3}(\.\d)?|\d{2,3} \d{1,2}a)\)$"
+        return re.sub(pattern, "", text)
 
     @staticmethod
     def get_tags_from_filename(filename: str) -> (str, str):
