@@ -7,17 +7,20 @@ from pathlib import Path
 
 import click
 import colorama
-from formatter import Formatter
 
 try:
     from colorprint import Color, get_color, print_bold, print_error, print_warn, print_yellow
     from track import Track
+    from formatter import Formatter
 except ModuleNotFoundError:
+    # poetry run needs the full import path
     from rename.colorprint import Color, get_color, print_bold, print_error, print_warn, print_yellow
     from rename.track import Track
+    from rename.formatter import Formatter
 
 try:
     # Workaround to be able to run tests on Apple Silicon while pytaglib is broken
+    # https://github.com/supermihi/pytaglib/issues/114
     import taglib
 except ImportError:
     taglib = None
