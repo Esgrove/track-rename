@@ -9,12 +9,12 @@ import click
 import colorama
 
 try:
-    from colorprint import Color, get_color, print_bold, print_error, print_warn, print_yellow
+    from colorprint import Color, get_color, print_bold, print_error, print_red, print_warn, print_yellow
     from formatter import Formatter
     from track import Track
 except ModuleNotFoundError:
     # poetry run needs the full import path
-    from rename.colorprint import Color, get_color, print_bold, print_error, print_warn, print_yellow
+    from rename.colorprint import Color, get_color, print_bold, print_error, print_red, print_warn, print_yellow
     from rename.formatter import Formatter
     from rename.track import Track
 
@@ -44,6 +44,7 @@ class Renamer:
         self.total_tracks = 0
         self.num_renamed = 0
         self.num_tags_fixed = 0
+        self.num_removed = 0
 
         self.formatter = Formatter()
 
@@ -132,7 +133,6 @@ class Renamer:
                 continue
 
             # Check file name
-            # Remove forbidden characters
             file_artist, file_title = self.formatter.format_filename(formatted_artist, formatted_title)
             new_file = f"{file_artist} - {file_title}{file.extension}"
             new_path = file.path / new_file
@@ -143,13 +143,24 @@ class Renamer:
                     if not track_printed:
                         print(f"{number}/{self.total_tracks}:")
 
-                    print_bold("Rename file:", Color.yellow)
+                    print_yellow("Rename file:", bold=True)
                     self.show_diff(file.filename, new_file)
                     self.num_renamed += 1
                     if not self.print_only and (self.force or self.confirm()):
                         os.rename(file.full_path, new_path)
 
                     print("-" * len(new_file))
+            elif new_path != file.full_path:
+                # This file is a duplicate of an existing file
+                if not track_printed:
+                    print(f"{number}/{self.total_tracks}:")
+
+                print_red(f"File exists: {new_file}")
+                if not self.print_only and (self.force or self.confirm("Delete duplicate")):
+                    file.full_path.unlink()
+                    self.num_removed += 1
+
+                print("-" * len(new_file))
 
     @staticmethod
     def get_tags_from_filename(filename: str) -> (str, str):
@@ -161,12 +172,12 @@ class Renamer:
         return artist, title
 
     @staticmethod
-    def confirm() -> bool:
+    def confirm(message="Proceed") -> bool:
         """
         Ask user to confirm action.
         Note: everything except 'n' is a yes.
         """
-        ans = input("Proceed (*/n)? ").strip()
+        ans = input(f"{message} (*/n)? ").strip()
         return ans.lower() != "n"
 
     @staticmethod
@@ -201,6 +212,7 @@ class Renamer:
         print_bold("Finished", Color.green)
         print(f"Tags:   {self.num_tags_fixed}")
         print(f"Rename: {self.num_renamed}")
+        print(f"Delete: {self.num_removed}")
 
 
 @click.command()
