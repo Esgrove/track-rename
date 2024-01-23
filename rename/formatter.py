@@ -60,8 +60,14 @@ class Formatter:
             (r"\(\s*?\)", ""),
             (r"(\S)\(", r"\1 ("),
         )
+        self.filename_regex_substitutes = (
+            ('"', "''"),
+            ("[<>|!]+", ""),
+            (r"[\\/:\*\?]", "-"),
+            (r"\s+", " "),
+        )
 
-    def format_track(self, artist: str, title: str) -> (str, str):
+    def format_tags(self, artist: str, title: str) -> (str, str):
         """Return formatted artist and title string."""
         artist = artist.strip()
         title = title.strip()
@@ -117,6 +123,17 @@ class Formatter:
 
         return artist, title
 
+    def format_filename(self, artist: str, title: str) -> (str, str):
+        """Return formatted artist and title string for filename."""
+        # Remove forbidden characters
+        file_artist = artist.strip()
+        file_title = title.strip()
+        for pattern, replacement in self.filename_regex_substitutes:
+            file_artist = re.sub(pattern, replacement, file_artist)
+            file_title = re.sub(pattern, replacement, file_title)
+
+        return file_artist, file_title
+
     def balance_parenthesis(self, title):
         """Check parenthesis match and insert missing."""
         open_count = title.count("(")
@@ -143,20 +160,6 @@ class Formatter:
         pattern = re.compile(r"\s*-\s*clean$", re.IGNORECASE)
         # Replace the matched part with " (Clean)"
         return pattern.sub(" (Clean)", text)
-
-    @staticmethod
-    def format_filename(artist: str, title: str) -> (str, str):
-        """Return formatted artist and title string for filename."""
-        # Remove forbidden characters
-        file_artist = re.sub('[\\/"<>|]+', "", artist).strip()
-        file_artist = re.sub(r"[:\*\?]", "-", file_artist)
-        file_artist = re.sub(r"\s+", " ", file_artist)
-
-        file_title = re.sub('[\\/"<>|]+', "", title).strip()
-        file_title = re.sub(r"[:\*\?]", "-", file_title)
-        file_title = re.sub(r"\s+", " ", file_title)
-
-        return file_artist, file_title
 
     @staticmethod
     def fix_nested_parentheses(text: str) -> str:

@@ -58,6 +58,6 @@ def test_feat_formatting(formatter, artist, correct_artist, title, correct_title
 
 
 def _check_format_track(formatter, artist, title, correct_artist, correct_title):
-    formatted_artist, formatted_title = formatter.format_track(artist, title)
+    formatted_artist, formatted_title = formatter.format_tags(artist, title)
     assert formatted_artist == correct_artist
     assert formatted_title == correct_title

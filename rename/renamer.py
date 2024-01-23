@@ -110,7 +110,7 @@ class Renamer:
                 print_warn(f"Missing title tag: {track.full_path}")
                 _, title = self.get_tags_from_filename(track.name)
 
-            formatted_artist, formatted_title = self.formatter.format_track(artist, title)
+            formatted_artist, formatted_title = self.formatter.format_tags(artist, title)
             new_tags = f"{formatted_artist} - {formatted_title}"
 
             tag_changed = False
