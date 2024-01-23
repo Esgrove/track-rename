@@ -1,4 +1,5 @@
 def _get_test_ids(data: list[tuple[str, str, str, str]]) -> tuple[str]:
+    """Use the formatted artist name as the test id."""
     return tuple(name[1][:32] for name in data)
 
 
