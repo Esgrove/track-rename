@@ -167,12 +167,16 @@ class Renamer:
                 if not self.print_only and (self.force or self.confirm("Delete duplicate")):
                     track.full_path.unlink()
                     self.num_removed += 1
+                else:
+                    print_yellow("Marking as duplicate...")
+                    duplicate_path = track.path / f"{new_filename} (Duplicate){file_extension}"
+                    os.rename(track.full_path, duplicate_path)
 
                 print("-" * len(new_file))
                 continue
 
             updated_track = Track(new_path.stem, new_path.suffix, new_path.parent) if track_renamed else track
-            if new_filename in processed:
+            if new_filename in processed and processed[new_filename].full_path.exists():
                 if not track_printed:
                     print(f"{number}/{self.total_tracks}:")
 
@@ -181,6 +185,20 @@ class Renamer:
                     print_red("Duplicate:", bold=True)
                     print(existing_track.full_path)
                     print(updated_track.full_path)
+
+                    print_yellow("Marking as duplicates...")
+                    existing_duplicate_path = (
+                        existing_track.path / f"{existing_track.name} (Duplicate1){existing_track.extension}"
+                    )
+                    updated_duplicate_path = (
+                        updated_track.path / f"{updated_track.name} (Duplicate2){updated_track.extension}"
+                    )
+
+                    os.rename(existing_track.full_path, existing_duplicate_path)
+                    if track.full_path.exists():
+                        os.rename(track.full_path, updated_duplicate_path)
+                    elif updated_track.full_path.exists():
+                        os.rename(updated_track.full_path, updated_duplicate_path)
                 else:
                     print_red("Multiple formats:", bold=True)
                     print(existing_track.full_path)
