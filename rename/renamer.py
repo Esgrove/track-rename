@@ -176,18 +176,23 @@ class Renamer:
                     print(f"{number}/{self.total_tracks}:")
 
                 existing_track = processed[new_filename]
-                print_red("Multiple formats:", bold=True)
-                print(existing_track.full_path)
-                print(updated_track.full_path)
-                if existing_track.is_mp3():
-                    if not self.print_only and (self.force or self.confirm(f"Delete {updated_track.extension}")):
-                        updated_track.full_path.unlink()
-                        self.num_removed += 1
+                if existing_track.extension == updated_track.extension:
+                    print_red("Duplicate:", bold=True)
+                    print(existing_track.full_path)
+                    print(updated_track.full_path)
                 else:
-                    if not self.print_only and (self.force or self.confirm(f"Delete {existing_track.extension}")):
-                        existing_track.full_path.unlink()
-                        self.num_removed += 1
-                        processed[new_filename] = updated_track
+                    print_red("Multiple formats:", bold=True)
+                    print(existing_track.full_path)
+                    print(updated_track.full_path)
+                    if existing_track.is_mp3():
+                        if not self.print_only and (self.force or self.confirm(f"Delete {existing_track.extension}")):
+                            existing_track.full_path.unlink()
+                            processed[new_filename] = updated_track
+                            self.num_removed += 1
+                    else:
+                        if not self.print_only and (self.force or self.confirm(f"Delete {updated_track.extension}")):
+                            updated_track.full_path.unlink()
+                            self.num_removed += 1
 
                 print("-" * len(str(existing_track.full_path)))
             else:
