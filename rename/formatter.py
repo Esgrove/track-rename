@@ -189,8 +189,17 @@ class Formatter:
 
     @staticmethod
     def remove_bpm_in_parentheses_from_end(text):
+        """Remove a BPM and key from the end of the string."""
         pattern = r" \((\d{2,3}(\.\d)?|\d{2,3} \d{1,2}a)\)$"
-        return re.sub(pattern, "", text)
+        result = re.sub(pattern, "", text)
+
+        pattern = r"\s\(\d{1,2}(?:\s\d{1,2})?\s?[a-zA-Z]\)$"
+        result = re.sub(pattern, "", result)
+
+        pattern = r"\s\(\d{2,3}\s?[a-zA-Z]{2,3}\)$"
+        result = re.sub(pattern, "", result)
+
+        return result
 
     @staticmethod
     def use_parenthesis_for_mix(title: str) -> str:

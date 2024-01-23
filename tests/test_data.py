@@ -169,6 +169,18 @@ FORMATTING_TEST_DATA = [
         "Signed, Sealed, Delivered - Trayze Nola Bounce Flip - 102 4a",
         "Signed, Sealed, Delivered (Trayze Nola Bounce Flip)",
     ),
+    (
+        "Rihanna",
+        "Rihanna",
+        "Right Now (Facetyme Remix) (132 Ebm)",
+        "Right Now (Facetyme Remix)",
+    ),
+    (
+        "Rihanna",
+        "Rihanna",
+        "Lift Me Up (Trayze Drop Leaf Edit) (89 11b)",
+        "Lift Me Up (Trayze Drop Leaf Edit)",
+    ),
 ]
 
 PARENTHESES_TEST_DATA = [
