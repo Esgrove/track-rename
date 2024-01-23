@@ -58,7 +58,7 @@ class Formatter:
             ("Intro/Outro", "Intro"),
             ("Intro-Outro", "Intro"),
             ("In+Out", "In-Out"),
-            ("In+out", "In-Out")
+            ("In+out", "In-Out"),
         )
         self.regex_substitutes = (
             (r"[\[{]+", "("),

@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 
+import datetime
 import difflib
+import hashlib
 import os
 import sys
+import time
 from pathlib import Path
 
 import click
@@ -90,8 +93,21 @@ class Renamer:
                     current_path = track.path
                     print_bold(str(current_path), Color.magenta)
 
+            if not track.full_path.exists():
+                print_red(f"File no longer exists: {track.full_path}")
+                continue
+
             # Check tags
-            tag_data = taglib.File(track.full_path)
+            attempts = 0
+            tag_data = None
+            while attempts < 2 and not tag_data:
+                try:
+                    tag_data = taglib.File(track.full_path)
+                except OSError as e:
+                    print_red(str(e))
+                    attempts += 1
+                    time.sleep(1)
+
             if not tag_data:
                 print_error(f"Failed to load tags for: '{track.full_path}'")
                 continue
@@ -169,8 +185,12 @@ class Renamer:
                     self.num_removed += 1
                 else:
                     print_yellow("Marking as duplicate...")
-                    duplicate_path = track.path / f"{new_filename} (Duplicate){file_extension}"
-                    os.rename(track.full_path, duplicate_path)
+                    current_duplicate_path = self.get_duplicate_name(new_path)
+                    new_duplicate_path = self.get_duplicate_name(track.full_path)
+                    if not current_duplicate_path.exists():
+                        os.rename(new_path, current_duplicate_path)
+                    if not new_duplicate_path.exists():
+                        os.rename(track.full_path, new_duplicate_path)
 
                 print("-" * len(new_file))
                 continue
@@ -187,18 +207,20 @@ class Renamer:
                     print(updated_track.full_path)
 
                     print_yellow("Marking as duplicates...")
-                    existing_duplicate_path = (
-                        existing_track.path / f"{existing_track.name} (Duplicate1){existing_track.extension}"
-                    )
-                    updated_duplicate_path = (
-                        updated_track.path / f"{updated_track.name} (Duplicate2){updated_track.extension}"
-                    )
+                    existing_duplicate_path = self.get_duplicate_name(existing_track.full_path)
+                    updated_duplicate_path = self.get_duplicate_name(updated_track.full_path)
 
-                    os.rename(existing_track.full_path, existing_duplicate_path)
-                    if track.full_path.exists():
-                        os.rename(track.full_path, updated_duplicate_path)
-                    elif updated_track.full_path.exists():
-                        os.rename(updated_track.full_path, updated_duplicate_path)
+                    try:
+                        os.rename(existing_track.full_path, existing_duplicate_path)
+                    except FileExistsError as e:
+                        print_red(f"Rename failed: {e}")
+                    try:
+                        if track.full_path.exists() and not updated_duplicate_path.exists():
+                            os.rename(track.full_path, updated_duplicate_path)
+                        elif updated_track.full_path.exists() and not updated_duplicate_path.exists():
+                            os.rename(updated_track.full_path, updated_duplicate_path)
+                    except FileExistsError as e:
+                        print_red(f"Rename failed: {e}")
                 else:
                     print_red("Multiple formats:", bold=True)
                     print(existing_track.full_path)
@@ -225,6 +247,15 @@ class Renamer:
 
         artist, title = filename.split(" - ", 1)
         return artist, title
+
+    @staticmethod
+    def get_duplicate_name(filepath: Path) -> Path:
+        current_datetime = datetime.datetime.now()
+        datetime_string = current_datetime.isoformat(timespec="milliseconds")
+        hash_object = hashlib.sha256(datetime_string.encode())
+        hash_digest = hash_object.hexdigest()
+        new_file_name = f"{filepath.stem} (Duplicate-{hash_digest[:8]}){filepath.suffix}"
+        return filepath.with_name(new_file_name)
 
     @staticmethod
     def confirm(message="Proceed") -> bool:
