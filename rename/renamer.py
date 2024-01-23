@@ -10,13 +10,13 @@ import colorama
 
 try:
     from colorprint import Color, get_color, print_bold, print_error, print_warn, print_yellow
-    from track import Track
     from formatter import Formatter
+    from track import Track
 except ModuleNotFoundError:
     # poetry run needs the full import path
     from rename.colorprint import Color, get_color, print_bold, print_error, print_warn, print_yellow
-    from rename.track import Track
     from rename.formatter import Formatter
+    from rename.track import Track
 
 try:
     # Workaround to be able to run tests on Apple Silicon while pytaglib is broken
@@ -67,7 +67,7 @@ class Renamer:
                 file_list.append(Track(file.stem, file.suffix, file.parent))
 
         if not file_list:
-            sys.exit("no audio files found!")
+            sys.exit("No audio files found")
 
         self.total_tracks = len(file_list)
 
@@ -206,11 +206,11 @@ class Renamer:
 @click.command()
 @click.help_option("-h", "--help")
 @click.argument("directory", type=click.Path(exists=True, file_okay=False, dir_okay=True), default=".")
-@click.option("--print", "-p", "print_only", is_flag=True, help="Only print changes")
-@click.option("--rename", "-r", is_flag=True, help="Rename all audio files")
-@click.option("--sort", "-s", is_flag=True, help="Sort audio files by name")
-@click.option("--tags", "-t", is_flag=True, help="Only fix tags")
 @click.option("--force", "-f", is_flag=True, help="Do not ask for confirmation")
+@click.option("--print", "-p", "print_only", is_flag=True, help="Only print changes")
+@click.option("--rename", "-r", is_flag=True, help="Rename all files")
+@click.option("--sort", "-s", is_flag=True, help="Sort audio files by name")
+@click.option("--tags", "-t", is_flag=True, help="Only fix tags, don't rename")
 def main(directory: str, rename: bool, sort: bool, print_only: bool, tags: bool, force: bool):
     """
     Check and rename audio files.
