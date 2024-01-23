@@ -1,0 +1,35 @@
+name: Python isort
+
+# Run either when pushing directly to main/master or in a PR targeting main/master
+on:
+  push:
+    branches:
+      - master
+      - main
+    paths:
+      - "**.py"
+      - "pyproject.toml"
+      - "poetry.lock"
+      - ".github/workflows/isort.yml"
+  pull_request:
+    paths:
+      - "**.py"
+      - "pyproject.toml"
+      - "poetry.lock"
+      - ".github/workflows/isort.yml"
+
+# https://github.com/marketplace/actions/python-isort
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python environment
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: isort
+        uses: isort/isort-action@v1.1.0

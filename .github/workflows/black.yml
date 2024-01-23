@@ -1,0 +1,36 @@
+name: Python black
+
+on:
+  push:
+    branches:
+      - master
+      - main
+    paths:
+      - "**.py"
+      - "pyproject.toml"
+      - "poetry.lock"
+      - ".github/workflows/black.yml"
+  pull_request:
+    paths:
+      - "**.py"
+      - "pyproject.toml"
+      - "poetry.lock"
+      - ".github/workflows/black.yml"
+
+# https://black.readthedocs.io/en/stable/integrations/github_actions.html
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python environment
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Black
+        uses: psf/black@stable
+        with:
+          options: "--check --verbose --diff --color"
