@@ -32,4 +32,6 @@ jobs:
           python-version: "3.11"
 
       - name: isort
-        uses: isort/isort-action@v1.1.0
+        uses: isort/isort-action@v1
+        with:
+          configuration: "--check-only --diff --verbose"

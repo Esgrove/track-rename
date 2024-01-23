@@ -52,6 +52,4 @@ jobs:
         run: poetry install --no-interaction
 
       - name: Run tests
-        run: |
-          poetry run pytest -v --cov=rename tests/
-          coverage report
+        run: poetry run pytest -v --cov=rename tests/
