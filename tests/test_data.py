@@ -1,6 +1,7 @@
 def _get_test_ids(data: list[tuple[str, str, str, str]]) -> tuple[str]:
     return tuple(name[1][:32] for name in data)
 
+
 # Data is in format:
 # 1. artist
 # 2. formatted artist

@@ -27,7 +27,9 @@ except ImportError:
 class Renamer:
     """Audio track tag and filename formatting."""
 
-    def __init__(self, path: Path, rename_files: bool, sort_files: bool, print_only: bool, tags_only: bool, force: bool):
+    def __init__(
+        self, path: Path, rename_files: bool, sort_files: bool, print_only: bool, tags_only: bool, force: bool
+    ):
         self.root: Path = path
         self.rename_files: bool = rename_files
         self.sort_files: bool = sort_files
