@@ -27,12 +27,13 @@ except ImportError:
 class Renamer:
     """Audio track tag and filename formatting."""
 
-    def __init__(self, path: Path, rename_files: bool, sort_files: bool, print_only: bool, tags_only: bool):
+    def __init__(self, path: Path, rename_files: bool, sort_files: bool, print_only: bool, tags_only: bool, force: bool):
         self.root: Path = path
         self.rename_files: bool = rename_files
         self.sort_files: bool = sort_files
         self.print_only: bool = print_only
         self.tags_only: bool = tags_only
+        self.force: bool = force
 
         self.file_list: list[Track] = []
         self.file_formats = (".mp3", ".flac", ".aif", ".aiff", ".m4a")
@@ -162,7 +163,7 @@ class Renamer:
                 print_bold("Fix tags:", Color.blue)
                 self.show_diff(current_tags, new_tags)
                 self.num_tags_fixed += 1
-                if not self.print_only and self.confirm():
+                if not self.print_only and (self.force or self.confirm()):
                     tag_data.tags["ARTIST"] = [formatted_artist]
                     tag_data.tags["TITLE"] = [formatted_title]
                     tag_data.save()
@@ -190,7 +191,7 @@ class Renamer:
                     print_bold("Rename file:", Color.yellow)
                     self.show_diff(file.filename, new_file)
                     self.num_renamed += 1
-                    if not self.print_only and self.confirm():
+                    if not self.print_only and (self.force or self.confirm()):
                         os.rename(file.full_path, new_path)
 
                     print("-" * len(new_file))
@@ -485,7 +486,8 @@ class Renamer:
 @click.option("--rename", "-r", is_flag=True, help="Rename all audio files")
 @click.option("--sort", "-s", is_flag=True, help="Sort audio files by name")
 @click.option("--tags", "-t", is_flag=True, help="Only fix tags")
-def main(directory: str, rename: bool, sort: bool, print_only: bool, tags: bool):
+@click.option("--force", "-f", is_flag=True, help="Do not ask for confirmation")
+def main(directory: str, rename: bool, sort: bool, print_only: bool, tags: bool, force: bool):
     """
     Check and rename audio files.
 
@@ -494,7 +496,7 @@ def main(directory: str, rename: bool, sort: bool, print_only: bool, tags: bool)
     filepath = Path(directory).resolve()
 
     try:
-        Renamer(filepath, rename, sort, print_only, tags).run()
+        Renamer(filepath, rename, sort, print_only, tags, force).run()
     except KeyboardInterrupt:
         click.echo("\ncancelled...")
 
