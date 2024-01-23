@@ -7,8 +7,11 @@ class Track:
         self.extension: str = extension
         self.path: Path = path
 
-        if self.extension[0] != ".":
-            self.extension = "." + self.extension
+        if not self.extension.startswith("."):
+            self.extension = f".{self.extension}"
+
+    def is_mp3(self) -> bool:
+        return self.extension == ".mp3"
 
     @property
     def filename(self):
@@ -18,13 +21,20 @@ class Track:
     def full_path(self):
         return self.path / self.filename
 
+    @property
+    def full_path_without_extension(self):
+        return self.path / self.name
+
     def __eq__(self, other):
         if isinstance(other, Track):
-            return self.name == other.name
+            return self.path == other.path and self.name == other.name
         if isinstance(other, str):
             return self.name == other
 
         return NotImplemented
+
+    def __hash__(self):
+        return hash(self.full_path_without_extension)
 
     def __ne__(self, other):
         return not self.__eq__(other)

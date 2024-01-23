@@ -81,17 +81,19 @@ class Renamer:
         """Format all tracks."""
         print_bold(f"Formatting {self.total_tracks} tracks...")
         current_path = self.root
-        for number, file in enumerate(self.file_list):
+
+        processed: dict[str, Track] = dict()
+        for number, track in enumerate(self.file_list):
             if not self.sort_files:
                 # Print current directory when iterating in directory order
-                if current_path != file.path:
-                    current_path = file.path
+                if current_path != track.path:
+                    current_path = track.path
                     print_bold(str(current_path), Color.magenta)
 
             # Check tags
-            tag_data = taglib.File(file.full_path)
+            tag_data = taglib.File(track.full_path)
             if not tag_data:
-                print_error(f"Failed to load tags for: '{file.full_path}'")
+                print_error(f"Failed to load tags for: '{track.full_path}'")
                 continue
 
             artist = "".join(tag_data.tags.get("ARTIST", []))
@@ -99,20 +101,21 @@ class Renamer:
             current_tags = f"{artist} - {title}"
 
             if not artist and not title:
-                print_warn(f"Missing tags: {file.full_path}")
-                artist, title = self.get_tags_from_filename(file.name)
+                print_warn(f"Missing tags: {track.full_path}")
+                artist, title = self.get_tags_from_filename(track.name)
             elif not artist:
-                print_warn(f"Missing artist tag: {file.full_path}")
-                artist, _ = self.get_tags_from_filename(file.name)
+                print_warn(f"Missing artist tag: {track.full_path}")
+                artist, _ = self.get_tags_from_filename(track.name)
             elif not title:
-                print_warn(f"Missing title tag: {file.full_path}")
-                _, title = self.get_tags_from_filename(file.name)
+                print_warn(f"Missing title tag: {track.full_path}")
+                _, title = self.get_tags_from_filename(track.name)
 
             formatted_artist, formatted_title = self.formatter.format_track(artist, title)
             new_tags = f"{formatted_artist} - {formatted_title}"
 
             tag_changed = False
             track_printed = False
+            track_renamed = False
             if current_tags != new_tags:
                 print(f"{number}/{self.total_tracks}:")
                 track_printed = True
@@ -134,33 +137,61 @@ class Renamer:
 
             # Check file name
             file_artist, file_title = self.formatter.format_filename(formatted_artist, formatted_title)
-            new_file = f"{file_artist} - {file_title}{file.extension}"
-            new_path = file.path / new_file
+            new_filename = f"{file_artist} - {file_title}"
+            new_file = f"{new_filename}{track.extension}"
+            new_path = track.path / new_file
 
             if not new_path.is_file():
                 # Rename files if flag was given or if tags were not changed
                 if self.rename_files or not tag_changed:
                     if not track_printed:
                         print(f"{number}/{self.total_tracks}:")
+                        track_printed = True
 
                     print_yellow("Rename file:", bold=True)
-                    self.show_diff(file.filename, new_file)
+                    self.show_diff(track.filename, new_file)
                     self.num_renamed += 1
                     if not self.print_only and (self.force or self.confirm()):
-                        os.rename(file.full_path, new_path)
+                        os.rename(track.full_path, new_path)
 
+                    track_renamed = True
                     print("-" * len(new_file))
-            elif new_path != file.full_path:
+            elif new_path != track.full_path:
                 # This file is a duplicate of an existing file
                 if not track_printed:
                     print(f"{number}/{self.total_tracks}:")
 
-                print_red(f"File exists: {new_file}")
+                print_red(f"Duplicate:", bold=True)
+                print(new_file)
                 if not self.print_only and (self.force or self.confirm("Delete duplicate")):
-                    file.full_path.unlink()
+                    track.full_path.unlink()
                     self.num_removed += 1
 
                 print("-" * len(new_file))
+                continue
+
+            updated_track = Track(new_path.stem, new_path.suffix, new_path.parent) if track_renamed else track
+            if new_filename in processed:
+                if not track_printed:
+                    print(f"{number}/{self.total_tracks}:")
+
+                existing_track = processed[new_filename]
+                print_red("Multiple formats:", bold=True)
+                print(existing_track.full_path)
+                print(updated_track.full_path)
+                if existing_track.is_mp3():
+                    if not self.print_only and (self.force or self.confirm(f"Delete {updated_track.extension}")):
+                        updated_track.full_path.unlink()
+                        self.num_removed += 1
+                else:
+                    if not self.print_only and (self.force or self.confirm(f"Delete {existing_track.extension}")):
+                        existing_track.full_path.unlink()
+                        self.num_removed += 1
+                        processed[new_filename] = updated_track
+
+                print("-" * len(str(existing_track.full_path)))
+            else:
+                processed[new_filename] = updated_track
 
     @staticmethod
     def get_tags_from_filename(filename: str) -> (str, str):
