@@ -17,6 +17,21 @@ BALANCE_PARENTHESES_TEST_DATA = [
     ),
 ]
 
+NESTED_PARENTHESES_TEST_DATA = [
+    (
+        "Janet Jackson",
+        "Janet Jackson",
+        "This is a test (with some (nested) parentheses (and (some) more))",
+        "This is a test (with some) (nested parentheses) (and) (some more)",
+    ),
+    (
+        "Krewella",
+        "Krewella",
+        "Live For The Night (Simo 128 (70) (Trayze Rmx) Transition) (Quick)",
+        "Live For The Night (Simo 128) (70) (Trayze Rmx Transition) (Quick)",
+    ),
+]
+
 FEAT_TEST_DATA = [
     (
         "seige",
@@ -188,5 +203,6 @@ WHITESPACE_TEST_DATA = [
 BALANCE_PARENTHESES_IDS = _get_test_ids(BALANCE_PARENTHESES_TEST_DATA)
 FEAT_IDS = _get_test_ids(FEAT_TEST_DATA)
 FORMATTING_IDS = _get_test_ids(FORMATTING_TEST_DATA)
+NESTED_PARENTHESES_IDS = _get_test_ids(NESTED_PARENTHESES_TEST_DATA)
 PARENTHESES_IDS = _get_test_ids(PARENTHESES_TEST_DATA)
 WHITESPACE_IDS = _get_test_ids(WHITESPACE_TEST_DATA)

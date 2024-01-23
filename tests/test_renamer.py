@@ -4,12 +4,14 @@ import pytest
 
 from rename.renamer import Renamer
 from tests.test_data import (
-    BALANCE_PARENTHESES_TEST_DATA,
     BALANCE_PARENTHESES_IDS,
+    BALANCE_PARENTHESES_TEST_DATA,
     FEAT_IDS,
     FEAT_TEST_DATA,
     FORMATTING_IDS,
     FORMATTING_TEST_DATA,
+    NESTED_PARENTHESES_IDS,
+    NESTED_PARENTHESES_TEST_DATA,
     PARENTHESES_IDS,
     PARENTHESES_TEST_DATA,
     WHITESPACE_IDS,
@@ -42,6 +44,13 @@ def test_add_parenthesis(renamer, artist, correct_artist, title, correct_title):
     "artist, correct_artist, title, correct_title", BALANCE_PARENTHESES_TEST_DATA, ids=BALANCE_PARENTHESES_IDS
 )
 def test_balance_parenthesis(renamer, artist, correct_artist, title, correct_title):
+    _check_format_track(renamer, artist, title, correct_artist, correct_title)
+
+
+@pytest.mark.parametrize(
+    "artist, correct_artist, title, correct_title", NESTED_PARENTHESES_TEST_DATA, ids=NESTED_PARENTHESES_IDS
+)
+def test_nested_parenthesis(renamer, artist, correct_artist, title, correct_title):
     _check_format_track(renamer, artist, title, correct_artist, correct_title)
 
 

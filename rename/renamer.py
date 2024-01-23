@@ -232,6 +232,7 @@ class Renamer:
 
         artist, title = self.move_feat_from_title_to_artist(artist, title)
 
+        title = self.fix_nested_parentheses(title)
         title = self.balance_parenthesis(title)
         title = self.wrap_text_after_parentheses(title)
 
@@ -250,12 +251,12 @@ class Renamer:
         return artist, title
 
     def replace_dirty_suffix(self, text: str) -> str:
-        pattern = re.compile(r'\s*-\s*dirty$', re.IGNORECASE)
+        pattern = re.compile(r"\s*-\s*dirty$", re.IGNORECASE)
         # Replace the matched part with " (Clean)"
         return pattern.sub(" (Dirty)", text)
 
     def replace_clean_suffix(self, text: str) -> str:
-        pattern = re.compile(r'\s*-\s*clean$', re.IGNORECASE)
+        pattern = re.compile(r"\s*-\s*clean$", re.IGNORECASE)
         # Replace the matched part with " (Clean)"
         return pattern.sub(" (Clean)", text)
 
@@ -271,6 +272,36 @@ class Renamer:
         file_title = re.sub(r"\s+", " ", file_title)
 
         return file_artist, file_title
+
+    def fix_nested_parentheses(self, text: str) -> str:
+        # Initialize a stack to keep track of parentheses
+        stack = []
+        result = []
+
+        for char in text:
+            if char == "(":
+                # If the stack is not empty and the top element is also '(', add a closing ')' before the new '('
+                if stack and stack[-1] == "(":
+                    result.append(") ")
+                stack.append(char)
+                result.append(char)
+            elif char == ")":
+                # If the stack is not empty, pop an element from the stack
+                if stack:
+                    stack.pop()
+                # Add the closing parenthesis only if the stack is empty or the top element is not '('
+                if not stack or stack[-1] != "(":
+                    result.append(char)
+            else:
+                # Add any other characters to the result
+                result.append(char)
+
+        # If there are any remaining opening parentheses, close them
+        while stack:
+            stack.pop()
+            result.append(")")
+
+        return "".join(result).replace(" )", ")").replace("( ", "(")
 
     def balance_parenthesis(self, title):
         """Check parenthesis match and insert missing."""
@@ -451,7 +482,7 @@ class Renamer:
 @click.help_option("-h", "--help")
 @click.argument("directory", type=click.Path(exists=True, file_okay=False, dir_okay=True), default=".")
 @click.option("--print", "-p", "print_only", is_flag=True, help="Only print changes")
-@click.option("--rename", "-r", is_flag=True, help="Rename audio files")
+@click.option("--rename", "-r", is_flag=True, help="Rename all audio files")
 @click.option("--sort", "-s", is_flag=True, help="Sort audio files by name")
 @click.option("--tags", "-t", is_flag=True, help="Only fix tags")
 def main(directory: str, rename: bool, sort: bool, print_only: bool, tags: bool):
