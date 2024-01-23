@@ -32,7 +32,8 @@ if [ -z "$(command -v cargo)" ]; then
     exit 1
 fi
 
-pushd "$REPO_ROOT" > /dev/null
+cd "$REPO_ROOT"
+
 cargo build --release
 
 if [ "$PLATFORM" = windows ]; then
@@ -44,5 +45,4 @@ fi
 rm -f "$executable"
 mv ./target/release/"$executable" "$executable"
 ./"$executable" --version
-./"$executable" -h
-popd > /dev/null
+./"$executable" -h || :
