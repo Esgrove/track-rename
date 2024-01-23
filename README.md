@@ -24,7 +24,10 @@ Options:
   -r, --rename  Rename all audio files
   -s, --sort    Sort audio files by name
   -t, --tags    Only fix tags
+  -f, --force   Do not ask for confirmation
 ```
+
+See the [test data](./tests/test_data.py) for formatting examples.
 
 ## Tests
 
