@@ -137,8 +137,9 @@ class Renamer:
 
             # Check file name
             file_artist, file_title = self.formatter.format_filename(formatted_artist, formatted_title)
+            file_extension = ".aif" if track.extension == ".aiff" else track.extension
             new_filename = f"{file_artist} - {file_title}"
-            new_file = f"{new_filename}{track.extension}"
+            new_file = f"{new_filename}{file_extension}"
             new_path = track.path / new_file
 
             if not new_path.is_file():
