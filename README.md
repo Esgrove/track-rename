@@ -7,15 +7,20 @@ CLI tool for formatting and renaming audio files.
 - Python 3.11+
 - [Poetry](https://github.com/python-poetry/poetry)
 
+Install Python packages:
 ```shell
 poetry install
 ```
 
 ## Usage
 
-```console
+Run with poetry script or directly:
+```shell
+poetry run rename --help
 poetry run python rename/renamer.py --help
+```
 
+```console
 Usage: renamer.py [OPTIONS] [DIRECTORY]
 
   Check and rename audio files.
@@ -24,11 +29,11 @@ Usage: renamer.py [OPTIONS] [DIRECTORY]
 
 Options:
   -h, --help    Show this message and exit.
-  -p, --print   Only print changes
-  -r, --rename  Rename all audio files
-  -s, --sort    Sort audio files by name
-  -t, --tags    Only fix tags
   -f, --force   Do not ask for confirmation
+  -p, --print   Only print changes
+  -r, --rename  Rename all files
+  -s, --sort    Sort audio files by name
+  -t, --tags    Only fix tags, don't rename
 ```
 
 See the [test data](./tests/test_data.py) for formatting examples.
