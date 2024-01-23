@@ -27,9 +27,9 @@ class Formatter:
             ("!!!", ""),
             ("...", " "),
             ("..", " "),
-            ("***", ""),
-            ("**", ""),
-            ("*", ""),
+            (" ***", ""),
+            (" **", ""),
+            (" * ", ""),
         )
         self.title_substitutes = (
             (" (Original Mix)", ""),
@@ -52,9 +52,13 @@ class Formatter:
             ("(7in ", "(7'' "),
             (" 7in ", " 7'' "),
             ("Intro/Outro", "Intro-Outro"),
-            ("In/Out", "Intro-Outro"),
+            (" In/Out", " Intro-Outro"),
+            ("In/Out ", "Intro-Outro "),
             ("Aca In/Aca Out", "Acapella In-Out"),
             ("Intro/Outro", "Intro"),
+            ("Intro-Outro", "Intro"),
+            ("In+Out", "In-Out"),
+            ("In+out", "In-Out")
         )
         self.regex_substitutes = (
             (r"[\[{]+", "("),
@@ -83,10 +87,10 @@ class Formatter:
         if title.startswith(f"{artist} - "):
             title = title.replace(f"{artist} - ", "", 1)
 
-        if artist.islower() or (artist.isupper() and len(artist) > 6):
+        if artist.islower() or (artist.isupper() and len(artist) > 12):
             artist = titlecase(artist)
 
-        if title.islower() or (title.isupper() and len(title) > 6):
+        if title.islower() or (title.isupper() and len(title) > 12):
             title = titlecase(title)
 
         if " clean" in title.lower():
