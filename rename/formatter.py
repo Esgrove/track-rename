@@ -26,6 +26,7 @@ class Formatter:
             (" - ) ", ")"),
             ("!!!", ""),
             ("...", " "),
+            ("..", " "),
             ("***", ""),
             ("**", ""),
             ("*", ""),
@@ -50,6 +51,10 @@ class Formatter:
             ("(12in ", "(12'' "),
             ("(7in ", "(7'' "),
             (" 7in ", " 7'' "),
+            ("Intro/Outro", "Intro-Outro"),
+            ("In/Out", "Intro-Outro"),
+            ("Aca In/Aca Out", "Acapella In-Out"),
+            ("Intro/Outro", "Intro"),
         )
         self.regex_substitutes = (
             (r"[\[{]+", "("),
