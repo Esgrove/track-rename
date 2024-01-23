@@ -27,7 +27,7 @@ class Track:
 
     def __eq__(self, other):
         if isinstance(other, Track):
-            return self.path == other.path and self.name == other.name
+            return self.name == other.name
         if isinstance(other, str):
             return self.name == other
 

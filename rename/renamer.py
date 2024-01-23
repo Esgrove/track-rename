@@ -162,7 +162,7 @@ class Renamer:
                 if not track_printed:
                     print(f"{number}/{self.total_tracks}:")
 
-                print_red(f"Duplicate:", bold=True)
+                print_red("Duplicate:", bold=True)
                 print(new_file)
                 if not self.print_only and (self.force or self.confirm("Delete duplicate")):
                     track.full_path.unlink()
