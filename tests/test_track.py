@@ -9,7 +9,7 @@ def test_constructor():
     track = Track("song", ".mp3", Path("/user/test/music"))
     assert track.name == "song"
     assert track.extension == ".mp3"
-    assert track.path == Path("/user/test/music")
+    assert track.root == Path("/user/test/music")
 
     # Test automatic addition of dot in extension
     track = Track("song", "mp3", Path("/user/test/music"))

@@ -1,17 +1,37 @@
 from pathlib import Path
+from typing import Self
 
 
 class Track:
-    def __init__(self, name: str, extension: str, path: Path):
+    def __init__(self, name: str, extension: str, path: Path, number: int | None = None):
         self.name: str = name
         self.extension: str = extension
-        self.path: Path = path
+        self.root: Path = path
+        self.number: int | None = number
+
+        self.original_tags: str = ""
+        self.formatted_tags: str = ""
+        self.tags_updated: bool = False
+        self.renamed: bool = False
+        self.printed: bool = False
 
         if not self.extension.startswith("."):
             self.extension = f".{self.extension}"
 
+    def show(self, total_tracks: int):
+        """Print track if it has not been already."""
+        if not self.printed:
+            print(f"{self.number}/{total_tracks}:")
+            self.printed = True
+
     def is_mp3(self) -> bool:
         return self.extension == ".mp3"
+
+    def is_aif(self) -> bool:
+        return self.extension == ".aif" or self.extension == ".aiff"
+
+    def track_with_number(self, number: int) -> Self:
+        return Track(self.name, self.extension, self.root, number=number)
 
     @property
     def filename(self):
@@ -19,11 +39,11 @@ class Track:
 
     @property
     def full_path(self):
-        return self.path / self.filename
+        return self.root / self.filename
 
     @property
     def full_path_without_extension(self):
-        return self.path / self.name
+        return self.root / self.name
 
     def __eq__(self, other):
         if isinstance(other, Track):

@@ -50,6 +50,7 @@ class Renamer:
         self.num_removed = 0
 
         self.formatter = Formatter()
+        self.processed: dict[str, Track] = dict()
 
     def run(self):
         """Gather and process audio files."""
@@ -83,173 +84,177 @@ class Renamer:
     def process_files(self) -> None:
         """Format all tracks."""
         print_bold(f"Formatting {self.total_tracks} tracks...")
-        current_path = self.root
+        current_root = self.root
 
-        processed: dict[str, Track] = dict()
         for number, track in enumerate(self.file_list):
             if not self.sort_files:
                 # Print current directory when iterating in directory order
-                if current_path != track.path:
-                    current_path = track.path
-                    print_bold(str(current_path), Color.magenta)
+                if current_root != track.root:
+                    current_root = track.root
+                    print_bold(str(current_root), Color.magenta)
 
+            # Might have deleted a duplicate track earlier for example
             if not track.full_path.exists():
-                print_red(f"File no longer exists: {track.full_path}")
+                print_red(f"File no longer exists: '{track.full_path}'")
                 continue
 
-            # Check tags
-            attempts = 0
-            tag_data = None
-            while attempts < 2 and not tag_data:
-                try:
-                    tag_data = taglib.File(track.full_path)
-                except OSError as e:
-                    print_red(str(e))
-                    attempts += 1
-                    time.sleep(1)
+            self.process_track(track.track_with_number(number))
 
-            if not tag_data:
-                print_error(f"Failed to load tags for: '{track.full_path}'")
-                continue
+    def process_track(self, track: Track) -> None:
+        """Format and rename one track."""
+        # Check tags
+        attempts = 0
+        tag_data = None
+        while attempts < 2 and not tag_data:
+            try:
+                tag_data = taglib.File(track.full_path)
+            except OSError as e:
+                print_red(str(e))
+                attempts += 1
+                time.sleep(1)
 
-            artist = "".join(tag_data.tags.get("ARTIST", []))
-            title = "".join(tag_data.tags.get("TITLE", []))
-            current_tags = f"{artist} - {title}"
+        if not tag_data:
+            print_error(f"Failed to load tags for: '{track.full_path}'")
+            return
 
-            if not artist and not title:
-                print_warn(f"Missing tags: {track.full_path}")
-                artist, title = self.get_tags_from_filename(track.name)
-            elif not artist:
-                print_warn(f"Missing artist tag: {track.full_path}")
-                artist, _ = self.get_tags_from_filename(track.name)
-            elif not title:
-                print_warn(f"Missing title tag: {track.full_path}")
-                _, title = self.get_tags_from_filename(track.name)
+        artist = "".join(tag_data.tags.get("ARTIST", []))
+        title = "".join(tag_data.tags.get("TITLE", []))
+        current_tags = f"{artist} - {title}"
 
-            formatted_artist, formatted_title = self.formatter.format_tags(artist, title)
-            new_tags = f"{formatted_artist} - {formatted_title}"
+        if not artist and not title:
+            print_warn(f"Missing tags: {track.full_path}")
+            artist, title = self.get_tags_from_filename(track.name)
+        elif not artist:
+            print_warn(f"Missing artist tag: {track.full_path}")
+            artist, _ = self.get_tags_from_filename(track.name)
+        elif not title:
+            print_warn(f"Missing title tag: {track.full_path}")
+            _, title = self.get_tags_from_filename(track.name)
 
-            tag_changed = False
-            track_printed = False
-            track_renamed = False
-            if current_tags != new_tags:
-                print(f"{number}/{self.total_tracks}:")
-                track_printed = True
-                print_bold("Fix tags:", Color.blue)
-                self.show_diff(current_tags, new_tags)
-                self.num_tags_fixed += 1
+        formatted_artist, formatted_title = self.formatter.format_tags(artist, title)
+        new_tags = f"{formatted_artist} - {formatted_title}"
+
+        if current_tags != new_tags:
+            track.show(self.total_tracks)
+            print_bold("Fix tags:", Color.blue)
+            self.show_diff(current_tags, new_tags)
+            self.num_tags_fixed += 1
+            if not self.print_only and (self.force or self.confirm()):
+                tag_data.tags["ARTIST"] = [formatted_artist]
+                tag_data.tags["TITLE"] = [formatted_title]
+                tag_data.save()
+                track.tag_changed = True
+
+            print("-" * len(new_tags))
+
+        tag_data.close()
+
+        if self.tags_only:
+            return
+
+        # Check file name
+        file_artist, file_title = self.formatter.format_filename(formatted_artist, formatted_title)
+        file_extension = ".aif" if track.extension == ".aiff" else track.extension
+        new_filename = f"{file_artist} - {file_title}"
+        new_file = f"{new_filename}{file_extension}"
+        new_path = track.root / new_file
+
+        if not new_path.is_file():
+            # Rename files if flag was given or if tags were not changed
+            if self.rename_files or not track.tag_changed:
+                track.show(self.total_tracks)
+
+                print_yellow("Rename file:", bold=True)
+                self.show_diff(track.filename, new_file)
+                self.num_renamed += 1
                 if not self.print_only and (self.force or self.confirm()):
-                    tag_data.tags["ARTIST"] = [formatted_artist]
-                    tag_data.tags["TITLE"] = [formatted_title]
-                    tag_data.save()
-                    tag_changed = True
+                    os.rename(track.full_path, new_path)
 
-                print("-" * len(new_tags))
-
-            tag_data.close()
-
-            if self.tags_only:
-                continue
-
-            # Check file name
-            file_artist, file_title = self.formatter.format_filename(formatted_artist, formatted_title)
-            file_extension = ".aif" if track.extension == ".aiff" else track.extension
-            new_filename = f"{file_artist} - {file_title}"
-            new_file = f"{new_filename}{file_extension}"
-            new_path = track.path / new_file
-
-            if not new_path.is_file():
-                # Rename files if flag was given or if tags were not changed
-                if self.rename_files or not tag_changed:
-                    if not track_printed:
-                        print(f"{number}/{self.total_tracks}:")
-                        track_printed = True
-
-                    print_yellow("Rename file:", bold=True)
-                    self.show_diff(track.filename, new_file)
-                    self.num_renamed += 1
-                    if not self.print_only and (self.force or self.confirm()):
-                        os.rename(track.full_path, new_path)
-
-                    track_renamed = True
-                    print("-" * len(new_file))
-            elif new_path != track.full_path:
-                # This file is a duplicate of an existing file
-                if not track_printed:
-                    print(f"{number}/{self.total_tracks}:")
-
-                print_red("Duplicate:", bold=True)
-                print(new_file)
-                if not self.print_only and (self.force or self.confirm("Delete duplicate")):
-                    track.full_path.unlink()
-                    self.num_removed += 1
-                else:
-                    print_yellow("Marking as duplicate...")
-                    current_duplicate_path = self.get_duplicate_name(new_path)
-                    new_duplicate_path = self.get_duplicate_name(track.full_path)
-                    if not current_duplicate_path.exists():
-                        os.rename(new_path, current_duplicate_path)
-                    if not new_duplicate_path.exists():
-                        os.rename(track.full_path, new_duplicate_path)
-
+                track.renamed = True
                 print("-" * len(new_file))
-                continue
+        elif new_path != track.full_path:
+            # This file is a duplicate of an existing file
+            track.show(self.total_tracks)
 
-            updated_track = Track(new_path.stem, new_path.suffix, new_path.parent) if track_renamed else track
-            if new_filename in processed and processed[new_filename].full_path.exists():
-                if not track_printed:
-                    print(f"{number}/{self.total_tracks}:")
-
-                existing_track = processed[new_filename]
-                if existing_track.extension == updated_track.extension:
-                    print_red("Duplicate:", bold=True)
-                    print(existing_track.full_path)
-                    print(updated_track.full_path)
-
-                    print_yellow("Marking as duplicates...")
-                    existing_duplicate_path = self.get_duplicate_name(existing_track.full_path)
-                    updated_duplicate_path = self.get_duplicate_name(updated_track.full_path)
-
-                    try:
-                        os.rename(existing_track.full_path, existing_duplicate_path)
-                    except FileExistsError as e:
-                        print_red(f"Rename failed: {e}")
-                    try:
-                        if track.full_path.exists() and not updated_duplicate_path.exists():
-                            os.rename(track.full_path, updated_duplicate_path)
-                        elif updated_track.full_path.exists() and not updated_duplicate_path.exists():
-                            os.rename(updated_track.full_path, updated_duplicate_path)
-                    except FileExistsError as e:
-                        print_red(f"Rename failed: {e}")
-                else:
-                    print_red("Multiple formats:", bold=True)
-                    print(existing_track.full_path)
-                    print(updated_track.full_path)
-                    if existing_track.is_mp3():
-                        if not self.print_only and (self.force or self.confirm(f"Delete {existing_track.extension}")):
-                            existing_track.full_path.unlink()
-                            processed[new_filename] = updated_track
-                            self.num_removed += 1
-                    else:
-                        if not self.print_only and (self.force or self.confirm(f"Delete {updated_track.extension}")):
-                            updated_track.full_path.unlink()
-                            self.num_removed += 1
-
-                print("-" * len(str(existing_track.full_path)))
+            print_red("Duplicate:", bold=True)
+            print(new_file)
+            if not self.print_only and (self.force or self.confirm("Delete duplicate")):
+                track.full_path.unlink()
+                self.num_removed += 1
             else:
-                processed[new_filename] = updated_track
+                print_yellow("Marking as duplicate...")
+                current_duplicate_path = self.append_duplicate_tag_to_name(new_path)
+                new_duplicate_path = self.append_duplicate_tag_to_name(track.full_path)
+                if not current_duplicate_path.exists():
+                    os.rename(new_path, current_duplicate_path)
+                if not new_duplicate_path.exists():
+                    os.rename(track.full_path, new_duplicate_path)
+
+            print("-" * len(new_file))
+            return
+
+        updated_track = Track(new_path.stem, new_path.suffix, new_path.parent) if track.renamed else track
+        if new_filename in self.processed and self.processed[new_filename].full_path.exists():
+            track.show(self.total_tracks)
+
+            existing_track = self.processed[new_filename]
+            if existing_track.extension == updated_track.extension:
+                print_red("Duplicate:", bold=True)
+                print(existing_track.full_path)
+                print(updated_track.full_path)
+
+                print_yellow("Marking as duplicates...")
+                existing_duplicate_path = self.append_duplicate_tag_to_name(existing_track.full_path)
+                updated_duplicate_path = self.append_duplicate_tag_to_name(updated_track.full_path)
+
+                try:
+                    os.rename(existing_track.full_path, existing_duplicate_path)
+                except FileExistsError as e:
+                    print_red(f"Rename failed: {e}")
+                try:
+                    if track.full_path.exists() and not updated_duplicate_path.exists():
+                        os.rename(track.full_path, updated_duplicate_path)
+                    elif updated_track.full_path.exists() and not updated_duplicate_path.exists():
+                        os.rename(updated_track.full_path, updated_duplicate_path)
+                except FileExistsError as e:
+                    print_red(f"Rename failed: {e}")
+            else:
+                print_red("Multiple formats:", bold=True)
+                print(existing_track.full_path)
+                print(updated_track.full_path)
+                if existing_track.is_mp3():
+                    if not self.print_only and (self.force or self.confirm(f"Delete {existing_track.extension}")):
+                        existing_track.full_path.unlink()
+                        self.processed[new_filename] = updated_track
+                        self.num_removed += 1
+                else:
+                    if not self.print_only and (self.force or self.confirm(f"Delete {updated_track.extension}")):
+                        updated_track.full_path.unlink()
+                        self.num_removed += 1
+
+            print("-" * len(str(existing_track.full_path)))
+        else:
+            self.processed[new_filename] = updated_track
 
     @staticmethod
     def get_tags_from_filename(filename: str) -> (str, str):
+        """
+        Convert filename to artist and title tags.
+        Expects filename to be in format 'artist - title'.
+        """
         if " - " not in filename:
             print_error(f"Can't parse tag data from malformed filename: {filename}")
             return "", ""
 
         artist, title = filename.split(" - ", 1)
-        return artist, title
+        return str(artist).strip(), str(title).strip()
 
     @staticmethod
-    def get_duplicate_name(filepath: Path) -> Path:
+    def append_duplicate_tag_to_name(filepath: Path) -> Path:
+        """
+        Add a duplicate string with a short hash based on current timestamp to
+        create a unique identifier.
+        """
         current_datetime = datetime.datetime.now()
         datetime_string = current_datetime.isoformat(timespec="milliseconds")
         hash_object = hashlib.sha256(datetime_string.encode())
@@ -268,7 +273,7 @@ class Renamer:
 
     @staticmethod
     def show_diff(old: str, new: str) -> None:
-        """Print a stacked diff of the changes."""
+        """Print a stacked colorized diff of the changes."""
         # http://stackoverflow.com/a/788780
         sequence = difflib.SequenceMatcher(None, old, new)
         diff_old = []
@@ -295,6 +300,7 @@ class Renamer:
         print(new)
 
     def print_stats(self):
+        """Print number of changes made."""
         print_bold("Finished", Color.green)
         print(f"Tags:   {self.num_tags_fixed}")
         print(f"Rename: {self.num_renamed}")
