@@ -9,8 +9,11 @@ class Track:
         self.root: Path = path
         self.number: int | None = number
 
-        self.original_tags: str = ""
-        self.formatted_tags: str = ""
+        self.artist: str = ""
+        self.title: str = ""
+        self.formatted_artist: str = ""
+        self.formatted_title: str = ""
+
         self.tags_updated: bool = False
         self.renamed: bool = False
         self.printed: bool = False
@@ -30,8 +33,20 @@ class Track:
     def is_aif(self) -> bool:
         return self.extension == ".aif" or self.extension == ".aiff"
 
-    def track_with_number(self, number: int) -> Self:
+    def new_with_number(self, number: int) -> Self:
         return Track(self.name, self.extension, self.root, number=number)
+
+    @property
+    def original_tags(self):
+        return f"{self.artist} - {self.title}"
+
+    @property
+    def formatted_tags(self):
+        return f"{self.formatted_artist} - {self.formatted_title}"
+
+    @property
+    def formatted_extension(self):
+        return ".aif" if self.extension.lower() == ".aiff" else self.extension.lower()
 
     @property
     def filename(self):

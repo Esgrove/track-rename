@@ -7,6 +7,7 @@ import os
 import sys
 import time
 from pathlib import Path
+from typing import re
 
 import click
 import colorama
@@ -48,6 +49,7 @@ class Renamer:
         self.num_renamed = 0
         self.num_tags_fixed = 0
         self.num_removed = 0
+        self.num_duplicates = 0
 
         self.formatter = Formatter()
         self.processed: dict[str, Track] = dict()
@@ -93,16 +95,23 @@ class Renamer:
                     current_root = track.root
                     print_bold(str(current_root), Color.magenta)
 
-            # Might have deleted a duplicate track earlier for example
+            # Might have deleted or renamed a duplicate track earlier
             if not track.full_path.exists():
                 print_red(f"File no longer exists: '{track.full_path}'")
                 continue
 
-            self.process_track(track.track_with_number(number))
+            self.process_track(track.new_with_number(number))
 
     def process_track(self, track: Track) -> None:
-        """Format and rename one track."""
-        # Check tags
+        """Format tags and rename one track."""
+        track = self.process_tags(track)
+        if self.tags_only or not track:
+            return
+
+        self.rename_track(track)
+
+    def process_tags(self, track) -> Track | None:
+        """Read and format tags."""
         attempts = 0
         tag_data = None
         while attempts < 2 and not tag_data:
@@ -115,11 +124,10 @@ class Renamer:
 
         if not tag_data:
             print_error(f"Failed to load tags for: '{track.full_path}'")
-            return
+            return None
 
         artist = "".join(tag_data.tags.get("ARTIST", []))
         title = "".join(tag_data.tags.get("TITLE", []))
-        current_tags = f"{artist} - {title}"
 
         if not artist and not title:
             print_warn(f"Missing tags: {track.full_path}")
@@ -131,13 +139,18 @@ class Renamer:
             print_warn(f"Missing title tag: {track.full_path}")
             _, title = self.get_tags_from_filename(track.name)
 
-        formatted_artist, formatted_title = self.formatter.format_tags(artist, title)
-        new_tags = f"{formatted_artist} - {formatted_title}"
+        track.artist = artist
+        track.title = title
 
-        if current_tags != new_tags:
+        formatted_artist, formatted_title = self.formatter.format_tags(artist, title)
+
+        track.formatted_artist = formatted_artist
+        track.formatted_title = formatted_title
+
+        if track.original_tags != track.formatted_tags:
             track.show(self.total_tracks)
             print_bold("Fix tags:", Color.blue)
-            self.show_diff(current_tags, new_tags)
+            self.show_diff(track.original_tags, track.formatted_tags)
             self.num_tags_fixed += 1
             if not self.print_only and (self.force or self.confirm()):
                 tag_data.tags["ARTIST"] = [formatted_artist]
@@ -145,39 +158,36 @@ class Renamer:
                 tag_data.save()
                 track.tag_changed = True
 
-            print("-" * len(new_tags))
+            self.print_divider(track.formatted_tags)
 
         tag_data.close()
 
-        if self.tags_only:
-            return
+        return track
 
-        # Check file name
-        file_artist, file_title = self.formatter.format_filename(formatted_artist, formatted_title)
-        file_extension = ".aif" if track.extension == ".aiff" else track.extension
-        new_filename = f"{file_artist} - {file_title}"
-        new_file = f"{new_filename}{file_extension}"
-        new_path = track.root / new_file
+    def rename_track(self, track: Track) -> None:
+        """Format filename and rename if needed."""
+        file_artist, file_title = self.formatter.format_filename(track.formatted_artist, track.formatted_title)
+        formatted_name = f"{file_artist} - {file_title}"
+        formatted_filename = f"{formatted_name}{track.formatted_extension}"
+        new_path = track.root / formatted_filename
 
-        if not new_path.is_file():
-            # Rename files if flag was given or if tags were not changed
-            if self.rename_files or not track.tag_changed:
+        if not new_path.exists():
+            # Rename file if rename flag was given or if tags were not changed
+            if self.rename_files or not track.tags_updated:
                 track.show(self.total_tracks)
-
                 print_yellow("Rename file:", bold=True)
-                self.show_diff(track.filename, new_file)
-                self.num_renamed += 1
+                self.show_diff(track.filename, formatted_filename)
                 if not self.print_only and (self.force or self.confirm()):
                     os.rename(track.full_path, new_path)
+                    track.renamed = True
 
-                track.renamed = True
-                print("-" * len(new_file))
+                self.num_renamed += 1
+                self.print_divider(formatted_filename)
         elif new_path != track.full_path:
-            # This file is a duplicate of an existing file
+            # This file is a duplicate of an existing file in the same root directory
             track.show(self.total_tracks)
-
             print_red("Duplicate:", bold=True)
-            print(new_file)
+            print(formatted_filename)
             if not self.print_only and (self.force or self.confirm("Delete duplicate")):
                 track.full_path.unlink()
                 self.num_removed += 1
@@ -190,14 +200,18 @@ class Renamer:
                 if not new_duplicate_path.exists():
                     os.rename(track.full_path, new_duplicate_path)
 
-            print("-" * len(new_file))
+                self.num_duplicates += 1
+
+            self.print_divider(formatted_filename)
             return
 
-        updated_track = Track(new_path.stem, new_path.suffix, new_path.parent) if track.renamed else track
-        if new_filename in self.processed and self.processed[new_filename].full_path.exists():
-            track.show(self.total_tracks)
+        self.check_for_duplicates(track, formatted_name, new_path)
 
-            existing_track = self.processed[new_filename]
+    def check_for_duplicates(self, track: Track, formatted_name: str, new_path: Path):
+        updated_track = Track(new_path.stem, new_path.suffix, new_path.parent) if track.renamed else track
+        if formatted_name in self.processed and self.processed[formatted_name].full_path.exists():
+            track.show(self.total_tracks)
+            existing_track = self.processed[formatted_name]
             if existing_track.extension == updated_track.extension:
                 print_red("Duplicate:", bold=True)
                 print(existing_track.full_path)
@@ -207,17 +221,13 @@ class Renamer:
                 existing_duplicate_path = self.append_duplicate_tag_to_name(existing_track.full_path)
                 updated_duplicate_path = self.append_duplicate_tag_to_name(updated_track.full_path)
 
-                try:
-                    os.rename(existing_track.full_path, existing_duplicate_path)
-                except FileExistsError as e:
-                    print_red(f"Rename failed: {e}")
-                try:
-                    if track.full_path.exists() and not updated_duplicate_path.exists():
-                        os.rename(track.full_path, updated_duplicate_path)
-                    elif updated_track.full_path.exists() and not updated_duplicate_path.exists():
-                        os.rename(updated_track.full_path, updated_duplicate_path)
-                except FileExistsError as e:
-                    print_red(f"Rename failed: {e}")
+                self.try_rename(existing_track.full_path, existing_duplicate_path)
+                if track.renamed:
+                    self.try_rename(updated_track.full_path, updated_duplicate_path)
+                else:
+                    self.try_rename(track.full_path, updated_duplicate_path)
+
+                self.num_duplicates += 1
             else:
                 print_red("Multiple formats:", bold=True)
                 print(existing_track.full_path)
@@ -225,16 +235,16 @@ class Renamer:
                 if existing_track.is_mp3():
                     if not self.print_only and (self.force or self.confirm(f"Delete {existing_track.extension}")):
                         existing_track.full_path.unlink()
-                        self.processed[new_filename] = updated_track
+                        self.processed[formatted_name] = updated_track
                         self.num_removed += 1
                 else:
                     if not self.print_only and (self.force or self.confirm(f"Delete {updated_track.extension}")):
                         updated_track.full_path.unlink()
                         self.num_removed += 1
 
-            print("-" * len(str(existing_track.full_path)))
+            self.print_divider(str(existing_track.full_path))
         else:
-            self.processed[new_filename] = updated_track
+            self.processed[formatted_name] = updated_track
 
     @staticmethod
     def get_tags_from_filename(filename: str) -> (str, str):
@@ -255,6 +265,9 @@ class Renamer:
         Add a duplicate string with a short hash based on current timestamp to
         create a unique identifier.
         """
+        if re.search(r"(Duplicate-[A-Za-z0-9]+)", filepath):
+            return filepath
+
         current_datetime = datetime.datetime.now()
         datetime_string = current_datetime.isoformat(timespec="milliseconds")
         hash_object = hashlib.sha256(datetime_string.encode())
@@ -299,12 +312,25 @@ class Renamer:
         print(old)
         print(new)
 
-    def print_stats(self):
+    @staticmethod
+    def try_rename(path: Path, new_path: Path):
+        try:
+            if path.exists() and not new_path.exists():
+                os.rename(path, new_path)
+        except Exception as e:
+            print_red(f"Rename failed: {e}")
+
+    def print_stats(self) -> None:
         """Print number of changes made."""
         print_bold("Finished", Color.green)
-        print(f"Tags:   {self.num_tags_fixed}")
-        print(f"Rename: {self.num_renamed}")
-        print(f"Delete: {self.num_removed}")
+        print(f"Tags:      {self.num_tags_fixed}")
+        print(f"Rename:    {self.num_renamed}")
+        print(f"Delete:    {self.num_removed}")
+        print(f"Duplicate: {self.num_duplicates}")
+
+    @staticmethod
+    def print_divider(for_text: str) -> None:
+        print("-" * len(str(for_text)))
 
 
 @click.command()
