@@ -1,8 +1,3 @@
-def _get_test_ids(data: list[tuple[str, str, str, str]]) -> tuple[str]:
-    """Use the formatted artist name as the test id."""
-    return tuple(name[1][:32] for name in data)
-
-
 # Data is in format:
 # 1. artist
 # 2. formatted artist
@@ -242,6 +237,12 @@ WHITESPACE_TEST_DATA = [
         "Through the Shuffle",
     ),
 ]
+
+
+def _get_test_ids(data: list[tuple[str, str, str, str]]) -> tuple[str]:
+    """Use the formatted artist name as the test id."""
+    return tuple(name[1][:32] for name in data)
+
 
 BALANCE_PARENTHESES_IDS = _get_test_ids(BALANCE_PARENTHESES_TEST_DATA)
 FEAT_IDS = _get_test_ids(FEAT_TEST_DATA)

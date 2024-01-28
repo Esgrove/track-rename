@@ -4,10 +4,10 @@ import datetime
 import difflib
 import hashlib
 import os
+import re
 import sys
 import time
 from pathlib import Path
-from typing import re
 
 import click
 import colorama
@@ -222,10 +222,7 @@ class Renamer:
                 updated_duplicate_path = self.append_duplicate_tag_to_name(updated_track.full_path)
 
                 self.try_rename(existing_track.full_path, existing_duplicate_path)
-                if track.renamed:
-                    self.try_rename(updated_track.full_path, updated_duplicate_path)
-                else:
-                    self.try_rename(track.full_path, updated_duplicate_path)
+                self.try_rename(updated_track.full_path, updated_duplicate_path)
 
                 self.num_duplicates += 1
             else:
@@ -265,7 +262,7 @@ class Renamer:
         Add a duplicate string with a short hash based on current timestamp to
         create a unique identifier.
         """
-        if re.search(r"(Duplicate-[A-Za-z0-9]+)", filepath):
+        if re.search(r"(Duplicate-[A-Za-z0-9]+)", filepath.stem):
             return filepath
 
         current_datetime = datetime.datetime.now()

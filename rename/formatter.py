@@ -3,7 +3,7 @@ import re
 from titlecase import titlecase
 
 
-class Formatter:
+class TrackFormatter:
     """Handle track formatting."""
 
     def __init__(self):
