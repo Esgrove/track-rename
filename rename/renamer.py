@@ -14,12 +14,12 @@ import colorama
 
 try:
     from colorprint import Color, get_color, print_bold, print_error, print_red, print_warn, print_yellow
-    from formatter import Formatter
+    from formatter import TrackFormatter
     from track import Track
 except ModuleNotFoundError:
     # poetry run needs the full import path
     from rename.colorprint import Color, get_color, print_bold, print_error, print_red, print_warn, print_yellow
-    from rename.formatter import Formatter
+    from rename.formatter import TrackFormatter
     from rename.track import Track
 
 try:
@@ -51,7 +51,7 @@ class Renamer:
         self.num_removed = 0
         self.num_duplicates = 0
 
-        self.formatter = Formatter()
+        self.formatter = TrackFormatter()
         self.processed: dict[str, Track] = dict()
 
     def run(self):
@@ -89,6 +89,7 @@ class Renamer:
         current_root = self.root
 
         for number, track in enumerate(self.file_list):
+            track.number = number
             if not self.sort_files:
                 # Print current directory when iterating in directory order
                 if current_root != track.root:
@@ -100,7 +101,7 @@ class Renamer:
                 print_red(f"File no longer exists: '{track.full_path}'")
                 continue
 
-            self.process_track(track.new_with_number(number))
+            self.process_track(track)
 
     def process_track(self, track: Track) -> None:
         """Format tags and rename one track."""

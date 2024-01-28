@@ -54,6 +54,7 @@ class TrackFormatter:
             ("Intro/Outro", "Intro-Outro"),
             (" In/Out", " Intro-Outro"),
             ("In/Out ", "Intro-Outro "),
+            (" In/out", " Intro-Outro"),
             ("Aca In/Aca Out", "Acapella In-Out"),
             ("Intro/Outro", "Intro"),
             ("Intro-Outro", "Intro"),
@@ -71,7 +72,7 @@ class TrackFormatter:
         )
         self.filename_regex_substitutes = (
             ('"', "''"),
-            ("[<>|!]+", ""),
+            ("[<>|!]+", "-"),
             (r"[\\/:\*\?]", "-"),
             (r"\s+", " "),
         )
@@ -82,6 +83,13 @@ class TrackFormatter:
         title = title.strip()
         if not artist and not title:
             return artist, title
+
+        # Check for redundant extension
+        for ext in (".mp3", ".flac", ".aif", ".aiff", ".m4a"):
+            if artist.lower().endswith(ext):
+                artist = artist[: -len(ext)]
+            if title.lower().endswith(ext):
+                title = title[: -len(ext)]
 
         # check if artist name is duplicated
         if title.startswith(f"{artist} - "):

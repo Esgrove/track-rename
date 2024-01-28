@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Self
 
 
 class Track:
@@ -32,9 +31,6 @@ class Track:
 
     def is_aif(self) -> bool:
         return self.extension == ".aif" or self.extension == ".aiff"
-
-    def new_with_number(self, number: int) -> Self:
-        return Track(self.name, self.extension, self.root, number=number)
 
     @property
     def original_tags(self):

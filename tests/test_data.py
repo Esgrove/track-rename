@@ -3,6 +3,7 @@
 # 2. formatted artist
 # 3. title
 # 4. formatted title
+import random
 
 BALANCE_PARENTHESES_TEST_DATA = [
     (
@@ -16,6 +17,18 @@ BALANCE_PARENTHESES_TEST_DATA = [
         "Another Jackson",
         "If (Kaytranada Edition) (Live Set Version",
         "If (Kaytranada Edition) (Live Set Version)",
+    ),
+    (
+        "Jackson 3",
+        "Jackson 3",
+        "If (Live Set Version",
+        "If (Live Set Version)",
+    ),
+    (
+        "Jackson 5",
+        "Jackson 5",
+        "If (Jes) Live Set Version)",
+        "If (Jes) (Live Set Version)",
     ),
 ]
 
@@ -176,6 +189,12 @@ FORMATTING_TEST_DATA = [
         "Lift Me Up (Trayze Drop Leaf Edit) (89 11b)",
         "Lift Me Up (Trayze Drop Leaf Edit)",
     ),
+    (
+        "Rihanna",
+        "Rihanna",
+        "Lift Me Up (Trayze Drop Leaf Edit) (89 11b)",
+        "Lift Me Up (Trayze Drop Leaf Edit)",
+    ),
 ]
 
 PARENTHESES_TEST_DATA = [
@@ -238,6 +257,12 @@ WHITESPACE_TEST_DATA = [
     ),
 ]
 
+EXTENSION_TEST_DATA = [
+    (*data[:2], data[2] + extension, data[3])
+    for extension in (".mp3", ".FLAC", ".aif", ".AIFF", ".m4a")
+    for data in [random.choice(FORMATTING_TEST_DATA)]
+]
+
 
 def _get_test_ids(data: list[tuple[str, str, str, str]]) -> tuple[str]:
     """Use the formatted artist name as the test id."""
@@ -249,4 +274,5 @@ FEAT_IDS = _get_test_ids(FEAT_TEST_DATA)
 FORMATTING_IDS = _get_test_ids(FORMATTING_TEST_DATA)
 NESTED_PARENTHESES_IDS = _get_test_ids(NESTED_PARENTHESES_TEST_DATA)
 PARENTHESES_IDS = _get_test_ids(PARENTHESES_TEST_DATA)
+EXTENSION_TEST_IDS = _get_test_ids(EXTENSION_TEST_DATA)
 WHITESPACE_IDS = _get_test_ids(WHITESPACE_TEST_DATA)

@@ -35,12 +35,6 @@ def test_extensions(extension):
     assert track.full_path == Path("/user/test/music/song" + extension)
 
 
-@pytest.mark.parametrize("extension", [".mp3", ".FLAC", ".aif", ".AIFF", ".m4a"])
-def test_remove_extra_extensions(extension):
-    track = Track(f"Test - Song with extra extension{extension}", extension, Path("/user/test/music"))
-    assert track.extension == extension
-    assert track.filename == "Test - Song with extra extension" + extension
-
 def test_eq_method():
     track1 = Track("song1", ".mp3", Path("/music"))
     track2 = Track("song1", ".mp3", Path("/different/path"))
@@ -139,15 +133,6 @@ def test_is_aif():
 
     track = Track("song", ".mp3", Path("/music"))
     assert track.is_aif() is False
-
-
-def test_new_with_number():
-    track = Track("song", ".mp3", Path("/music"))
-    new_track = track.new_with_number(5)
-    assert new_track.number == 5
-    assert new_track.name == track.name
-    assert new_track.extension == track.extension
-    assert new_track.root == track.root
 
 
 def test_original_tags_property():

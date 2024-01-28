@@ -1,9 +1,11 @@
 import pytest
 
-from rename.formatter import Formatter
+from rename.formatter import TrackFormatter
 from tests.test_data import (
     BALANCE_PARENTHESES_IDS,
     BALANCE_PARENTHESES_TEST_DATA,
+    EXTENSION_TEST_DATA,
+    EXTENSION_TEST_IDS,
     FEAT_IDS,
     FEAT_TEST_DATA,
     FORMATTING_IDS,
@@ -19,7 +21,7 @@ from tests.test_data import (
 
 @pytest.fixture(scope="module")
 def formatter():
-    formatter = Formatter()
+    formatter = TrackFormatter()
     yield formatter
 
 
@@ -54,6 +56,11 @@ def test_nested_parenthesis(formatter, artist, correct_artist, title, correct_ti
 
 @pytest.mark.parametrize("artist, correct_artist, title, correct_title", FEAT_TEST_DATA, ids=FEAT_IDS)
 def test_feat_formatting(formatter, artist, correct_artist, title, correct_title):
+    _check_format_track(formatter, artist, title, correct_artist, correct_title)
+
+
+@pytest.mark.parametrize("artist, correct_artist, title, correct_title", EXTENSION_TEST_DATA, ids=EXTENSION_TEST_IDS)
+def test_extension_formatting(formatter, artist, correct_artist, title, correct_title):
     _check_format_track(formatter, artist, title, correct_artist, correct_title)
 
 
