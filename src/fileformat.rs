@@ -3,6 +3,8 @@ use std::fmt::Display;
 
 use std::str::FromStr;
 
+/// Supported audio file formats.
+// TODO: add support for "flac", "m4a", "mp4"
 #[derive(Debug, PartialEq)]
 pub enum FileFormat {
     Mp3,

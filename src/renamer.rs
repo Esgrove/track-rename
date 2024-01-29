@@ -11,6 +11,7 @@ use crate::fileformat::FileFormat;
 use crate::formatter::Formatter;
 use std::fs;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::string::String;
 
 use crate::track::Track;
@@ -23,7 +24,6 @@ pub struct Renamer {
     tags_only: bool,
     verbose: bool,
     file_list: Vec<Track>,
-    file_formats: [&'static str; 3],
     total_tracks: usize,
     num_tags_fixed: usize,
     num_renamed: usize,
@@ -47,7 +47,6 @@ impl Renamer {
             tags_only,
             verbose,
             file_list: Vec::new(),
-            file_formats: ["mp3", "aif", "aiff"], // "flac", "m4a", "mp4"
             total_tracks: 0,
             num_tags_fixed: 0,
             num_renamed: 0,
@@ -66,14 +65,36 @@ impl Renamer {
         println!("Getting audio files from {}", format!("{}", self.root.display()).cyan());
         let mut file_list: Vec<Track> = Vec::new();
 
-        for entry in WalkDir::new(&self.root).into_iter().filter_map(|e| e.ok()).filter(|e| {
-            e.path().is_file()
-                && self
-                    .file_formats
-                    .contains(&e.path().extension().unwrap_or_default().to_string_lossy().as_ref())
-        }) {
-            if let Ok(track) = Track::new(entry.path().to_path_buf()) {
-                file_list.push(track);
+        for entry in WalkDir::new(&self.root)
+            .into_iter()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.path().is_file())
+        {
+            let path = entry.path();
+            let extension = path
+                .extension()
+                .and_then(|e| e.to_str())
+                .unwrap_or_default()
+                .to_lowercase();
+
+            match FileFormat::from_str(&extension) {
+                Ok(_) => {
+                    if let Ok(track) = Track::new(path.to_path_buf()) {
+                        file_list.push(track);
+                    } else {
+                        eprintln!("{}", format!("Failed to create Track from: {}", path.display()).red());
+                    }
+                }
+                Err(e) => {
+                    if extension == "wav" {
+                        println!(
+                            "{}",
+                            format!("Wav should be converted to aif: {}", path.display()).yellow()
+                        );
+                    } else {
+                        eprintln!("{}", e);
+                    }
+                }
             }
         }
 
