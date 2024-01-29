@@ -4,12 +4,13 @@ pub struct Formatter {
     common_substitutes: Vec<(&'static str, &'static str)>,
     title_substitutes: Vec<(&'static str, &'static str)>,
     regex_substitutes: Vec<(Regex, &'static str)>,
+    filename_regex_substitutes: Vec<(Regex, &'static str)>,
 }
 
 impl Formatter {
     #![allow(dead_code)]
     pub fn new() -> Formatter {
-        Formatter{
+        Formatter {
             common_substitutes: vec![
                 (" feat ", " feat. "),
                 (" ft. ", " feat. "),
@@ -65,12 +66,18 @@ impl Formatter {
             ],
             regex_substitutes: vec![
                 (Regex::new(r"[\[{]+").unwrap(), "("),
-                (Regex::new(r"[]}]+").unwrap(), ")"),
+                (Regex::new(r"[\]}]+").unwrap(), ")"),
                 (Regex::new(r"\s+").unwrap(), " "),
                 (Regex::new(r"\s{2,}").unwrap(), " "),
                 (Regex::new(r"\.{2,}").unwrap(), "."),
                 (Regex::new(r"\(\s*?\)").unwrap(), ""),
                 (Regex::new(r"(\S)\(").unwrap(), "$1 ("),
+            ],
+            filename_regex_substitutes: vec![
+                (Regex::new("\"").unwrap(), "''"),
+                (Regex::new("[<>|!]+").unwrap(), ""),
+                (Regex::new(r"[\\/:\*\?]").unwrap(), "-"),
+                (Regex::new(r"\s+").unwrap(), " "),
             ],
         }
     }
