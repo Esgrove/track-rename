@@ -1,6 +1,11 @@
 #!/bin/bash
 set -eo pipefail
 
+# Import common functions
+DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=./common.sh
+source "$DIR/common.sh"
+
 USAGE="Usage: $0 [OPTIONS]
 
 Build the Rust renamer tool.
@@ -25,23 +30,15 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-REPO_ROOT=$(git rev-parse --show-toplevel || (cd "$(dirname "${BASH_SOURCE[0]}")" && pwd))
-
 if [ -z "$(command -v cargo)" ]; then
-    echo "Cargo not found in path. Maybe install rustup?"
-    exit 1
+    print_error_and_exit "Cargo not found in path. Maybe install rustup?"
 fi
 
 cd "$REPO_ROOT"
 
 cargo build --release
 
-if [ "$PLATFORM" = windows ]; then
-    executable="track-renamer.exe"
-else
-    executable="track-renamer"
-fi
-
+executable=$(get_rust_executable_name)
 rm -f "$executable"
 mv ./target/release/"$executable" "$executable"
 ./"$executable" --version
