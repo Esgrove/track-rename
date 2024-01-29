@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
-use std::fmt::Display;
 
+use std::fmt::Display;
 use std::str::FromStr;
 
 /// Supported audio file formats.

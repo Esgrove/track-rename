@@ -2,18 +2,17 @@ use anyhow::{Context, Result};
 use colored::*;
 use difference::{Changeset, Difference};
 use id3::{Error, ErrorKind, Tag, TagLike};
+use walkdir::WalkDir;
 
 use std::collections::HashMap;
 use std::io;
-use walkdir::WalkDir;
-
-use crate::fileformat::FileFormat;
-use crate::formatter::Formatter;
 use std::fs;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::string::String;
 
+use crate::fileformat::FileFormat;
+use crate::formatter::Formatter;
 use crate::track::Track;
 
 pub struct Renamer {

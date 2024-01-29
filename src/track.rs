@@ -1,16 +1,22 @@
-use crate::fileformat::FileFormat;
 use anyhow::Context;
+
 use std::cmp::Ordering;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::{env, fmt};
 
+use crate::fileformat::FileFormat;
+
 #[derive(Debug)]
 pub struct Track {
     pub name: String,
-    pub extension: FileFormat,
+    pub extension: String,
+    pub format: FileFormat,
     pub root: PathBuf,
     pub path: PathBuf,
+    pub tags_updated: bool,
+    pub renamed: bool,
+    pub printed: bool,
 }
 
 impl Track {
