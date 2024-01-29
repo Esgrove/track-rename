@@ -14,7 +14,11 @@ impl Track {
             extension.insert(0, '.');
         }
 
-        Track { name, extension, root: path }
+        Track {
+            name,
+            extension,
+            root: path,
+        }
     }
 
     pub fn new_from_path(path: PathBuf) -> Track {

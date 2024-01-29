@@ -1,15 +1,15 @@
 use anyhow::{Context, Result};
-use id3::{Tag, TagLike};
 use colored::*;
 use difference::{Changeset, Difference};
+use id3::{Tag, TagLike};
 use regex::Regex;
 use std::io;
 use walkdir::WalkDir;
 
+use crate::formatter::Formatter;
 use std::fs;
 use std::path::PathBuf;
 use std::string::String;
-use crate::formatter::Formatter;
 
 use crate::track::Track;
 
@@ -49,7 +49,7 @@ impl Renamer {
             total_tracks: 0,
             num_tags_fixed: 0,
             num_renamed: 0,
-            formatter: Formatter::new()
+            formatter: Formatter::new(),
         }
     }
 

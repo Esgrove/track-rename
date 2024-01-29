@@ -1,6 +1,6 @@
+mod formatter;
 mod renamer;
 mod track;
-mod formatter;
 
 extern crate colored;
 
@@ -54,6 +54,13 @@ fn main() -> Result<()> {
     }
     let absolute_input_path = fs::canonicalize(filepath)?;
 
-    let mut renamer = Renamer::new(absolute_input_path, args.rename, args.sort, args.print, args.tags_only, args.verbose);
+    let mut renamer = Renamer::new(
+        absolute_input_path,
+        args.rename,
+        args.sort,
+        args.print,
+        args.tags_only,
+        args.verbose,
+    );
     renamer.run()
 }
