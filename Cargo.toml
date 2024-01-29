@@ -25,8 +25,10 @@ walkdir = "2.4.0"
 name = "track-renamer"
 path = "src/main.rs"
 
+[profile.dev]
+incremental = true
+
 [profile.release]
 lto = true
-incremental = true
 # https://doc.rust-lang.org/rustc/codegen-options/index.html#codegen-units
 codegen-units = 1

@@ -103,7 +103,9 @@ impl Renamer {
     /// Format all tracks.
     pub fn process_files(&mut self) -> Result<()> {
         println!("{}", format!("Processing {} tracks...", self.total_tracks).bold());
-
+        if self.print_only {
+            println!("{}", "Running in print-only mode".yellow().bold())
+        }
         let mut current_path = self.root.clone();
         for (number, track) in self.file_list.iter().enumerate() {
             if !self.sort_files {
@@ -211,7 +213,8 @@ impl Renamer {
                     println!("{}/{}:", number + 1, self.total_tracks);
                 }
                 println!("{}", "Duplicate:".red().bold());
-                println!("{}", new_file_name);
+                println!("{}", track.path.display());
+                println!("{}", new_path.display());
                 println!("{}", "-".repeat(new_file_name.chars().count()));
             }
         }
@@ -290,21 +293,33 @@ impl Renamer {
     /// Print a stacked diff of the changes.
     fn show_diff(old: &str, new: &str) {
         let changeset = Changeset::new(old, new, "");
-        let mut old_string = String::new();
-        let mut new_string = String::new();
+        let mut old_diff = String::new();
+        let mut new_diff = String::new();
 
         for diff in changeset.diffs {
             match diff {
                 Difference::Same(ref x) => {
-                    old_string.push_str(x);
-                    new_string.push_str(x);
+                    old_diff.push_str(x);
+                    new_diff.push_str(x);
                 }
-                Difference::Add(ref x) => new_string.push_str(&x.green().to_string()),
-                Difference::Rem(ref x) => old_string.push_str(&x.red().to_string()),
+                Difference::Add(ref x) => {
+                    if x.chars().all(char::is_whitespace) {
+                        new_diff.push_str(&x.to_string().on_green().to_string());
+                    } else {
+                        new_diff.push_str(&x.to_string().green().to_string());
+                    }
+                }
+                Difference::Rem(ref x) => {
+                    if x.chars().all(char::is_whitespace) {
+                        old_diff.push_str(&x.to_string().on_red().to_string());
+                    } else {
+                        old_diff.push_str(&x.to_string().red().to_string());
+                    }
+                }
             }
         }
 
-        println!("{}", old_string);
-        println!("{}", new_string);
+        println!("{}", old_diff);
+        println!("{}", new_diff);
     }
 }

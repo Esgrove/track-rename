@@ -27,7 +27,7 @@ impl Track {
     }
 
     pub fn filename(&self) -> String {
-        format!("{}{}", self.name, self.extension)
+        format!("{}.{}", self.name, self.extension)
     }
 
     pub fn full_path(&self) -> PathBuf {
@@ -61,12 +61,12 @@ impl fmt::Display for Track {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let current_dir = match env::current_dir() {
             Ok(dir) => dir,
-            Err(_) => return write!(f, "{}/{}{}", self.root.display(), self.name, self.extension),
+            Err(_) => return write!(f, "{}/{}.{}", self.root.display(), self.name, self.extension),
         };
         let relative_path = match self.root.strip_prefix(&current_dir) {
             Ok(path) => path,
             Err(_) => &self.root,
         };
-        write!(f, "{}/{}{}", relative_path.display(), self.name, self.extension)
+        write!(f, "{}/{}.{}", relative_path.display(), self.name, self.extension)
     }
 }

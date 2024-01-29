@@ -21,24 +21,28 @@ impl Formatter {
                 ("(Feat ", "(feat. "),
                 ("(featuring ", "(feat. "),
                 ("(Featuring ", "(feat. "),
+                (" (Dirty!)", ""),
                 (") - (", ""),
                 (" - (", " ("),
                 ("(- ", "("),
                 ("( - ", "("),
                 (" -)", " )"),
                 (" - ) ", ")"),
-                ("!!!", ""),
                 ("...", " "),
                 ("..", " "),
                 (" ***", ""),
                 (" **", ""),
-                (" * ", ""),
+                (" *", ""),
+                ("*** ", ""),
+                ("** ", ""),
+                ("* ", ""),
             ],
             title_substitutes: vec![
                 (" (Original Mix)", ""),
                 (" DJcity", ""),
                 (" DJCity", ""),
                 ("(DJcity - ", "("),
+                ("(DJcity ", "("),
                 ("DJcity ", ""),
                 ("DJCity ", ""),
                 ("12\"", "12''"),
@@ -66,15 +70,20 @@ impl Formatter {
             regex_substitutes: vec![
                 (Regex::new(r"[\[{]+").unwrap(), "("),
                 (Regex::new(r"[\]}]+").unwrap(), ")"),
+                (Regex::new(r"!{2,}").unwrap(), "!"),
                 (Regex::new(r"\s+").unwrap(), " "),
                 (Regex::new(r"\s{2,}").unwrap(), " "),
                 (Regex::new(r"\.{2,}").unwrap(), "."),
                 (Regex::new(r"\(\s*?\)").unwrap(), ""),
                 (Regex::new(r"(\S)\(").unwrap(), "$1 ("),
+                (
+                    Regex::new(r"\bMissy Elliot\b|\bMissy Elliot$").unwrap(),
+                    "Missy Elliott",
+                ),
             ],
             filename_regex_substitutes: vec![
                 (Regex::new("\"").unwrap(), "''"),
-                (Regex::new(r"[\\/<>|!:\*\?]+").unwrap(), "-"),
+                (Regex::new(r"([\\/<>|:\*\?])+").unwrap(), "-"),
                 (Regex::new(r"\s+").unwrap(), " "),
             ],
         }
@@ -95,8 +104,8 @@ impl Formatter {
         }
 
         for (regex, replacement) in &self.regex_substitutes {
-            formatted_artist = regex.replace_all(artist, *replacement).to_string();
-            formatted_title = regex.replace_all(title, *replacement).to_string();
+            formatted_artist = regex.replace_all(&formatted_artist, *replacement).to_string();
+            formatted_title = regex.replace_all(&formatted_title, *replacement).to_string();
         }
 
         (formatted_artist.trim().to_string(), formatted_title.trim().to_string())
@@ -107,8 +116,8 @@ impl Formatter {
         let mut formatted_title = title.to_string();
 
         for (regex, replacement) in &self.filename_regex_substitutes {
-            formatted_artist = regex.replace_all(artist, *replacement).to_string();
-            formatted_title = regex.replace_all(title, *replacement).to_string();
+            formatted_artist = regex.replace_all(&formatted_artist, *replacement).to_string();
+            formatted_title = regex.replace_all(&formatted_title, *replacement).to_string();
         }
 
         (formatted_artist.trim().to_string(), formatted_title.trim().to_string())
