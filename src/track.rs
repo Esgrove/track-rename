@@ -1,37 +1,29 @@
+use crate::fileformat::FileFormat;
 use std::cmp::Ordering;
 use std::path::PathBuf;
+use std::str::FromStr;
+use std::{env, fmt};
 
 #[derive(Debug)]
 pub struct Track {
     pub name: String,
-    pub extension: String,
+    pub extension: FileFormat,
     pub root: PathBuf,
+    pub path: PathBuf,
 }
 
 impl Track {
-    #![allow(dead_code)]
-    pub fn new(name: String, mut extension: String, path: PathBuf) -> Track {
-        if !extension.starts_with('.') {
-            extension.insert(0, '.');
-        }
-
-        Track {
-            name,
-            extension,
-            root: path,
-        }
-    }
-
-    pub fn new_from_path(path: PathBuf) -> Track {
+    pub fn new(path: PathBuf) -> anyhow::Result<Track> {
         let name = path.file_stem().unwrap().to_string_lossy().into_owned();
-        let mut extension = path.extension().unwrap().to_string_lossy().into_owned();
+        let extension = FileFormat::from_str(path.extension().unwrap().to_string_lossy().as_ref())?;
         let root = path.parent().unwrap().to_owned();
 
-        if !extension.starts_with('.') {
-            extension.insert(0, '.');
-        }
-
-        Track { name, extension, root }
+        Ok(Track {
+            name,
+            extension,
+            root,
+            path,
+        })
     }
 
     pub fn filename(&self) -> String {
@@ -60,5 +52,21 @@ impl PartialOrd for Track {
 impl Ord for Track {
     fn cmp(&self, other: &Self) -> Ordering {
         self.name.cmp(&other.name)
+    }
+}
+
+impl fmt::Display for Track {
+    // Try to print full filepath relative to current working directory,
+    // otherwise fallback to absolute path.
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let current_dir = match env::current_dir() {
+            Ok(dir) => dir,
+            Err(_) => return write!(f, "{}/{}{}", self.root.display(), self.name, self.extension),
+        };
+        let relative_path = match self.root.strip_prefix(&current_dir) {
+            Ok(path) => path,
+            Err(_) => &self.root,
+        };
+        write!(f, "{}/{}{}", relative_path.display(), self.name, self.extension)
     }
 }

@@ -1,11 +1,13 @@
 use anyhow::{Context, Result};
 use colored::*;
 use difference::{Changeset, Difference};
-use id3::{Tag, TagLike};
-use regex::Regex;
+use id3::{Error, ErrorKind, Tag, TagLike};
+
+use std::collections::HashMap;
 use std::io;
 use walkdir::WalkDir;
 
+use crate::fileformat::FileFormat;
 use crate::formatter::Formatter;
 use std::fs;
 use std::path::PathBuf;
@@ -70,7 +72,9 @@ impl Renamer {
                     .file_formats
                     .contains(&e.path().extension().unwrap_or_default().to_string_lossy().as_ref())
         }) {
-            file_list.push(Track::new_from_path(entry.path().to_path_buf()));
+            if let Ok(track) = Track::new(entry.path().to_path_buf()) {
+                file_list.push(track);
+            }
         }
 
         if file_list.is_empty() {
@@ -85,18 +89,27 @@ impl Renamer {
 
         self.file_list = file_list;
 
+        if self.verbose && self.file_list.len() < 100 {
+            for track in &self.file_list {
+                println!("{}", track);
+            }
+
+            self.print_extension_counts();
+        }
+
         Ok(())
     }
 
     /// Format all tracks.
     pub fn process_files(&mut self) -> Result<()> {
-        println!("Formatting {} tracks...", self.total_tracks);
+        println!("{}", format!("Processing {} tracks...", self.total_tracks).bold());
+
         let mut current_path = self.root.clone();
-        for (number, file) in self.file_list.iter().enumerate() {
+        for (number, track) in self.file_list.iter().enumerate() {
             if !self.sort_files {
                 // Print current directory when iterating in directory order
-                if current_path != file.root {
-                    current_path = file.root.clone();
+                if current_path != track.root {
+                    current_path = track.root.clone();
                     println!(
                         "{}",
                         match current_path.strip_prefix(&self.root) {
@@ -107,11 +120,11 @@ impl Renamer {
                 }
             }
 
-            if self.verbose {
-                println!("{:>3}: {}", number, file.name);
-            }
+            let mut tag = match Renamer::read_tags(track) {
+                Some(tag) => tag,
+                None => continue,
+            };
 
-            let mut tag = Tag::read_from_path(file.full_path())?;
             let mut artist = String::new();
             let mut title = String::new();
             let mut current_tags = " - ".to_string();
@@ -123,49 +136,49 @@ impl Renamer {
                     current_tags = format!("{} - {}", artist, title);
                 }
                 (None, None) => {
-                    eprintln!("Missing tags: {}", file.full_path().display());
-                    if let Some((a, t)) = Renamer::get_tags_from_filename(&file.name) {
+                    eprintln!("Missing tags: {}", track.full_path().display());
+                    if let Some((a, t)) = Renamer::get_tags_from_filename(&track.name) {
                         artist = a;
                         title = t;
                     }
                 }
                 (None, Some(t)) => {
-                    eprintln!("Missing artist tag: {}", file.full_path().display());
-                    if let Some((a, _)) = Renamer::get_tags_from_filename(&file.name) {
+                    eprintln!("Missing artist tag: {}", track.full_path().display());
+                    if let Some((a, _)) = Renamer::get_tags_from_filename(&track.name) {
                         artist = a;
                     }
                     title = t.to_string();
                     current_tags = format!(" - {}", title);
                 }
                 (Some(a), None) => {
-                    eprintln!("Missing title tag: {}", file.full_path().display());
+                    eprintln!("Missing title tag: {}", track.full_path().display());
                     artist = a.to_string();
-                    if let Some((_, t)) = Renamer::get_tags_from_filename(&file.name) {
+                    if let Some((_, t)) = Renamer::get_tags_from_filename(&track.name) {
                         title = t;
                     }
                     current_tags = format!("{} - ", artist);
                 }
             }
 
-            let (formatted_artist, formatted_title) = self.formatter.format_track(&artist, &title);
-            let new_tags = format!("{} - {}", formatted_artist, formatted_title);
+            let (formatted_artist, formatted_title) = self.formatter.format_tags(&artist, &title);
+            let formatted_tags = format!("{} - {}", formatted_artist, formatted_title);
 
             let mut tag_changed = false;
             let mut track_printed = false;
-            if current_tags != new_tags {
-                println!("{}/{}:", number, self.total_tracks);
+            if current_tags != formatted_tags {
+                println!("{}/{}:", number + 1, self.total_tracks);
                 track_printed = true;
                 println!("{}", "Fix tags:".blue().bold());
-                Renamer::show_diff(&current_tags, &new_tags);
+                Renamer::show_diff(&current_tags, &formatted_tags);
                 self.num_tags_fixed += 1;
                 if !self.print_only && Renamer::confirm() {
                     tag.set_artist(formatted_artist.clone());
                     tag.set_title(formatted_title.clone());
-                    tag.write_to_path(file.full_path(), tag.version())
+                    tag.write_to_path(&track.path, tag.version())
                         .context("Failed to write tags")?;
                     tag_changed = true;
                 }
-                println!("{}", "-".repeat(new_tags.len()));
+                println!("{}", "-".repeat(formatted_tags.chars().count()));
             }
 
             if self.tags_only {
@@ -173,39 +186,80 @@ impl Renamer {
             }
 
             // Check file name and rename if necessary
-            let forbidden_char_regex = Regex::new("[/:\"*?<>|]+").context("Invalid regex pattern")?;
-            let file_artist = forbidden_char_regex
-                .replace_all(&formatted_artist, "")
-                .to_string()
-                .trim()
-                .to_string();
-            let file_title = forbidden_char_regex
-                .replace_all(&formatted_title, "")
-                .to_string()
-                .trim()
-                .to_string();
 
-            let new_file_name = format!("{} - {}{}", file_artist, file_title, file.extension);
-            let new_path = file.root.join(&new_file_name);
+            let (file_artist, file_title) = self.formatter.format_filename(&formatted_artist, &formatted_title);
+
+            let new_file_name = format!("{} - {}.{}", file_artist, file_title, track.extension);
+            let new_path = track.root.join(&new_file_name);
 
             if !new_path.is_file() {
                 // Rename files if flag was given or if tags were not changed
                 if self.rename_files || !tag_changed {
                     if !track_printed {
-                        println!("{}/{}:", number, self.total_tracks);
+                        println!("{}/{}:", number + 1, self.total_tracks);
                     }
                     println!("{}", "Rename file:".yellow().bold());
-                    Renamer::show_diff(&file.filename(), &new_file_name);
+                    Renamer::show_diff(&track.filename(), &new_file_name);
                     self.num_renamed += 1;
                     if !self.print_only && Renamer::confirm() {
-                        fs::rename(&file.full_path(), &new_path)?;
+                        fs::rename(&track.full_path(), &new_path)?;
                     }
-                    println!("{}", "-".repeat(new_file_name.len()));
+                    println!("{}", "-".repeat(new_file_name.chars().count()));
                 }
+            } else if new_path != track.path {
+                if !track_printed {
+                    println!("{}/{}:", number + 1, self.total_tracks);
+                }
+                println!("{}", "Duplicate:".red().bold());
+                println!("{}", new_file_name);
+                println!("{}", "-".repeat(new_file_name.chars().count()));
             }
         }
 
         Ok(())
+    }
+
+    /// Count and print the total number of each file extension in the file list.
+    fn print_extension_counts(&self) {
+        let mut file_format_counts: HashMap<String, usize> = HashMap::new();
+
+        for track in &self.file_list {
+            *file_format_counts.entry(track.extension.to_string()).or_insert(0) += 1;
+        }
+
+        // Collect the HashMap into a Vec for sorting
+        let mut counts: Vec<(&String, &usize)> = file_format_counts.iter().collect();
+
+        // Sort the Vec in decreasing order
+        counts.sort_by(|a, b| b.1.cmp(a.1));
+
+        println!("{}", "File format counts:".bold());
+        for (format, count) in counts {
+            println!("{}: {}", format, count);
+        }
+    }
+
+    /// Try to read tags from path.
+    /// Will return empty tags when there are no tags.
+    fn read_tags(track: &Track) -> Option<Tag> {
+        let result = match track.extension {
+            FileFormat::Aif => Tag::read_from_aiff_path(&track.path),
+            FileFormat::Mp3 => Tag::read_from_path(&track.path),
+        };
+
+        match result {
+            Ok(tag) => Some(tag),
+            Err(Error {
+                kind: ErrorKind::NoTag, ..
+            }) => {
+                println!("{}", format!("No tags: {}", track).yellow());
+                Some(Tag::new())
+            }
+            Err(err) => {
+                println!("{}", format!("Failed to read tags for: {}\n{}", track, err).red());
+                None
+            }
+        }
     }
 
     /// Ask user to confirm action.

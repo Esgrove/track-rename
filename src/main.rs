@@ -1,3 +1,4 @@
+mod fileformat;
 mod formatter;
 mod renamer;
 mod track;

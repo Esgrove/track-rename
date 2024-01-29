@@ -74,15 +74,14 @@ impl Formatter {
             ],
             filename_regex_substitutes: vec![
                 (Regex::new("\"").unwrap(), "''"),
-                (Regex::new("[<>|!]+").unwrap(), ""),
-                (Regex::new(r"[\\/:\*\?]").unwrap(), "-"),
+                (Regex::new(r"[\\/<>|!:\*\?]+").unwrap(), "-"),
                 (Regex::new(r"\s+").unwrap(), " "),
             ],
         }
     }
 
     /// Return formatted artist and title string.
-    pub(crate) fn format_track(&self, artist: &str, title: &str) -> (String, String) {
+    pub(crate) fn format_tags(&self, artist: &str, title: &str) -> (String, String) {
         let mut formatted_artist = artist.to_string();
         let mut formatted_title = title.to_string();
 
@@ -100,6 +99,18 @@ impl Formatter {
             formatted_title = regex.replace_all(title, *replacement).to_string();
         }
 
-        (formatted_artist.to_string(), formatted_title.to_string())
+        (formatted_artist.trim().to_string(), formatted_title.trim().to_string())
+    }
+
+    pub(crate) fn format_filename(&self, artist: &str, title: &str) -> (String, String) {
+        let mut formatted_artist = artist.to_string();
+        let mut formatted_title = title.to_string();
+
+        for (regex, replacement) in &self.filename_regex_substitutes {
+            formatted_artist = regex.replace_all(artist, *replacement).to_string();
+            formatted_title = regex.replace_all(title, *replacement).to_string();
+        }
+
+        (formatted_artist.trim().to_string(), formatted_title.trim().to_string())
     }
 }
