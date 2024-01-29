@@ -1,4 +1,5 @@
 use crate::fileformat::FileFormat;
+use anyhow::Context;
 use std::cmp::Ordering;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -13,10 +14,36 @@ pub struct Track {
 }
 
 impl Track {
+    #![allow(dead_code)]
     pub fn new(path: PathBuf) -> anyhow::Result<Track> {
-        let name = path.file_stem().unwrap().to_string_lossy().into_owned();
-        let extension = FileFormat::from_str(path.extension().unwrap().to_string_lossy().as_ref())?;
-        let root = path.parent().unwrap().to_owned();
+        let name = path
+            .file_stem()
+            .context("Failed to get file stem")?
+            .to_string_lossy()
+            .into_owned();
+        let extension = FileFormat::from_str(
+            path.extension()
+                .context("Failed to get file extension")?
+                .to_string_lossy()
+                .as_ref(),
+        )?;
+        let root = path.parent().context("Failed to get file root")?.to_owned();
+
+        Ok(Track {
+            name,
+            extension,
+            root,
+            path,
+        })
+    }
+
+    pub fn new_with_extension(path: PathBuf, extension: FileFormat) -> anyhow::Result<Track> {
+        let name = path
+            .file_stem()
+            .context("Failed to get file stem")?
+            .to_string_lossy()
+            .into_owned();
+        let root = path.parent().context("Failed to get file root")?.to_owned();
 
         Ok(Track {
             name,

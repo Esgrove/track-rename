@@ -78,8 +78,8 @@ impl Renamer {
                 .to_lowercase();
 
             match FileFormat::from_str(&extension) {
-                Ok(_) => {
-                    if let Ok(track) = Track::new(path.to_path_buf()) {
+                Ok(format) => {
+                    if let Ok(track) = Track::new_with_extension(path.to_path_buf(), format) {
                         file_list.push(track);
                     } else {
                         eprintln!("{}", format!("Failed to create Track from: {}", path.display()).red());
