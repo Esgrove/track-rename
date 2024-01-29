@@ -5,8 +5,8 @@ use id3::{Error, ErrorKind, Tag, TagLike};
 use walkdir::WalkDir;
 
 use std::collections::HashMap;
-use std::io;
 use std::fs;
+use std::io;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::string::String;
@@ -78,7 +78,7 @@ impl Renamer {
 
             match FileFormat::from_str(&extension) {
                 Ok(format) => {
-                    if let Ok(track) = Track::new_with_extension(path.to_path_buf(), format) {
+                    if let Ok(track) = Track::new_with_extension(path.to_path_buf(), extension, format) {
                         file_list.push(track);
                     } else {
                         eprintln!("{}", format!("Failed to create Track from: {}", path.display()).red());
@@ -127,7 +127,7 @@ impl Renamer {
             println!("{}", "Running in print-only mode".yellow().bold())
         }
         let mut current_path = self.root.clone();
-        for (number, track) in self.file_list.iter().enumerate() {
+        for (number, track) in self.file_list.iter_mut().enumerate() {
             if !self.sort_files {
                 // Print current directory when iterating in directory order
                 if current_path != track.root {
@@ -158,14 +158,14 @@ impl Renamer {
                     current_tags = format!("{} - {}", artist, title);
                 }
                 (None, None) => {
-                    eprintln!("Missing tags: {}", track.full_path().display());
+                    eprintln!("Missing tags: {}", track.path.display());
                     if let Some((a, t)) = Renamer::get_tags_from_filename(&track.name) {
                         artist = a;
                         title = t;
                     }
                 }
                 (None, Some(t)) => {
-                    eprintln!("Missing artist tag: {}", track.full_path().display());
+                    eprintln!("Missing artist tag: {}", track.path.display());
                     if let Some((a, _)) = Renamer::get_tags_from_filename(&track.name) {
                         artist = a;
                     }
@@ -173,7 +173,7 @@ impl Renamer {
                     current_tags = format!(" - {}", title);
                 }
                 (Some(a), None) => {
-                    eprintln!("Missing title tag: {}", track.full_path().display());
+                    eprintln!("Missing title tag: {}", track.path.display());
                     artist = a.to_string();
                     if let Some((_, t)) = Renamer::get_tags_from_filename(&track.name) {
                         title = t;
@@ -185,11 +185,8 @@ impl Renamer {
             let (formatted_artist, formatted_title) = self.formatter.format_tags(&artist, &title);
             let formatted_tags = format!("{} - {}", formatted_artist, formatted_title);
 
-            let mut tag_changed = false;
-            let mut track_printed = false;
             if current_tags != formatted_tags {
-                println!("{}/{}:", number + 1, self.total_tracks);
-                track_printed = true;
+                track.show(number + 1, self.total_tracks);
                 println!("{}", "Fix tags:".blue().bold());
                 Renamer::show_diff(&current_tags, &formatted_tags);
                 self.num_tags_fixed += 1;
@@ -198,7 +195,7 @@ impl Renamer {
                     tag.set_title(formatted_title.clone());
                     tag.write_to_path(&track.path, tag.version())
                         .context("Failed to write tags")?;
-                    tag_changed = true;
+                    track.tags_updated = true;
                 }
                 println!("{}", "-".repeat(formatted_tags.chars().count()));
             }
@@ -211,27 +208,23 @@ impl Renamer {
 
             let (file_artist, file_title) = self.formatter.format_filename(&formatted_artist, &formatted_title);
 
-            let new_file_name = format!("{} - {}.{}", file_artist, file_title, track.extension);
+            let new_file_name = format!("{} - {}.{}", file_artist, file_title, track.format);
             let new_path = track.root.join(&new_file_name);
 
             if !new_path.is_file() {
                 // Rename files if flag was given or if tags were not changed
-                if self.rename_files || !tag_changed {
-                    if !track_printed {
-                        println!("{}/{}:", number + 1, self.total_tracks);
-                    }
+                if self.rename_files || !track.tags_updated {
+                    track.show(number + 1, self.total_tracks);
                     println!("{}", "Rename file:".yellow().bold());
                     Renamer::show_diff(&track.filename(), &new_file_name);
                     self.num_renamed += 1;
                     if !self.print_only && Renamer::confirm() {
-                        fs::rename(&track.full_path(), &new_path)?;
+                        fs::rename(&track.path, &new_path)?;
                     }
                     println!("{}", "-".repeat(new_file_name.chars().count()));
                 }
             } else if new_path != track.path {
-                if !track_printed {
-                    println!("{}/{}:", number + 1, self.total_tracks);
-                }
+                track.show(number + 1, self.total_tracks);
                 println!("{}", "Duplicate:".red().bold());
                 println!("{}", track.path.display());
                 println!("{}", new_path.display());
@@ -247,7 +240,7 @@ impl Renamer {
         let mut file_format_counts: HashMap<String, usize> = HashMap::new();
 
         for track in &self.file_list {
-            *file_format_counts.entry(track.extension.to_string()).or_insert(0) += 1;
+            *file_format_counts.entry(track.format.to_string()).or_insert(0) += 1;
         }
 
         // Collect the HashMap into a Vec for sorting
@@ -265,7 +258,7 @@ impl Renamer {
     /// Try to read tags from path.
     /// Will return empty tags when there are no tags.
     fn read_tags(track: &Track) -> Option<Tag> {
-        let result = match track.extension {
+        let result = match track.format {
             FileFormat::Aif => Tag::read_from_aiff_path(&track.path),
             FileFormat::Mp3 => Tag::read_from_path(&track.path),
         };

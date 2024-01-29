@@ -27,23 +27,29 @@ impl Track {
             .context("Failed to get file stem")?
             .to_string_lossy()
             .into_owned();
-        let extension = FileFormat::from_str(
-            path.extension()
-                .context("Failed to get file extension")?
-                .to_string_lossy()
-                .as_ref(),
-        )?;
+
+        let extension = path
+            .extension()
+            .context("Failed to get file extension")?
+            .to_string_lossy()
+            .to_string();
+
+        let format = FileFormat::from_str(&extension)?;
         let root = path.parent().context("Failed to get file root")?.to_owned();
 
         Ok(Track {
             name,
             extension,
+            format,
             root,
             path,
+            tags_updated: false,
+            renamed: false,
+            printed: false,
         })
     }
 
-    pub fn new_with_extension(path: PathBuf, extension: FileFormat) -> anyhow::Result<Track> {
+    pub fn new_with_extension(path: PathBuf, extension: String, format: FileFormat) -> anyhow::Result<Track> {
         let name = path
             .file_stem()
             .context("Failed to get file stem")?
@@ -54,17 +60,26 @@ impl Track {
         Ok(Track {
             name,
             extension,
+            format,
             root,
             path,
+            tags_updated: false,
+            renamed: false,
+            printed: false,
         })
     }
 
-    pub fn filename(&self) -> String {
-        format!("{}.{}", self.name, self.extension)
+    /// Print track if it has not been already.
+    pub fn show(&mut self, number: usize, total_tracks: usize) {
+        if !self.printed {
+            println!("{number}/{total_tracks}:");
+            self.printed = true
+        }
     }
 
-    pub fn full_path(&self) -> PathBuf {
-        self.root.join(self.filename())
+    /// Get the original file name
+    pub fn filename(&self) -> String {
+        format!("{}.{}", self.name, self.extension)
     }
 }
 
@@ -94,12 +109,12 @@ impl fmt::Display for Track {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let current_dir = match env::current_dir() {
             Ok(dir) => dir,
-            Err(_) => return write!(f, "{}/{}.{}", self.root.display(), self.name, self.extension),
+            Err(_) => return write!(f, "{}/{}.{}", self.root.display(), self.name, self.format),
         };
         let relative_path = match self.root.strip_prefix(&current_dir) {
             Ok(path) => path,
             Err(_) => &self.root,
         };
-        write!(f, "{}/{}.{}", relative_path.display(), self.name, self.extension)
+        write!(f, "{}/{}.{}", relative_path.display(), self.name, self.format)
     }
 }
