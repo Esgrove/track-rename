@@ -5,7 +5,7 @@ use std::path::PathBuf;
 pub struct Track {
     pub name: String,
     pub extension: String,
-    pub path: PathBuf,
+    pub root: PathBuf,
 }
 
 impl Track {
@@ -14,7 +14,19 @@ impl Track {
             extension.insert(0, '.');
         }
 
-        Track { name, extension, path }
+        Track { name, extension, root: path }
+    }
+
+    pub fn new_from_path(path: PathBuf) -> Track {
+        let name = path.file_stem().unwrap().to_string_lossy().into_owned();
+        let mut extension = path.extension().unwrap().to_string_lossy().into_owned();
+        let root = path.parent().unwrap().to_owned();
+
+        if !extension.starts_with('.') {
+            extension.insert(0, '.');
+        }
+
+        Track { name, extension, root }
     }
 
     pub fn filename(&self) -> String {
@@ -22,7 +34,7 @@ impl Track {
     }
 
     pub fn full_path(&self) -> PathBuf {
-        self.path.join(self.filename())
+        self.root.join(self.filename())
     }
 }
 

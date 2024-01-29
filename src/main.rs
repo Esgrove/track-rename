@@ -1,5 +1,6 @@
 mod renamer;
 mod track;
+mod formatter;
 
 extern crate colored;
 
