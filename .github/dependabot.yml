@@ -16,3 +16,9 @@ updates:
     directory: "/python"
     schedule:
       interval: "weekly"
+
+  # Rust
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
