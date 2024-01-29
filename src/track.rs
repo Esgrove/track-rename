@@ -9,6 +9,7 @@ pub struct Track {
 }
 
 impl Track {
+    #![allow(dead_code)]
     pub fn new(name: String, mut extension: String, path: PathBuf) -> Track {
         if !extension.starts_with('.') {
             extension.insert(0, '.');

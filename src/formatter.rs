@@ -8,7 +8,6 @@ pub struct Formatter {
 }
 
 impl Formatter {
-    #![allow(dead_code)]
     pub fn new() -> Formatter {
         Formatter {
             common_substitutes: vec![
