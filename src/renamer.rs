@@ -12,7 +12,7 @@ use std::str::FromStr;
 use std::string::String;
 
 use crate::fileformat::FileFormat;
-use crate::formatter::Formatter;
+use crate::formatter::TrackFormatter;
 use crate::track::Track;
 
 pub struct Renamer {
@@ -26,7 +26,7 @@ pub struct Renamer {
     total_tracks: usize,
     num_tags_fixed: usize,
     num_renamed: usize,
-    formatter: Formatter,
+    formatter: TrackFormatter,
 }
 
 impl Renamer {
@@ -49,7 +49,7 @@ impl Renamer {
             total_tracks: 0,
             num_tags_fixed: 0,
             num_renamed: 0,
-            formatter: Formatter::new(),
+            formatter: TrackFormatter::new(),
         }
     }
 

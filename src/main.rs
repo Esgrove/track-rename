@@ -3,6 +3,9 @@ mod formatter;
 mod renamer;
 mod track;
 
+#[cfg(test)]
+mod test_formatter;
+
 extern crate colored;
 
 use crate::renamer::Renamer;

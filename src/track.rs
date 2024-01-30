@@ -118,3 +118,44 @@ impl fmt::Display for Track {
         write!(f, "{}/{}.{}", relative_path.display(), self.name, self.format)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    #[test]
+    fn test_track_new_valid_path() {
+        let path = PathBuf::from("/users/test/test_song.mp3");
+        let track = Track::new(path).expect("Failed to create track");
+        assert_eq!(track.name, "test_song");
+        assert_eq!(track.extension, "mp3");
+        assert_eq!(track.format, FileFormat::Mp3);
+        assert_eq!(track.root, PathBuf::from("/users/test"));
+        assert_eq!(track.filename(), "test_song.mp3");
+    }
+    #[test]
+    fn test_track_new_with_extension() {
+        let path = PathBuf::from("/users/test/another/artist - test song.aiff");
+        let track = Track::new_with_extension(path, "aiff".to_string(), FileFormat::Aif)
+            .expect("Failed to create track with extension");
+        assert_eq!(track.name, "artist - test song");
+        assert_eq!(track.extension, "aiff");
+        assert_eq!(track.format, FileFormat::Aif);
+        assert_eq!(track.root, PathBuf::from("/users/test/another"));
+        assert_eq!(track.filename(), "artist - test song.aiff");
+    }
+    #[test]
+    fn test_track_equality() {
+        let track1 = Track::new(PathBuf::from("/users/test/Test - song1.mp3")).expect("Failed to create track");
+        let track2 = Track::new(PathBuf::from("/users/other/Test - song1.aif")).expect("Failed to create track");
+        assert_eq!(track1, track2);
+    }
+    #[test]
+    fn test_track_display() {
+        let dir = env::current_dir().expect("Failed to get current dir");
+        let track = Track::new(dir.join("artist - title.mp3")).expect("Failed to create track");
+        let displayed = format!("{}", track);
+        assert!(displayed.contains("artist - title.mp3"));
+    }
+}

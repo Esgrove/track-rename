@@ -1,15 +1,15 @@
 use regex::Regex;
 
-pub struct Formatter {
+pub struct TrackFormatter {
     common_substitutes: Vec<(&'static str, &'static str)>,
     title_substitutes: Vec<(&'static str, &'static str)>,
     regex_substitutes: Vec<(Regex, &'static str)>,
     filename_regex_substitutes: Vec<(Regex, &'static str)>,
 }
 
-impl Formatter {
-    pub fn new() -> Formatter {
-        Formatter {
+impl TrackFormatter {
+    pub fn new() -> TrackFormatter {
+        TrackFormatter {
             common_substitutes: vec![
                 (" feat ", " feat. "),
                 (" ft. ", " feat. "),
