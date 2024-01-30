@@ -192,7 +192,7 @@ impl Renamer {
                 if !self.print_only && Renamer::confirm() {
                     tag.set_artist(formatted_artist.clone());
                     tag.set_title(formatted_title.clone());
-                    tag.write_to_path(&track.path, tag.version())
+                    tag.write_to_path(&track.path, id3::Version::Id3v23)
                         .context("Failed to write tags")?;
                     track.tags_updated = true;
                 }
@@ -271,7 +271,7 @@ impl Renamer {
                 Some(Tag::new())
             }
             Err(err) => {
-                println!("{}", format!("Failed to read tags for: {}\n{}", track, err).red());
+                eprintln!("{}", format!("Failed to read tags for: {}\n{}", track, err).red());
                 None
             }
         }
