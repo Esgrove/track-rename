@@ -62,11 +62,8 @@ impl TrackFormatter {
                 ("In+out", "In-Out"),
             ],
             regex_substitutes: vec![
-                (Regex::new(r"(?i)\b(?:feat\.?|ft\.?|featuring)\b").unwrap(), " feat. "),
-                (
-                    Regex::new(r"(?i)\(\s*(?:feat\.?|ft\.?|featuring)\b").unwrap(),
-                    "(feat. ",
-                ),
+                (Regex::new(r"(?i)\b(?:feat\.?|ft\.?|featuring)\b").unwrap(), "feat."),
+                (Regex::new(r"(?i)\(\s*(?:feat\.?|ft\.?|featuring)\b").unwrap(), "(feat."),
                 (Regex::new(r"[\[{]+").unwrap(), "("),
                 (Regex::new(r"[\]}]+").unwrap(), ")"),
                 (Regex::new(r"!{2,}").unwrap(), "!"),
@@ -96,6 +93,16 @@ impl TrackFormatter {
         let mut formatted_artist = artist.to_string();
         let mut formatted_title = title.to_string();
 
+        let extensions = [".mp3", ".flac", ".aif", ".aiff", ".m4a"];
+        for ext in &extensions {
+            if formatted_artist.to_lowercase().ends_with(ext) {
+                formatted_artist = formatted_artist[0..formatted_artist.len() - ext.len()].to_string();
+            }
+            if formatted_title.to_lowercase().ends_with(ext) {
+                formatted_title = formatted_title[0..formatted_title.len() - ext.len()].to_string();
+            }
+        }
+
         for (pattern, replacement) in &self.common_substitutes {
             formatted_artist = formatted_artist.replace(pattern, replacement);
             formatted_title = formatted_title.replace(pattern, replacement);
@@ -111,9 +118,11 @@ impl TrackFormatter {
         }
 
         TrackFormatter::use_parenthesis_for_mix(&mut formatted_title);
+        formatted_title = TrackFormatter::replace_dash_in_parentheses(&formatted_title);
         formatted_title = TrackFormatter::fix_nested_parentheses(&formatted_title);
         formatted_title = TrackFormatter::wrap_text_after_parentheses(&formatted_title);
         formatted_title = TrackFormatter::remove_bpm_in_parentheses_from_end(&formatted_title);
+        formatted_title = formatted_title.replace("((", "(").replace("))", ")");
 
         (formatted_artist.trim().to_string(), formatted_title.trim().to_string())
     }
@@ -218,35 +227,36 @@ impl TrackFormatter {
 
     fn wrap_text_after_parentheses(text: &str) -> String {
         let re = Regex::new(r"\)\s(.*?)\s\(").unwrap();
-        if text.starts_with('(') {
+
+        let (start, rest) = if text.starts_with('(') {
             // If the text starts with a parenthesis, find the end of the first group and start replacing from there
             if let Some(index) = text.find(") ") {
-                let (start, rest) = text.split_at(index + 2);
-                let mut rest = re
-                    .replace_all(rest, |caps: &regex::Captures| format!(") ({}) (", &caps[1]))
-                    .to_string();
-                if let Some(index) = rest.rfind(')') {
-                    if index < rest.len() - 1 {
-                        rest.insert_str(index + 2, "(");
-                        rest.push_str(")");
-                    }
-                }
-                format!("{}{}", start, rest)
+                text.split_at(index + 2)
             } else {
-                text.to_string()
+                return text.to_string();
             }
         } else {
-            let mut result = re
-                .replace_all(text, |caps: &regex::Captures| format!(") ({}) (", &caps[1]))
-                .to_string();
-            if let Some(index) = result.rfind(')') {
-                if index < result.len() - 1 {
-                    result.insert_str(index + 2, "(");
-                    result.push_str(")");
-                }
+            ("", text)
+        };
+
+        let mut result = re
+            .replace_all(rest, |caps: &regex::Captures| format!(") ({}) (", &caps[1]))
+            .to_string();
+
+        if let Some(index) = result.rfind(')') {
+            if index < result.len() - 1 {
+                result.insert_str(index + 2, "(");
+                result.push_str(")");
             }
-            result
         }
+
+        format!("{}{}", start, result)
+    }
+
+    fn replace_dash_in_parentheses(text: &str) -> String {
+        let re = Regex::new(r"\((.*?) - (.*?)\)").unwrap();
+        let result = re.replace_all(text, |caps: &regex::Captures| format!("({}) ({})", &caps[1], &caps[2]));
+        result.to_string()
     }
 }
 

@@ -12,6 +12,33 @@ mod tests {
         correct_title: &'static str,
     }
 
+    static BALANCE_PARENTHESES_TEST_DATA: &[FormattingTestData] = &[
+        FormattingTestData {
+            artist: "Janet Jackson",
+            correct_artist: "Janet Jackson",
+            title: "If (Kaytranada Edition (Live Set Version)",
+            correct_title: "If (Kaytranada Edition) (Live Set Version)",
+        },
+        FormattingTestData {
+            artist: "Another Jackson",
+            correct_artist: "Another Jackson",
+            title: "If (Kaytranada Edition) (Live Set Version",
+            correct_title: "If (Kaytranada Edition) (Live Set Version)",
+        },
+        FormattingTestData {
+            artist: "Jackson 3",
+            correct_artist: "Jackson 3",
+            title: "If (Live Set Version",
+            correct_title: "If (Live Set Version)",
+        },
+        FormattingTestData {
+            artist: "Jackson 5",
+            correct_artist: "Jackson 5",
+            title: "If (Jes) Live Set Version)",
+            correct_title: "If (Jes) (Live Set Version)",
+        },
+    ];
+
     static FEAT_TEST_DATA: &[FormattingTestData] = &[
         FormattingTestData {
             artist: "seige",
@@ -83,12 +110,6 @@ mod tests {
 
     static FORMATTING_TEST_DATA: &[FormattingTestData] = &[
         FormattingTestData {
-            artist: "ACA",
-            correct_artist: "ACA",
-            title: "Azn Danza - Myles Club Edit",
-            correct_title: "Azn Danza (Myles Club Edit)",
-        },
-        FormattingTestData {
             artist: "ASAP Ferg x A-Ha",
             correct_artist: "ASAP Ferg x A-Ha",
             title: "Plain Jane (Nick Bike Edit + Acap In & Out)[Clean]",
@@ -107,12 +128,6 @@ mod tests {
             correct_title: "Rain (Clean Intro)",
         },
         FormattingTestData {
-            artist: "Lizzo",
-            correct_artist: "Lizzo",
-            title: "About Damn Time - Purple Disco Machine (Dirty Intro)",
-            correct_title: "About Damn Time (Purple Disco Machine) (Dirty Intro)",
-        },
-        FormattingTestData {
             artist: "GoRilla x Kendrick Lamar",
             correct_artist: "GoRilla x Kendrick Lamar",
             title: "FNF Let's Go (Nick Bike 'Humble' Edit)(Acap In Out)(Clean)",
@@ -124,41 +139,20 @@ mod tests {
             title: "Dance (A$$) - Tall Boys Remix (DJcity Intro - Dirty)",
             correct_title: "Dance (A$$) (Tall Boys Remix) (Dirty Intro)",
         },
+    ];
+
+    static NESTED_PARENTHESES_TEST_DATA: &[FormattingTestData] = &[
         FormattingTestData {
-            artist: "Toosii",
-            correct_artist: "Toosii",
-            title: "Favorite Song (Trayze My Boo Edit) 130 11a",
-            correct_title: "Favorite Song (Trayze My Boo Edit)",
+            artist: "Janet Jackson",
+            correct_artist: "Janet Jackson",
+            title: "This is a test (with some (nested) parentheses (and (some) more))",
+            correct_title: "This is a test (with some) (nested parentheses) (and) (some more)",
         },
         FormattingTestData {
-            artist: "Tori Kelly",
-            correct_artist: "Tori Kelly",
-            title: "Cut (Trayze Acap Out) 136",
-            correct_title: "Cut (Trayze Acapella Out)",
-        },
-        FormattingTestData {
-            artist: "Stevie Wonder",
-            correct_artist: "Stevie Wonder",
-            title: "Signed, Sealed, Delivered - Trayze Nola Bounce Flip - 102 4a",
-            correct_title: "Signed, Sealed, Delivered (Trayze Nola Bounce Flip)",
-        },
-        FormattingTestData {
-            artist: "Rihanna",
-            correct_artist: "Rihanna",
-            title: "Right Now (Facetyme Remix) (132 Ebm)",
-            correct_title: "Right Now (Facetyme Remix)",
-        },
-        FormattingTestData {
-            artist: "Rihanna",
-            correct_artist: "Rihanna",
-            title: "Lift Me Up (Trayze Drop Leaf Edit) (89 11b)",
-            correct_title: "Lift Me Up (Trayze Drop Leaf Edit)",
-        },
-        FormattingTestData {
-            artist: "Rihanna",
-            correct_artist: "Rihanna",
-            title: "Lift Me Up (Trayze Drop Leaf Edit) (89 11b)",
-            correct_title: "Lift Me Up (Trayze Drop Leaf Edit)",
+            artist: "Krewella",
+            correct_artist: "Krewella",
+            title: "Live For The Night (Simo 128 (70) (Trayze Rmx) Transition) (Quick)",
+            correct_title: "Live For The Night (Simo 128) (70) (Trayze Rmx Transition) (Quick)",
         },
     ];
 
@@ -201,45 +195,57 @@ mod tests {
         },
     ];
 
-    static BALANCE_PARENTHESES_TEST_DATA: &[FormattingTestData] = &[
+    static REMIX_FORMATTING_TEST_DATA: &[FormattingTestData] = &[
         FormattingTestData {
-            artist: "Janet Jackson",
-            correct_artist: "Janet Jackson",
-            title: "If (Kaytranada Edition (Live Set Version)",
-            correct_title: "If (Kaytranada Edition) (Live Set Version)",
+            artist: "ACA",
+            correct_artist: "ACA",
+            title: "Azn Danza - Myles Club Edit",
+            correct_title: "Azn Danza (Myles Club Edit)",
         },
         FormattingTestData {
-            artist: "Another Jackson",
-            correct_artist: "Another Jackson",
-            title: "If (Kaytranada Edition) (Live Set Version",
-            correct_title: "If (Kaytranada Edition) (Live Set Version)",
-        },
-        FormattingTestData {
-            artist: "Jackson 3",
-            correct_artist: "Jackson 3",
-            title: "If (Live Set Version",
-            correct_title: "If (Live Set Version)",
-        },
-        FormattingTestData {
-            artist: "Jackson 5",
-            correct_artist: "Jackson 5",
-            title: "If (Jes) Live Set Version)",
-            correct_title: "If (Jes) (Live Set Version)",
+            artist: "Lizzo",
+            correct_artist: "Lizzo",
+            title: "About Damn Time - Purple Disco Machine (Dirty Intro)",
+            correct_title: "About Damn Time (Purple Disco Machine) (Dirty Intro)",
         },
     ];
 
-    static NESTED_PARENTHESES_TEST_DATA: &[FormattingTestData] = &[
+    static REMOVE_BPM_AND_KEY_TEST_DATA: &[FormattingTestData] = &[
         FormattingTestData {
-            artist: "Janet Jackson",
-            correct_artist: "Janet Jackson",
-            title: "This is a test (with some (nested) parentheses (and (some) more))",
-            correct_title: "This is a test (with some) (nested parentheses) (and) (some more)",
+            artist: "Toosii",
+            correct_artist: "Toosii",
+            title: "Favorite Song (Trayze My Boo Edit) 130 11a",
+            correct_title: "Favorite Song (Trayze My Boo Edit)",
         },
         FormattingTestData {
-            artist: "Krewella",
-            correct_artist: "Krewella",
-            title: "Live For The Night (Simo 128 (70) (Trayze Rmx) Transition) (Quick)",
-            correct_title: "Live For The Night (Simo 128) (70) (Trayze Rmx Transition) (Quick)",
+            artist: "Tori Kelly",
+            correct_artist: "Tori Kelly",
+            title: "Cut (Trayze Acap Out) 136",
+            correct_title: "Cut (Trayze Acapella Out)",
+        },
+        FormattingTestData {
+            artist: "Stevie Wonder",
+            correct_artist: "Stevie Wonder",
+            title: "Signed, Sealed, Delivered - Trayze Nola Bounce Flip - 102 4a",
+            correct_title: "Signed, Sealed, Delivered (Trayze Nola Bounce Flip)",
+        },
+        FormattingTestData {
+            artist: "Rihanna",
+            correct_artist: "Rihanna",
+            title: "Right Now (Facetyme Remix) (132 Ebm)",
+            correct_title: "Right Now (Facetyme Remix)",
+        },
+        FormattingTestData {
+            artist: "Rihanna",
+            correct_artist: "Rihanna",
+            title: "Lift Me Up (Trayze Drop Leaf Edit) (89 11b)",
+            correct_title: "Lift Me Up (Trayze Drop Leaf Edit)",
+        },
+        FormattingTestData {
+            artist: "Rihanna",
+            correct_artist: "Rihanna",
+            title: "Lift Me Up (Trayze Drop Leaf Edit) (89 11b)",
+            correct_title: "Lift Me Up (Trayze Drop Leaf Edit)",
         },
     ];
 
@@ -274,6 +280,10 @@ mod tests {
     }
 
     #[test]
+    fn test_balance_parentheses() {
+        run_formatter_tests(&BALANCE_PARENTHESES_TEST_DATA)
+    }
+    #[test]
     fn test_feat_formatting() {
         run_formatter_tests(&FEAT_TEST_DATA)
     }
@@ -282,16 +292,20 @@ mod tests {
         run_formatter_tests(&FORMATTING_TEST_DATA)
     }
     #[test]
+    fn test_nested_parentheses() {
+        run_formatter_tests(&NESTED_PARENTHESES_TEST_DATA)
+    }
+    #[test]
     fn test_parentheses() {
         run_formatter_tests(&PARENTHESES_TEST_DATA)
     }
     #[test]
-    fn test_balance_parentheses() {
-        run_formatter_tests(&BALANCE_PARENTHESES_TEST_DATA)
+    fn test_remix_formatting() {
+        run_formatter_tests(&REMIX_FORMATTING_TEST_DATA)
     }
     #[test]
-    fn test_nested_parentheses() {
-        run_formatter_tests(&NESTED_PARENTHESES_TEST_DATA)
+    fn test_remove_bpm_and_key() {
+        run_formatter_tests(&REMOVE_BPM_AND_KEY_TEST_DATA)
     }
     #[test]
     fn test_whitespace_formatting() {
