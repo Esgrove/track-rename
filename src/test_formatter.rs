@@ -1,9 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::fileformat::FileFormat;
+
     use crate::formatter::TrackFormatter;
-    use crate::track::Track;
 
     struct FormattingTestData {
         artist: &'static str,
@@ -299,34 +297,34 @@ mod tests {
 
     #[test]
     fn test_balance_parentheses() {
-        run_formatter_tests(&BALANCE_PARENTHESES_TEST_DATA)
+        run_formatter_tests(BALANCE_PARENTHESES_TEST_DATA)
     }
     #[test]
     fn test_feat_formatting() {
-        run_formatter_tests(&FEAT_TEST_DATA)
+        run_formatter_tests(FEAT_TEST_DATA)
     }
     #[test]
     fn test_formatting() {
-        run_formatter_tests(&FORMATTING_TEST_DATA)
+        run_formatter_tests(FORMATTING_TEST_DATA)
     }
     #[test]
     fn test_nested_parentheses() {
-        run_formatter_tests(&NESTED_PARENTHESES_TEST_DATA)
+        run_formatter_tests(NESTED_PARENTHESES_TEST_DATA)
     }
     #[test]
     fn test_parentheses() {
-        run_formatter_tests(&PARENTHESES_TEST_DATA)
+        run_formatter_tests(PARENTHESES_TEST_DATA)
     }
     #[test]
     fn test_remix_formatting() {
-        run_formatter_tests(&REMIX_FORMATTING_TEST_DATA)
+        run_formatter_tests(REMIX_FORMATTING_TEST_DATA)
     }
     #[test]
     fn test_remove_bpm_and_key() {
-        run_formatter_tests(&REMOVE_BPM_AND_KEY_TEST_DATA)
+        run_formatter_tests(REMOVE_BPM_AND_KEY_TEST_DATA)
     }
     #[test]
     fn test_whitespace_formatting() {
-        run_formatter_tests(&WHITESPACE_TEST_DATA)
+        run_formatter_tests(WHITESPACE_TEST_DATA)
     }
 }

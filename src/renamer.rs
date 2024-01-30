@@ -89,10 +89,8 @@ impl Renamer {
                             "{}",
                             format!("Wav should be converted to aif: {}", path.display()).yellow()
                         );
-                    } else {
-                        if self.verbose {
-                            eprintln!("{}", e);
-                        }
+                    } else if self.verbose {
+                        eprintln!("{}", e);
                     }
                 }
             }

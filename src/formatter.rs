@@ -165,7 +165,7 @@ impl TrackFormatter {
 
         if title.contains(" feat. ") || title.contains("(feat. ") {
             let feat_regex = Regex::new(r"feat\. .*?( -|\(|\)|$)").unwrap();
-            if let Some(feat_match) = feat_regex.find(&title) {
+            if let Some(feat_match) = feat_regex.find(title) {
                 let feat = feat_match
                     .as_str()
                     .trim_end_matches(|c| c == '(' || c == ')' || c == '-');
@@ -205,7 +205,7 @@ impl TrackFormatter {
 
                 // Check for " (" after the replaced part
                 if let Some(insert_index) = title[index..].find(" (").map(|i| i + index) {
-                    title.insert_str(insert_index, ")");
+                    title.insert(insert_index, ')');
                 } else {
                     // Add a closing parenthesis at the end
                     title.push(')');
@@ -233,7 +233,7 @@ impl TrackFormatter {
                 }
                 ')' => {
                     // If the stack is not empty, pop an element from the stack
-                    if let Some(_) = stack.pop() {
+                    if stack.pop().is_some() {
                         // Add the closing parenthesis only if the stack is empty or the top element is not '('
                         if stack.is_empty() || *stack.last().unwrap() != '(' {
                             result.push(char);
@@ -248,7 +248,7 @@ impl TrackFormatter {
         }
 
         // If there are any remaining opening parentheses, close them
-        while let Some(_) = stack.pop() {
+        while stack.pop().is_some() {
             result.push(')');
         }
 
@@ -312,8 +312,8 @@ impl TrackFormatter {
 
         if let Some(index) = result.rfind(')') {
             if index < result.len() - 1 {
-                result.insert_str(index + 2, "(");
-                result.push_str(")");
+                result.insert(index + 2, '(');
+                result.push(')');
             }
         }
 
