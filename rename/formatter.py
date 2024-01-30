@@ -69,6 +69,7 @@ class TrackFormatter:
             (r"\.{2,}", "."),
             (r"\(\s*?\)", ""),
             (r"(\S)\(", r"\1 ("),
+            (r"(?i)\sW/", " feat. "),
         )
         self.filename_regex_substitutes = (
             ('"', "''"),

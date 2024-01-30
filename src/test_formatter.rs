@@ -139,6 +139,12 @@ mod tests {
             title: "Dance (A$$) - Tall Boys Remix (DJcity Intro - Dirty)",
             correct_title: "Dance (A$$) (Tall Boys Remix) (Dirty Intro)",
         },
+        FormattingTestData {
+            artist: "Big Sean W/Taku",
+            correct_artist: "Big Sean feat. Taku",
+            title: "Dance (A$$)",
+            correct_title: "Dance (A$$)",
+        },
     ];
 
     static NESTED_PARENTHESES_TEST_DATA: &[FormattingTestData] = &[

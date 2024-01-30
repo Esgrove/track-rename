@@ -195,6 +195,12 @@ FORMATTING_TEST_DATA = [
         "Lift Me Up (Trayze Drop Leaf Edit) (89 11b)",
         "Lift Me Up (Trayze Drop Leaf Edit)",
     ),
+    (
+        "Big Sean W/Taku",
+        "Big Sean feat. Taku",
+        "Dance (A$$)",
+        "Dance (A$$)",
+    ),
 ]
 
 PARENTHESES_TEST_DATA = [

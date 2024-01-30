@@ -79,6 +79,7 @@ impl TrackFormatter {
                     "Missy Elliott",
                 ),
                 (Regex::new(r"(?i)\bGangstarr\b|\bGangstarr$").unwrap(), "Gang Starr"),
+                (Regex::new(r"(?i)\sW/").unwrap(), " feat. "),
             ],
             filename_regex_substitutes: vec![
                 (Regex::new("\"").unwrap(), "''"),
