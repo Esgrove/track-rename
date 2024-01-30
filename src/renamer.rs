@@ -7,6 +7,7 @@ use walkdir::WalkDir;
 use std::collections::HashMap;
 use std::fs;
 use std::io;
+use std::io::Write;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::string::String;
@@ -157,14 +158,14 @@ impl Renamer {
                     current_tags = format!("{} - {}", artist, title);
                 }
                 (None, None) => {
-                    eprintln!("Missing tags: {}", track.path.display());
+                    eprintln!("{}", format!("Missing tags: {}", track.path.display()).yellow());
                     if let Some((a, t)) = Renamer::get_tags_from_filename(&track.name) {
                         artist = a;
                         title = t;
                     }
                 }
                 (None, Some(t)) => {
-                    eprintln!("Missing artist tag: {}", track.path.display());
+                    eprintln!("{}", format!("Missing artist tag: {}", track.path.display()).yellow());
                     if let Some((a, _)) = Renamer::get_tags_from_filename(&track.name) {
                         artist = a;
                     }
@@ -172,7 +173,7 @@ impl Renamer {
                     current_tags = format!(" - {}", title);
                 }
                 (Some(a), None) => {
-                    eprintln!("Missing title tag: {}", track.path.display());
+                    eprintln!("{}", format!("Missing title tag: {}", track.path.display()).yellow());
                     artist = a.to_string();
                     if let Some((_, t)) = Renamer::get_tags_from_filename(&track.name) {
                         title = t;
@@ -281,6 +282,7 @@ impl Renamer {
     /// Note: everything except `n` is a yes.
     fn confirm() -> bool {
         print!("Proceed (y/n)? ");
+        io::stdout().flush().expect("Failed to flush stdout");
         let mut ans = String::new();
         io::stdin().read_line(&mut ans).expect("Failed to read line");
         ans.trim().to_lowercase() != "n"
