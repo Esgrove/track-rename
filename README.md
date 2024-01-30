@@ -1,20 +1,26 @@
 # Track Renamer
 
 CLI tool for formatting and renaming audio files.
+Originally made in Python,
+and now contains a Rust version as well.
 
-## Dependencies
+## Python version
+
+### Dependencies
 
 - Python 3.11+
 - [Poetry](https://github.com/python-poetry/poetry)
 
 Install Python packages:
+
 ```shell
 poetry install
 ```
 
-## Usage
+### Usage
 
 Run with poetry script or directly:
+
 ```shell
 poetry run rename --help
 poetry run python rename/renamer.py --help
@@ -38,12 +44,21 @@ Options:
 
 See the [test data](./tests/test_data.py) for formatting examples.
 
-## Tests
+### Tests
 
 ```shell
 poetry run pytest -v --cov=rename tests/
 ```
 
-## TODO
+## Rust version
 
-- Finish Rust version
+```shell
+./build.sh
+./install.sh
+```
+
+### Run tests
+
+```shell
+cargo test
+```
