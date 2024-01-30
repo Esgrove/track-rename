@@ -41,7 +41,7 @@ mod tests {
 
     static FEAT_TEST_DATA: &[FormattingTestData] = &[
         FormattingTestData {
-            artist: "seige",
+            artist: "Seige",
             correct_artist: "Seige feat. Busta Rhymes, Little Brother, Kurupt, Crooked I & Willie B",
             title: "Holla Remix (featuring Busta Rhymes, Little Brother, Kurupt, Crooked I, and Willie B)",
             correct_title: "Holla Remix",

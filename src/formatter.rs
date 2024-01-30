@@ -11,7 +11,6 @@ impl TrackFormatter {
     pub fn new() -> TrackFormatter {
         TrackFormatter {
             common_substitutes: vec![
-                (" (Dirty!)", " (Dirty)"),
                 (")(", ") ("),
                 ("()", " "),
                 (") - (", ""),
@@ -32,6 +31,7 @@ impl TrackFormatter {
                 ("* ", ""),
             ],
             title_substitutes: vec![
+                (" (Dirty!)", " (Dirty)"),
                 (" (Original Mix)", ""),
                 (" DJcity", ""),
                 (" DJCity", ""),
@@ -118,11 +118,25 @@ impl TrackFormatter {
         }
 
         TrackFormatter::use_parenthesis_for_mix(&mut formatted_title);
+
+        (formatted_artist, formatted_title) =
+            TrackFormatter::move_feat_from_title_to_artist(&formatted_artist, &formatted_title);
+
         formatted_title = TrackFormatter::replace_dash_in_parentheses(&formatted_title);
         formatted_title = TrackFormatter::fix_nested_parentheses(&formatted_title);
         formatted_title = TrackFormatter::wrap_text_after_parentheses(&formatted_title);
         formatted_title = TrackFormatter::remove_bpm_in_parentheses_from_end(&formatted_title);
         formatted_title = formatted_title.replace("((", "(").replace("))", ")");
+
+        for (regex, replacement) in &self.regex_substitutes {
+            formatted_artist = regex.replace_all(&formatted_artist, *replacement).to_string();
+            formatted_title = regex.replace_all(&formatted_title, *replacement).to_string();
+        }
+
+        for (pattern, replacement) in &self.common_substitutes {
+            formatted_artist = formatted_artist.replace(pattern, replacement);
+            formatted_title = formatted_title.replace(pattern, replacement);
+        }
 
         (formatted_artist.trim().to_string(), formatted_title.trim().to_string())
     }
@@ -134,6 +148,42 @@ impl TrackFormatter {
         for (regex, replacement) in &self.filename_regex_substitutes {
             formatted_artist = regex.replace_all(&formatted_artist, *replacement).to_string();
             formatted_title = regex.replace_all(&formatted_title, *replacement).to_string();
+        }
+
+        (formatted_artist.trim().to_string(), formatted_title.trim().to_string())
+    }
+
+    fn move_feat_from_title_to_artist(artist: &str, title: &str) -> (String, String) {
+        let mut formatted_artist = artist.to_string();
+        let mut formatted_title = title.to_string();
+
+        if title.contains(" feat. ") || title.contains("(feat. ") {
+            let feat_regex = Regex::new(r"feat\. .*?( -|\(|\)|$)").unwrap();
+            if let Some(feat_match) = feat_regex.find(&title) {
+                let feat = feat_match
+                    .as_str()
+                    .trim_end_matches(|c| c == '(' || c == ')' || c == '-');
+
+                formatted_title = title.replace(feat, "").replace("()", "");
+
+                let feat_artist = feat
+                    .replacen("feat. ", "", 1)
+                    .replace(", and ", " & ")
+                    .replace(" and ", " & ")
+                    .trim()
+                    .to_string();
+
+                for delimiter in [", ", " & ", " and ", " + "] {
+                    formatted_artist = formatted_artist
+                        .replace(&format!("{}{}", delimiter, feat_artist), "")
+                        .replace(&format!("{}{}", feat_artist, delimiter), "");
+                }
+
+                let new_feat = format!(" feat. {}", feat_artist);
+                if !formatted_artist.contains(&new_feat) {
+                    formatted_artist.push_str(&new_feat);
+                }
+            }
         }
 
         (formatted_artist.trim().to_string(), formatted_title.trim().to_string())
