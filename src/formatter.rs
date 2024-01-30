@@ -72,6 +72,7 @@ impl TrackFormatter {
                 (Regex::new(r"\.{2,}").unwrap(), "."),
                 (Regex::new(r"\(\s*?\)").unwrap(), ""),
                 (Regex::new(r"(\S)\(").unwrap(), "$1 ("),
+                (Regex::new(r"\)(\S)").unwrap(), ") $1"),
                 (Regex::new(r"\(\s*\){2,}").unwrap(), "("),
                 (Regex::new(r"\)\s*\){2,}").unwrap(), ")"),
                 (
