@@ -296,7 +296,7 @@ impl TrackFormatter {
 
         if let Some(index) = result.rfind(')') {
             if index < result.len() - 1 {
-                result.insert_str(index + 2, "(");
+                result.insert_str(index + 1, "(");
                 result.push_str(")");
             }
         }
