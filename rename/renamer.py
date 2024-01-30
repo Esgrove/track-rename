@@ -179,7 +179,7 @@ class Renamer:
                 print_yellow("Rename file:", bold=True)
                 self.show_diff(track.filename, formatted_filename)
                 if not self.print_only and (self.force or self.confirm()):
-                    os.rename(track.full_path, new_path)
+                    self.try_rename(track.full_path, new_path)
                     track.renamed = True
 
                 self.num_renamed += 1
@@ -197,9 +197,9 @@ class Renamer:
                 current_duplicate_path = self.append_duplicate_tag_to_name(new_path)
                 new_duplicate_path = self.append_duplicate_tag_to_name(track.full_path)
                 if not current_duplicate_path.exists():
-                    os.rename(new_path, current_duplicate_path)
+                    self.try_rename(new_path, current_duplicate_path)
                 if not new_duplicate_path.exists():
-                    os.rename(track.full_path, new_duplicate_path)
+                    self.try_rename(track.full_path, new_duplicate_path)
 
                 self.num_duplicates += 1
 

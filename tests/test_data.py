@@ -226,7 +226,7 @@ PARENTHESES_TEST_DATA = [
         "abc",
         "Abc",
         "(You Make Me Feel) Mighty Real",
-        "(You Make Me Feel) Mighty Real",
+        "(You Make Me Feel) (Mighty Real)",
     ),
     (
         "The Bucketheads",

@@ -287,7 +287,7 @@ class TrackFormatter:
                 # If there are unclosed parentheses before opening a new one, close them
                 if open_count > 0:
                     result.append(") ")
-                    open_count = max(0, open_count - 1)
+                    open_count -= 1
                 else:
                     open_count += 1
             elif char == ")":
@@ -296,8 +296,7 @@ class TrackFormatter:
             result.append(char)
 
         # Add any remaining closing parentheses at the end
-        if open_count > 0:
-            result.append(")")
+        result.extend(")" * open_count)
 
         return "".join(result)
 
@@ -310,7 +309,7 @@ class TrackFormatter:
             if char == ")":
                 if open_count > 0:
                     result.append(" (")
-                    open_count = max(0, open_count - 1)
+                    open_count -= 1
                 else:
                     open_count += 1
             elif char == "(":
@@ -318,16 +317,13 @@ class TrackFormatter:
 
             result.append(char)
 
-        if open_count > 0:
-            result.append("(")
+        result.extend("(" * open_count)
 
         return "".join(reversed(result))
 
     @staticmethod
     def wrap_text_after_parentheses(text: str) -> str:
         """Add parentheses around text following text in parentheses."""
-        if text.endswith(")") or text.startswith("("):
-            return text
 
         # Regex pattern to match text after the last closing parenthesis
         # The negative lookahead (?!.*\() ensures no opening parenthesis follows
