@@ -11,23 +11,17 @@ impl TrackFormatter {
     pub fn new() -> TrackFormatter {
         TrackFormatter {
             common_substitutes: vec![
-                (" feat ", " feat. "),
-                (" ft. ", " feat. "),
-                (" Feat ", " feat. "),
-                (" featuring ", " feat. "),
-                (" Featuring ", " feat. "),
-                ("(feat ", "(feat. "),
-                ("(ft. ", "(feat. "),
-                ("(Feat ", "(feat. "),
-                ("(featuring ", "(feat. "),
-                ("(Featuring ", "(feat. "),
-                (" (Dirty!)", ""),
+                (" (Dirty!)", " (Dirty)"),
+                (")(", ") ("),
+                ("()", " "),
                 (") - (", ""),
                 (" - (", " ("),
                 ("(- ", "("),
                 ("( - ", "("),
                 (" -)", " )"),
                 (" - ) ", ")"),
+                (" )", ")"),
+                ("( ", "("),
                 ("...", " "),
                 ("..", " "),
                 (" ***", ""),
@@ -68,6 +62,11 @@ impl TrackFormatter {
                 ("In+out", "In-Out"),
             ],
             regex_substitutes: vec![
+                (Regex::new(r"(?i)\b(?:feat\.?|ft\.?|featuring)\b").unwrap(), " feat. "),
+                (
+                    Regex::new(r"(?i)\(\s*(?:feat\.?|ft\.?|featuring)\b").unwrap(),
+                    "(feat. ",
+                ),
                 (Regex::new(r"[\[{]+").unwrap(), "("),
                 (Regex::new(r"[\]}]+").unwrap(), ")"),
                 (Regex::new(r"!{2,}").unwrap(), "!"),
@@ -76,10 +75,13 @@ impl TrackFormatter {
                 (Regex::new(r"\.{2,}").unwrap(), "."),
                 (Regex::new(r"\(\s*?\)").unwrap(), ""),
                 (Regex::new(r"(\S)\(").unwrap(), "$1 ("),
+                (Regex::new(r"\(\s*\){2,}").unwrap(), "("),
+                (Regex::new(r"\)\s*\){2,}").unwrap(), ")"),
                 (
-                    Regex::new(r"\bMissy Elliot\b|\bMissy Elliot$").unwrap(),
+                    Regex::new(r"(?i)\bMissy Elliot\b|\bMissy Elliot$").unwrap(),
                     "Missy Elliott",
                 ),
+                (Regex::new(r"(?i)\bGangstarr\b|\bGangstarr$").unwrap(), "Gang Starr"),
             ],
             filename_regex_substitutes: vec![
                 (Regex::new("\"").unwrap(), "''"),
@@ -108,6 +110,11 @@ impl TrackFormatter {
             formatted_title = regex.replace_all(&formatted_title, *replacement).to_string();
         }
 
+        TrackFormatter::use_parenthesis_for_mix(&mut formatted_title);
+        formatted_title = TrackFormatter::fix_nested_parentheses(&formatted_title);
+        formatted_title = TrackFormatter::wrap_text_after_parentheses(&formatted_title);
+        formatted_title = TrackFormatter::remove_bpm_in_parentheses_from_end(&formatted_title);
+
         (formatted_artist.trim().to_string(), formatted_title.trim().to_string())
     }
 
@@ -121,5 +128,212 @@ impl TrackFormatter {
         }
 
         (formatted_artist.trim().to_string(), formatted_title.trim().to_string())
+    }
+
+    fn use_parenthesis_for_mix(title: &mut String) {
+        if title.contains(" - ") {
+            if let Some(mut index) = title.find(" - ") {
+                let new_title = title.replacen(" - ", " (", 1);
+                title.clear();
+                title.push_str(&new_title);
+                index += 2;
+
+                // Check for " (" after the replaced part
+                if let Some(insert_index) = title[index..].find(" (").map(|i| i + index) {
+                    title.insert_str(insert_index, ")");
+                } else {
+                    // Add a closing parenthesis at the end
+                    title.push(')');
+                }
+            }
+        }
+    }
+
+    fn fix_nested_parentheses(text: &str) -> String {
+        // Initialize a stack to keep track of parentheses
+        let mut stack = Vec::new();
+        let mut result = String::new();
+
+        for char in text.chars() {
+            match char {
+                '(' => {
+                    // If the stack is not empty and the top element is also '(', add a closing ')' before the new '('
+                    if let Some(&last_char) = stack.last() {
+                        if last_char == '(' {
+                            result.push_str(") ");
+                        }
+                    }
+                    stack.push(char);
+                    result.push(char);
+                }
+                ')' => {
+                    // If the stack is not empty, pop an element from the stack
+                    if let Some(_) = stack.pop() {
+                        // Add the closing parenthesis only if the stack is empty or the top element is not '('
+                        if stack.is_empty() || *stack.last().unwrap() != '(' {
+                            result.push(char);
+                        }
+                    }
+                }
+                _ => {
+                    // Add any other characters to the result
+                    result.push(char);
+                }
+            }
+        }
+
+        // If there are any remaining opening parentheses, close them
+        while let Some(_) = stack.pop() {
+            result.push(')');
+        }
+
+        result
+            .replace(" )", ")")
+            .replace("( ", "(")
+            .replace(" ()", "")
+            .replace("() ", "")
+    }
+
+    fn remove_bpm_in_parentheses_from_end(text: &str) -> String {
+        // Special case to skip one valid title
+        if text.ends_with(" (4U)") {
+            return text.to_string();
+        }
+
+        let mut result = text.to_string();
+
+        let re = Regex::new(r" \((\d{2,3}(\.\d)?|\d{2,3} \d{1,2}a)\)$").unwrap();
+        result = re.replace_all(&result, "").to_string();
+
+        let re = Regex::new(r"\s\(\d{1,2}(?:\s\d{1,2})?\s?[a-zA-Z]\)$").unwrap();
+        result = re.replace_all(&result, "").to_string();
+
+        if !result.to_lowercase().ends_with(" mix)") {
+            let re = Regex::new(r"\s\(\d{2,3}\s?[a-zA-Z]{2,3}\)$").unwrap();
+            result = re.replace_all(&result, "").to_string();
+        }
+
+        result
+    }
+
+    fn wrap_text_after_parentheses(text: &str) -> String {
+        let re = Regex::new(r"\)\s(.*?)\s\(").unwrap();
+        if text.starts_with('(') {
+            // If the text starts with a parenthesis, find the end of the first group and start replacing from there
+            if let Some(index) = text.find(") ") {
+                let (start, rest) = text.split_at(index + 2);
+                let mut rest = re
+                    .replace_all(rest, |caps: &regex::Captures| format!(") ({}) (", &caps[1]))
+                    .to_string();
+                if let Some(index) = rest.rfind(')') {
+                    if index < rest.len() - 1 {
+                        rest.insert_str(index + 2, "(");
+                        rest.push_str(")");
+                    }
+                }
+                format!("{}{}", start, rest)
+            } else {
+                text.to_string()
+            }
+        } else {
+            let mut result = re
+                .replace_all(text, |caps: &regex::Captures| format!(") ({}) (", &caps[1]))
+                .to_string();
+            if let Some(index) = result.rfind(')') {
+                if index < result.len() - 1 {
+                    result.insert_str(index + 2, "(");
+                    result.push_str(")");
+                }
+            }
+            result
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_use_parenthesis_for_mix() {
+        let mut title = "Azn Danza - Myles Club Edit".to_string();
+        let correct_title = "Azn Danza (Myles Club Edit)".to_string();
+        TrackFormatter::use_parenthesis_for_mix(&mut title);
+        assert_eq!(title, correct_title);
+
+        let mut title = "About Damn Time - Purple Disco Machine (Dirty Intro)".to_string();
+        let correct_title = "About Damn Time (Purple Disco Machine) (Dirty Intro)".to_string();
+        TrackFormatter::use_parenthesis_for_mix(&mut title);
+        assert_eq!(title, correct_title);
+    }
+
+    #[test]
+    fn test_remove_bpm_in_parentheses_from_end() {
+        let test_cases = [
+            ("Hot (4U)", "Hot (4U)"),
+            (
+                "Favorite Song (Trayze My Boo Edit) (130 11a)",
+                "Favorite Song (Trayze My Boo Edit)",
+            ),
+            ("Cut (Trayze Acapella Out) (136)", "Cut (Trayze Acapella Out)"),
+            (
+                "Signed, Sealed, Delivered (Trayze Nola Bounce Flip) (102 4a)",
+                "Signed, Sealed, Delivered (Trayze Nola Bounce Flip)",
+            ),
+            ("Right Now (Facetyme Remix) (132 Ebm)", "Right Now (Facetyme Remix)"),
+            (
+                "Lift Me Up (Trayze Drop Leaf Edit) (89 11b)",
+                "Lift Me Up (Trayze Drop Leaf Edit)",
+            ),
+            (
+                "Lift Me Up (Trayze Drop Leaf Edit) (89 Mix)",
+                "Lift Me Up (Trayze Drop Leaf Edit) (89 Mix)",
+            ),
+        ];
+
+        for (input, expected) in test_cases {
+            let result = TrackFormatter::remove_bpm_in_parentheses_from_end(input);
+            assert_eq!(result, expected);
+        }
+    }
+    #[test]
+    fn test_fix_nested_parentheses() {
+        let test_cases = vec![
+            ("Hello ((World))", "Hello (World)"),
+            ("((Hello) World)", "(Hello World)"),
+            ("Hello (World)", "Hello (World)"),
+            ("(Hello) (World)", "(Hello) (World)"),
+        ];
+
+        for (input, expected) in test_cases {
+            let result = TrackFormatter::fix_nested_parentheses(input);
+            assert_eq!(result, expected);
+        }
+    }
+
+    #[test]
+    fn test_wrap_text_after_parentheses() {
+        let test_cases = vec![
+            ("Hello (World) Test", "Hello (World) (Test)"),
+            ("Hello (World) Test (Another)", "Hello (World) (Test) (Another)"),
+            (
+                "Come And Get Your Love (Nick Bike Extended Mix) (Instrumental) 2.2",
+                "Come And Get Your Love (Nick Bike Extended Mix) (Instrumental) (2.2)",
+            ),
+            (
+                "Come And Get Your Love (Nick Bike Remix) Extended Mix (Instrumental) 2.2",
+                "Come And Get Your Love (Nick Bike Remix) (Extended Mix) (Instrumental) (2.2)",
+            ),
+            ("(You Make Me Feel) Mighty Real", "(You Make Me Feel) Mighty Real"),
+            (
+                "(You Make Me Feel) Mighty Real (Clean) 2.2",
+                "(You Make Me Feel) Mighty Real (Clean) (2.2)",
+            ),
+        ];
+
+        for (input, expected) in test_cases {
+            let result = TrackFormatter::wrap_text_after_parentheses(input);
+            assert_eq!(result, expected);
+        }
     }
 }

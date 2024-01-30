@@ -189,7 +189,7 @@ mod tests {
         },
         FormattingTestData {
             artist: "abcdefg",
-            correct_artist: "Abcdefg",
+            correct_artist: "abcdefg",
             title: "(You Make Me Feel) Mighty Real",
             correct_title: "(You Make Me Feel) Mighty Real",
         },
