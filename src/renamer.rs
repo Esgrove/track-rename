@@ -280,7 +280,7 @@ impl Renamer {
     /// Ask user to confirm action.
     /// Note: everything except `n` is a yes.
     fn confirm() -> bool {
-        println!("Proceed (y/n)? ");
+        print!("Proceed (y/n)? ");
         let mut ans = String::new();
         io::stdin().read_line(&mut ans).expect("Failed to read line");
         ans.trim().to_lowercase() != "n"
