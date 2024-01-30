@@ -106,6 +106,12 @@ mod tests {
             title: "Get Lucky (Drumless Edition) (feat. Pharrell Williams and Nile Rodgers)",
             correct_title: "Get Lucky (Drumless Edition)",
         },
+        FormattingTestData {
+            artist: "DJ S.K.T, Iris Gold",
+            correct_artist: "DJ S.K.T feat. Iris Gold",
+            title: "4am In London (Feat. Iris Gold) (Harry Romero Extended Mix)",
+            correct_title: "4am In London (Harry Romero Extended Mix)",
+        },
     ];
 
     static FORMATTING_TEST_DATA: &[FormattingTestData] = &[

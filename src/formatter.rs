@@ -42,6 +42,8 @@ impl TrackFormatter {
                 ("12\"", "12''"),
                 ("Intro - Dirty", "Dirty Intro"),
                 ("Intro - Clean", "Clean Intro"),
+                ("(Dirty - Intro)", "(Dirty Intro)"),
+                ("(Clean - Intro)", "(Clean Intro)"),
                 ("Acap - DIY", "Acapella DIY"),
                 ("(Acap)", "(Acapella)"),
                 ("Acap ", "Acapella "),
