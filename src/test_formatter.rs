@@ -112,6 +112,12 @@ mod tests {
             title: "4am In London (Feat. Iris Gold) (Harry Romero Extended Mix)",
             correct_title: "4am In London (Harry Romero Extended Mix)",
         },
+        FormattingTestData {
+            artist: "Major Lazer (feat. Laidback Luke & Ms. Dynamite)",
+            correct_artist: "Major Lazer feat. Laidback Luke & Ms. Dynamite",
+            title: "Sweat (Trayze Qh)",
+            correct_title: "Sweat (Trayze Qh)",
+        },
     ];
 
     static FORMATTING_TEST_DATA: &[FormattingTestData] = &[

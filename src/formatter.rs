@@ -132,6 +132,8 @@ impl TrackFormatter {
         formatted_title = TrackFormatter::remove_bpm_in_parentheses_from_end(&formatted_title);
         formatted_title = formatted_title.replace("((", "(").replace("))", ")");
 
+        formatted_artist = TrackFormatter::extract_feat_from_parentheses(&formatted_artist);
+
         for (regex, replacement) in &self.regex_substitutes {
             formatted_artist = regex.replace_all(&formatted_artist, *replacement).to_string();
             formatted_title = regex.replace_all(&formatted_title, *replacement).to_string();
@@ -257,6 +259,17 @@ impl TrackFormatter {
             .replace("() ", "")
     }
 
+    fn extract_feat_from_parentheses(artist: &str) -> String {
+        let start_pattern = "(feat. ";
+        if let Some(start) = artist.find(start_pattern) {
+            if let Some(end) = artist[start..].find(')') {
+                let feature_part = &artist[start..start + end + 1];
+                return artist.replacen(feature_part, &feature_part[1..feature_part.len() - 1], 1);
+            }
+        }
+        artist.to_string()
+    }
+
     fn remove_bpm_in_parentheses_from_end(text: &str) -> String {
         // Special case to skip one valid title
         if text.ends_with(" (4U)") {
@@ -329,6 +342,14 @@ mod tests {
         let correct_title = "About Damn Time (Purple Disco Machine) (Dirty Intro)".to_string();
         TrackFormatter::use_parenthesis_for_mix(&mut title);
         assert_eq!(title, correct_title);
+    }
+
+    #[test]
+    fn test_extract_feat_from_parentheses() {
+        let artist = "Major Lazer (feat. Laidback Luke & Ms. Dynamite)".to_string();
+        let correct_artist = "Major Lazer feat. Laidback Luke & Ms. Dynamite".to_string();
+        let result = TrackFormatter::extract_feat_from_parentheses(&artist);
+        assert_eq!(result, correct_artist);
     }
 
     #[test]
