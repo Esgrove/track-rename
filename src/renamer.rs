@@ -70,15 +70,14 @@ impl Renamer {
             .filter(|e| e.path().is_file())
         {
             let path = entry.path();
-            let extension = path
-                .extension()
-                .and_then(|e| e.to_str())
-                .unwrap_or_default()
-                .to_lowercase();
+            let extension = path.extension().and_then(|e| e.to_str()).unwrap_or_default().trim();
 
-            match FileFormat::from_str(&extension) {
+            if extension.is_empty() {
+                continue;
+            }
+            match FileFormat::from_str(extension) {
                 Ok(format) => {
-                    if let Ok(track) = Track::new_with_extension(path.to_path_buf(), extension, format) {
+                    if let Ok(track) = Track::new_with_extension(path.to_path_buf(), extension.to_string(), format) {
                         file_list.push(track);
                     } else {
                         eprintln!("{}", format!("Failed to create Track from: {}", path.display()).red());
@@ -91,7 +90,9 @@ impl Renamer {
                             format!("Wav should be converted to aif: {}", path.display()).yellow()
                         );
                     } else {
-                        eprintln!("{}", e);
+                        if self.verbose {
+                            eprintln!("{}", e);
+                        }
                     }
                 }
             }
