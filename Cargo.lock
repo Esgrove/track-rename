@@ -431,7 +431,7 @@ dependencies = [
 
 [[package]]
 name = "track-renamer"
-version = "0.3.0"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "audiotags",
