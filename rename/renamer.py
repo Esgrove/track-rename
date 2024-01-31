@@ -55,7 +55,7 @@ class Renamer:
         self.processed: dict[str, Track] = dict()
 
     def run(self):
-        """Gather and process audio files."""
+        """Gather and process supported audio files."""
         try:
             self.gather_files()
             self.process_files()
@@ -65,7 +65,7 @@ class Renamer:
         self.print_stats()
 
     def gather_files(self) -> None:
-        """Get all audio files recursively from the root path."""
+        """Gather audio files recursively from the root path."""
         print_bold(f"Getting audio files from {get_color(str(self.root), color=Color.cyan)}")
         file_list: list[Track] = []
 
@@ -74,10 +74,9 @@ class Renamer:
                 file_list.append(Track(file.stem, file.suffix, file.parent))
 
         if not file_list:
-            sys.exit("No audio files found")
+            sys.exit("No supported audio files found")
 
         self.total_tracks = len(file_list)
-
         if self.sort_files:
             file_list.sort()
 
@@ -104,7 +103,7 @@ class Renamer:
             self.process_track(track)
 
     def process_track(self, track: Track) -> None:
-        """Format tags and rename one track."""
+        """Format and rename one track."""
         track = self.process_tags(track)
         if self.tags_only or not track:
             return

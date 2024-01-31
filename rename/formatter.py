@@ -4,7 +4,7 @@ from titlecase import titlecase
 
 
 class TrackFormatter:
-    """Handle track formatting."""
+    """Handles track formatting."""
 
     def __init__(self):
         self.common_substitutes = (
@@ -155,7 +155,7 @@ class TrackFormatter:
         return file_artist, file_title
 
     def balance_parenthesis(self, title):
-        """Check parenthesis match and insert missing."""
+        """Check parenthesis counts match and insert missing."""
         open_count = title.count("(")
         close_count = title.count(")")
         if open_count > close_count:
