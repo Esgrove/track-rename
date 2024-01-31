@@ -1,5 +1,6 @@
 use regex::Regex;
 
+/// Handles track formatting.
 pub struct TrackFormatter {
     common_substitutes: Vec<(&'static str, &'static str)>,
     title_substitutes: Vec<(&'static str, &'static str)>,
@@ -97,6 +98,7 @@ impl TrackFormatter {
         let mut formatted_artist = artist.to_string();
         let mut formatted_title = title.to_string();
 
+        // Remove extra extension from end
         let extensions = [".mp3", ".flac", ".aif", ".aiff", ".m4a"];
         for ext in &extensions {
             if formatted_artist.to_lowercase().ends_with(ext) {
@@ -133,6 +135,7 @@ impl TrackFormatter {
         formatted_title = formatted_title.replace("((", "(").replace("))", ")");
 
         formatted_artist = TrackFormatter::extract_feat_from_parentheses(&formatted_artist);
+        formatted_title = self.balance_parenthesis(formatted_title);
 
         for (regex, replacement) in &self.regex_substitutes {
             formatted_artist = regex.replace_all(&formatted_artist, *replacement).to_string();
@@ -157,6 +160,78 @@ impl TrackFormatter {
         }
 
         (formatted_artist.trim().to_string(), formatted_title.trim().to_string())
+    }
+
+    /// Check parenthesis counts match and insert missing.
+    fn balance_parenthesis(&self, mut title: String) -> String {
+        let open_count = title.matches('(').count();
+        let close_count = title.matches(')').count();
+        if open_count > close_count {
+            title = Self::add_missing_closing_parentheses(&title);
+        } else if open_count < close_count {
+            title = Self::add_missing_opening_parentheses(&title);
+        }
+        title
+    }
+
+    fn add_missing_closing_parentheses(text: &str) -> String {
+        let mut open_count: usize = 0;
+        let mut result = String::new();
+        println!("Missing closing");
+
+        for char in text.chars() {
+            match char {
+                '(' => {
+                    if open_count > 0 {
+                        result.push_str(") ");
+                        open_count -= 1;
+                    } else {
+                        open_count += 1;
+                    }
+                }
+                ')' => {
+                    open_count = open_count.saturating_sub(1);
+                }
+                _ => {}
+            }
+            result.push(char);
+        }
+
+        for _ in 0..open_count {
+            result.push(')');
+        }
+
+        result
+    }
+
+    fn add_missing_opening_parentheses(text: &str) -> String {
+        let mut open_count: usize = 0;
+        let mut result = String::new();
+        println!("Missing opening");
+
+        for char in text.chars().rev() {
+            match char {
+                ')' => {
+                    if open_count > 0 {
+                        result.push_str(" (");
+                        open_count -= 1;
+                    } else {
+                        open_count += 1;
+                    }
+                }
+                '(' => {
+                    open_count = open_count.saturating_sub(1);
+                }
+                _ => {}
+            }
+            result.push(char);
+        }
+
+        for _ in 0..open_count {
+            result.push('(');
+        }
+
+        result.chars().rev().collect()
     }
 
     fn move_feat_from_title_to_artist(artist: &str, title: &str) -> (String, String) {
