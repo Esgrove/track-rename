@@ -37,9 +37,9 @@ Options:
   -h, --help    Show this message and exit.
   -f, --force   Do not ask for confirmation
   -p, --print   Only print changes
-  -r, --rename  Rename all files
+  -r, --rename  Rename all audio files
   -s, --sort    Sort audio files by name
-  -t, --tags    Only fix tags, don't rename
+  -t, --tags    Only fix tags, do not rename
 ```
 
 See the [test data](./tests/test_data.py) for formatting examples.
@@ -55,6 +55,23 @@ poetry run pytest -v --cov=rename tests/
 ```shell
 ./build.sh
 ./install.sh
+```
+
+```console
+Usage: track-renamer.exe [OPTIONS] <INPUT_DIR>
+
+Arguments:
+  <INPUT_DIR>  Optional input directory with audio files to format
+
+Options:
+  -f, --force      Do not ask for confirmation
+  -p, --print      Only print changes
+  -r, --rename     Rename all audio files
+  -s, --sort       Sort audio files by name
+  -t, --tags-only  Only fix tags, do not rename
+  -v, --verbose    Verbose output
+  -h, --help       Print help
+  -V, --version    Print version
 ```
 
 ### Run tests
