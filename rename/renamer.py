@@ -336,9 +336,9 @@ class Renamer:
 @click.argument("directory", type=click.Path(exists=True, file_okay=False, dir_okay=True), default=".")
 @click.option("--force", "-f", is_flag=True, help="Do not ask for confirmation")
 @click.option("--print", "-p", "print_only", is_flag=True, help="Only print changes")
-@click.option("--rename", "-r", is_flag=True, help="Rename all files")
+@click.option("--rename", "-r", is_flag=True, help="Rename all audio files")
 @click.option("--sort", "-s", is_flag=True, help="Sort audio files by name")
-@click.option("--tags", "-t", is_flag=True, help="Only fix tags, don't rename")
+@click.option("--tags", "-t", is_flag=True, help="Only fix tags, do not rename")
 def main(directory: str, rename: bool, sort: bool, print_only: bool, tags: bool, force: bool):
     """
     Check and rename audio files.

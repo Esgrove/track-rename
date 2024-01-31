@@ -19,14 +19,18 @@ use std::path::Path;
 #[derive(Parser)]
 #[command(author, about, version, arg_required_else_help = true)]
 struct Args {
-    /// Input directory with audio files to format
+    /// Optional input directory with audio files to format
     input_dir: String,
+
+    /// Do not ask for confirmation
+    #[arg(short, long)]
+    force: bool,
 
     /// Only print changes
     #[arg(short, long)]
     print: bool,
 
-    /// Rename audio files
+    /// Rename all audio files
     #[arg(short, long)]
     rename: bool,
 
@@ -34,7 +38,7 @@ struct Args {
     #[arg(short, long)]
     sort: bool,
 
-    /// Only fix tags
+    /// Only fix tags, do not rename
     #[arg(short, long)]
     tags_only: bool,
 
@@ -60,6 +64,7 @@ fn main() -> Result<()> {
 
     let mut renamer = Renamer::new(
         absolute_input_path,
+        args.force,
         args.rename,
         args.sort,
         args.print,

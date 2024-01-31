@@ -1,6 +1,5 @@
 #[cfg(test)]
 mod tests {
-
     use crate::formatter::TrackFormatter;
 
     struct FormattingTestData {

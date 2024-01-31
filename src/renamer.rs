@@ -18,6 +18,7 @@ use crate::track::Track;
 
 pub struct Renamer {
     root: PathBuf,
+    force: bool,
     rename_files: bool,
     sort_files: bool,
     print_only: bool,
@@ -33,6 +34,7 @@ pub struct Renamer {
 impl Renamer {
     pub fn new(
         path: PathBuf,
+        force: bool,
         rename_files: bool,
         sort_files: bool,
         print_only: bool,
@@ -41,6 +43,7 @@ impl Renamer {
     ) -> Renamer {
         Renamer {
             root: path,
+            force,
             rename_files,
             sort_files,
             print_only,
@@ -54,17 +57,41 @@ impl Renamer {
         }
     }
 
-    /// Gather and process audio files.
+    /// Gather and process supported audio files.
     pub fn run(&mut self) -> Result<()> {
         self.gather_files()?;
         self.process_files()
     }
 
-    /// Get all audio files recursively from the root path.
+    /// Gather audio files recursively from the root path.
     pub fn gather_files(&mut self) -> Result<()> {
         println!("Getting audio files from {}", format!("{}", self.root.display()).cyan());
-        let mut file_list: Vec<Track> = Vec::new();
+        let mut file_list = self.get_tracks_from_root();
+        if file_list.is_empty() {
+            anyhow::bail!("no audio files found!");
+        }
 
+        self.total_tracks = file_list.len();
+        if self.sort_files {
+            file_list.sort();
+        }
+
+        self.file_list = file_list;
+        if self.verbose {
+            if self.file_list.len() < 100 {
+                for track in &self.file_list {
+                    println!("{}", track);
+                }
+            }
+            self.print_extension_counts();
+        }
+
+        Ok(())
+    }
+
+    /// Find and return a list of audio tracks from the root directory.
+    fn get_tracks_from_root(&mut self) -> Vec<Track> {
+        let mut file_list: Vec<Track> = Vec::new();
         for entry in WalkDir::new(&self.root)
             .into_iter()
             .filter_map(|e| e.ok())
@@ -96,28 +123,7 @@ impl Renamer {
                 }
             }
         }
-
-        if file_list.is_empty() {
-            anyhow::bail!("no audio files found!");
-        }
-
-        self.total_tracks = file_list.len();
-
-        if self.sort_files {
-            file_list.sort();
-        }
-
-        self.file_list = file_list;
-
-        if self.verbose && self.file_list.len() < 100 {
-            for track in &self.file_list {
-                println!("{}", track);
-            }
-
-            self.print_extension_counts();
-        }
-
-        Ok(())
+        file_list
     }
 
     /// Format all tracks.
@@ -146,42 +152,7 @@ impl Renamer {
                 Some(tag) => tag,
                 None => continue,
             };
-
-            let mut artist = String::new();
-            let mut title = String::new();
-            let mut current_tags = " - ".to_string();
-
-            match (tag.artist(), tag.title()) {
-                (Some(a), Some(t)) => {
-                    artist = a.to_string();
-                    title = t.to_string();
-                    current_tags = format!("{} - {}", artist, title);
-                }
-                (None, None) => {
-                    eprintln!("{}", format!("Missing tags: {}", track.path.display()).yellow());
-                    if let Some((a, t)) = Renamer::get_tags_from_filename(&track.name) {
-                        artist = a;
-                        title = t;
-                    }
-                }
-                (None, Some(t)) => {
-                    eprintln!("{}", format!("Missing artist tag: {}", track.path.display()).yellow());
-                    if let Some((a, _)) = Renamer::get_tags_from_filename(&track.name) {
-                        artist = a;
-                    }
-                    title = t.to_string();
-                    current_tags = format!(" - {}", title);
-                }
-                (Some(a), None) => {
-                    eprintln!("{}", format!("Missing title tag: {}", track.path.display()).yellow());
-                    artist = a.to_string();
-                    if let Some((_, t)) = Renamer::get_tags_from_filename(&track.name) {
-                        title = t;
-                    }
-                    current_tags = format!("{} - ", artist);
-                }
-            }
-
+            let (artist, title, current_tags) = Self::parse_artist_and_title(&track, &mut tag);
             let (formatted_artist, formatted_title) = self.formatter.format_tags(&artist, &title);
             let formatted_tags = format!("{} - {}", formatted_artist, formatted_title);
 
@@ -190,7 +161,7 @@ impl Renamer {
                 println!("{}", "Fix tags:".blue().bold());
                 Renamer::show_diff(&current_tags, &formatted_tags);
                 self.num_tags_fixed += 1;
-                if !self.print_only && Renamer::confirm() {
+                if !self.print_only && (self.force || Renamer::confirm()) {
                     tag.set_artist(formatted_artist.clone());
                     tag.set_title(formatted_title.clone());
                     tag.write_to_path(&track.path, id3::Version::Id3v23)
@@ -218,7 +189,7 @@ impl Renamer {
                     println!("{}", "Rename file:".yellow().bold());
                     Renamer::show_diff(&track.filename(), &new_file_name);
                     self.num_renamed += 1;
-                    if !self.print_only && Renamer::confirm() {
+                    if !self.print_only && (self.force || Renamer::confirm()) {
                         fs::rename(&track.path, &new_path)?;
                     }
                     println!("{}", "-".repeat(new_file_name.chars().count()));
@@ -233,6 +204,46 @@ impl Renamer {
         }
 
         Ok(())
+    }
+
+    /// Try to read artist and title from tags.
+    /// Fallback to parsing them from filename if tags are empty.
+    fn parse_artist_and_title(track: &&mut Track, tag: &mut Tag) -> (String, String, String) {
+        let mut artist = String::new();
+        let mut title = String::new();
+        let mut current_tags = " - ".to_string();
+
+        match (tag.artist(), tag.title()) {
+            (Some(a), Some(t)) => {
+                artist = a.to_string();
+                title = t.to_string();
+                current_tags = format!("{} - {}", artist, title);
+            }
+            (None, None) => {
+                eprintln!("{}", format!("Missing tags: {}", track.path.display()).yellow());
+                if let Some((a, t)) = Renamer::get_tags_from_filename(&track.name) {
+                    artist = a;
+                    title = t;
+                }
+            }
+            (None, Some(t)) => {
+                eprintln!("{}", format!("Missing artist tag: {}", track.path.display()).yellow());
+                if let Some((a, _)) = Renamer::get_tags_from_filename(&track.name) {
+                    artist = a;
+                }
+                title = t.to_string();
+                current_tags = format!(" - {}", title);
+            }
+            (Some(a), None) => {
+                eprintln!("{}", format!("Missing title tag: {}", track.path.display()).yellow());
+                artist = a.to_string();
+                if let Some((_, t)) = Renamer::get_tags_from_filename(&track.name) {
+                    title = t;
+                }
+                current_tags = format!("{} - ", artist);
+            }
+        }
+        (artist, title, current_tags)
     }
 
     /// Count and print the total number of each file extension in the file list.
