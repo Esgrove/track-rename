@@ -1,4 +1,5 @@
 use regex::Regex;
+use std::cmp::Ordering;
 
 /// Handles track formatting.
 pub struct TrackFormatter {
@@ -163,21 +164,19 @@ impl TrackFormatter {
     }
 
     /// Check parenthesis counts match and insert missing.
-    fn balance_parenthesis(&self, mut title: String) -> String {
+    fn balance_parenthesis(&self, title: String) -> String {
         let open_count = title.matches('(').count();
         let close_count = title.matches(')').count();
-        if open_count > close_count {
-            title = Self::add_missing_closing_parentheses(&title);
-        } else if open_count < close_count {
-            title = Self::add_missing_opening_parentheses(&title);
+        match open_count.cmp(&close_count) {
+            Ordering::Greater => Self::add_missing_closing_parentheses(&title),
+            Ordering::Less => Self::add_missing_opening_parentheses(&title),
+            _ => title,
         }
-        title
     }
 
     fn add_missing_closing_parentheses(text: &str) -> String {
         let mut open_count: usize = 0;
         let mut result = String::new();
-        println!("Missing closing");
 
         for char in text.chars() {
             match char {
@@ -207,7 +206,6 @@ impl TrackFormatter {
     fn add_missing_opening_parentheses(text: &str) -> String {
         let mut open_count: usize = 0;
         let mut result = String::new();
-        println!("Missing opening");
 
         for char in text.chars().rev() {
             match char {
