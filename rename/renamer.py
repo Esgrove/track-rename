@@ -70,7 +70,7 @@ class Renamer:
         file_list: list[Track] = []
 
         for file in self.root.rglob("*"):
-            if file.suffix in self.file_formats:
+            if file.suffix.lower() in self.file_formats:
                 file_list.append(Track(file.stem, file.suffix, file.parent))
 
         if not file_list:
