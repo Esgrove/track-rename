@@ -8,7 +8,7 @@ readme = "README.md"
 homepage = "https://github.com/Esgrove/track-rename"
 repository = "https://github.com/Esgrove/track-rename"
 keywords = ["audio", "DJ", "rename"]
-packages = [{include = "rename"}]
+packages = [{ include = "rename" }]
 
 [build-system]
 requires = ["poetry-core"]
@@ -24,13 +24,15 @@ click = "^8.1.7"
 pytaglib = "^2.1.0"
 titlecase = "^2.4.1"
 
-[tool.poetry.group.dev.dependencies]
-black = "^23.11.0"
-isort = "^5.12.0"
-ruff = "^0.1.6"
+[tool.poetry.group.test.dependencies]
 pytest = "^7.4.3"
 pytest-cov = "^4.1.0"
 coverage = "^7.3.2"
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.11.0"
+isort = "^5.12.0"
+ruff = "^0.2.0"
 
 [tool.black]
 # https://black.readthedocs.io/en/stable/usage_and_configuration/the_basics.html#configuration-via-a-file
@@ -44,6 +46,8 @@ extend-exclude = '''venv*'''
 include = ["*.py", "*.pyi", "**/pyproject.toml"]
 target-version = "py311"
 line-length = 120
+
+[tool.ruff.lint]
 select = ["E4", "E7", "E9", "F", "W", "N", "UP"]
 ignore = []
 per-file-ignores = {}
@@ -123,7 +127,7 @@ exclude = [
     "venv*",
 ]
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 # https://beta.ruff.rs/docs/settings/#isort
 combine-as-imports = true
 lines-between-types = 1

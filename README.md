@@ -2,7 +2,7 @@
 
 CLI tool for formatting and renaming audio files.
 Originally made in Python,
-and now contains a Rust version as well.
+and contains a Rust version as well.
 
 ## Python version
 
