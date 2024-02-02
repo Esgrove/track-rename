@@ -120,14 +120,12 @@ impl Renamer {
                         eprintln!("{}", format!("Failed to create Track from: {}", path.display()).red());
                     }
                 }
-                Err(e) => {
+                Err(_) => {
                     if extension == "wav" {
                         println!(
                             "{}",
                             format!("Wav should be converted to aif: {}", path.display()).yellow()
                         );
-                    } else if self.verbose {
-                        eprintln!("{}", e);
                     }
                 }
             }
