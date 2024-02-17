@@ -155,11 +155,11 @@ impl Renamer {
                 }
             }
 
-            let mut tag = match Renamer::read_tags(track) {
+            let mut tags = match Renamer::read_tags(track) {
                 Some(tag) => tag,
                 None => continue,
             };
-            let (artist, title, current_tags) = Self::parse_artist_and_title(&track, &mut tag);
+            let (artist, title, current_tags) = Self::parse_artist_and_title(&track, &mut tags);
             let (formatted_artist, formatted_title) = self.formatter.format_tags(&artist, &title);
             let formatted_tags = format!("{} - {}", formatted_artist, formatted_title);
 
@@ -169,9 +169,9 @@ impl Renamer {
                 Renamer::show_diff(&current_tags, &formatted_tags);
                 self.num_tags_fixed += 1;
                 if !self.print_only && (self.force || Renamer::confirm()) {
-                    tag.set_artist(formatted_artist.clone());
-                    tag.set_title(formatted_title.clone());
-                    tag.write_to_path(&track.path, id3::Version::Id3v23)
+                    tags.set_artist(formatted_artist.clone());
+                    tags.set_title(formatted_title.clone());
+                    tags.write_to_path(&track.path, id3::Version::Id3v23)
                         .context("Failed to write tags")?;
                     track.tags_updated = true;
                 }

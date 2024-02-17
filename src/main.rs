@@ -10,17 +10,17 @@ extern crate colored;
 
 use crate::renamer::Renamer;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::Parser;
 
-use std::fs;
-use std::path::Path;
+use std::path::PathBuf;
+use std::{env, fs};
 
 #[derive(Parser)]
 #[command(author, about, version, arg_required_else_help = true)]
 struct Args {
     /// Optional input directory with audio files to format
-    input_dir: String,
+    input_dir: Option<String>,
 
     /// Do not ask for confirmation
     #[arg(short, long)]
@@ -49,11 +49,12 @@ struct Args {
 
 fn main() -> Result<()> {
     let args = Args::parse();
-    let input_path = args.input_dir.trim();
-    if input_path.is_empty() {
-        anyhow::bail!("empty input path");
-    }
-    let filepath = Path::new(input_path);
+    let input_path = args.input_dir.unwrap_or_default().trim().to_string();
+    let filepath = if input_path.is_empty() {
+        env::current_dir().context("Failed to get current working directory")?
+    } else {
+        PathBuf::from(input_path)
+    };
     if !filepath.is_dir() {
         anyhow::bail!(
             "Input directory does not exist or is not accessible: '{}'",
