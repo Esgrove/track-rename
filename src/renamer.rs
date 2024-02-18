@@ -13,7 +13,7 @@ use std::str::FromStr;
 use std::string::String;
 
 use crate::fileformat::FileFormat;
-use crate::formatter::TrackFormatter;
+use crate::formatter;
 use crate::track::Track;
 
 /// Audio track tag and filename formatting.
@@ -31,7 +31,6 @@ pub struct Renamer {
     num_renamed: usize,
     num_removed: usize,
     num_duplicates: usize,
-    formatter: TrackFormatter,
 }
 
 impl Renamer {
@@ -58,7 +57,6 @@ impl Renamer {
             num_renamed: 0,
             num_removed: 0,
             num_duplicates: 0,
-            formatter: TrackFormatter::new(),
         }
     }
 
@@ -160,7 +158,7 @@ impl Renamer {
                 None => continue,
             };
             let (artist, title, current_tags) = Self::parse_artist_and_title(&track, &mut tags);
-            let (formatted_artist, formatted_title) = self.formatter.format_tags(&artist, &title);
+            let (formatted_artist, formatted_title) = formatter::format_tags(&artist, &title);
             let formatted_tags = format!("{} - {}", formatted_artist, formatted_title);
 
             if current_tags != formatted_tags {
@@ -182,7 +180,7 @@ impl Renamer {
                 continue;
             }
 
-            let (file_artist, file_title) = self.formatter.format_filename(&formatted_artist, &formatted_title);
+            let (file_artist, file_title) = formatter::format_filename(&formatted_artist, &formatted_title);
             let new_file_name = format!("{} - {}.{}", file_artist, file_title, track.format);
             let new_path = track.root.join(&new_file_name);
 

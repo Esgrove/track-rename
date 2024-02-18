@@ -1,7 +1,8 @@
 #[cfg(test)]
 mod tests {
-    use crate::formatter::TrackFormatter;
+    use crate::formatter;
 
+    #[derive(Debug)]
     struct FormattingTestData {
         artist: &'static str,
         correct_artist: &'static str,
@@ -120,6 +121,12 @@ mod tests {
             correct_artist: "Copyright feat. Mr. V & Miss Patty",
             title: "In Da Club (Shake Shit Up) (Feat. Mr. V & Miss Patty) (Copyright Main Mix)",
             correct_title: "In Da Club (Shake Shit Up) (Copyright Main Mix)",
+        },
+        FormattingTestData {
+            artist: "Copyright, Miss Patty, Mr. V",
+            correct_artist: "Copyright feat. Mr. V & Miss Patty",
+            title: "In Da Club (Shake Sh-T Up) (Feat. Mr. V & Miss Patty) (Copyright Main Mix)",
+            correct_title: "In Da Club (Shake Sh-T Up) (Copyright Main Mix)",
         },
     ];
 
@@ -291,10 +298,48 @@ mod tests {
         },
     ];
 
-    fn run_formatter_tests(test_data: &[FormattingTestData]) {
-        let formatter = TrackFormatter::new();
+    static FILE_FORMATTING_TEST_DATA: &[FormattingTestData] = &[
+        FormattingTestData {
+            artist: "A*rtist",
+            correct_artist: "A-rtist",
+            title: "Na<me",
+            correct_title: "Na-me",
+        },
+        FormattingTestData {
+            artist: "Artist with  Spaces",
+            correct_artist: "Artist with Spaces",
+            title: "Title  with   Spaces",
+            correct_title: "Title with Spaces",
+        },
+        FormattingTestData {
+            artist: "Artist \"Name\"",
+            correct_artist: "Artist ''Name''",
+            title: "Title \"Version\"",
+            correct_title: "Title ''Version''",
+        },
+        FormattingTestData {
+            artist: "A/rtist|Name",
+            correct_artist: "A-rtist-Name",
+            title: "T:itle*Name?",
+            correct_title: "T-itle-Name-",
+        },
+        FormattingTestData {
+            artist: "Artist-Name",
+            correct_artist: "Artist-Name",
+            title: "Title (Original Mix)",
+            correct_title: "Title (Original Mix)",
+        },
+        FormattingTestData {
+            artist: "Artist/Name",
+            correct_artist: "Artist-Name",
+            title: "Title/Name (VIP Remix)",
+            correct_title: "Title-Name (VIP Remix)",
+        },
+    ];
+
+    fn run_tag_formatting_tests(test_data: &[FormattingTestData]) {
         for data in test_data {
-            let (formatted_artist, formatted_title) = formatter.format_tags(data.artist, data.title);
+            let (formatted_artist, formatted_title) = formatter::format_tags(data.artist, data.title);
             assert_eq!(formatted_artist, data.correct_artist);
             assert_eq!(formatted_title, data.correct_title);
         }
@@ -302,34 +347,43 @@ mod tests {
 
     #[test]
     fn test_balance_parentheses() {
-        run_formatter_tests(BALANCE_PARENTHESES_TEST_DATA)
+        run_tag_formatting_tests(BALANCE_PARENTHESES_TEST_DATA)
     }
     #[test]
     fn test_feat_formatting() {
-        run_formatter_tests(FEAT_TEST_DATA)
+        run_tag_formatting_tests(FEAT_TEST_DATA)
     }
     #[test]
     fn test_formatting() {
-        run_formatter_tests(FORMATTING_TEST_DATA)
+        run_tag_formatting_tests(FORMATTING_TEST_DATA)
     }
     #[test]
     fn test_nested_parentheses() {
-        run_formatter_tests(NESTED_PARENTHESES_TEST_DATA)
+        run_tag_formatting_tests(NESTED_PARENTHESES_TEST_DATA)
     }
     #[test]
     fn test_parentheses() {
-        run_formatter_tests(PARENTHESES_TEST_DATA)
+        run_tag_formatting_tests(PARENTHESES_TEST_DATA)
     }
     #[test]
     fn test_remix_formatting() {
-        run_formatter_tests(REMIX_FORMATTING_TEST_DATA)
+        run_tag_formatting_tests(REMIX_FORMATTING_TEST_DATA)
     }
     #[test]
     fn test_remove_bpm_and_key() {
-        run_formatter_tests(REMOVE_BPM_AND_KEY_TEST_DATA)
+        run_tag_formatting_tests(REMOVE_BPM_AND_KEY_TEST_DATA)
     }
     #[test]
     fn test_whitespace_formatting() {
-        run_formatter_tests(WHITESPACE_TEST_DATA)
+        run_tag_formatting_tests(WHITESPACE_TEST_DATA)
+    }
+
+    #[test]
+    fn test_filename_formatting() {
+        for data in FILE_FORMATTING_TEST_DATA {
+            let (formatted_artist, formatted_title) = formatter::format_filename(data.artist, data.title);
+            assert_eq!(formatted_artist, data.correct_artist);
+            assert_eq!(formatted_title, data.correct_title);
+        }
     }
 }

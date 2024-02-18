@@ -352,6 +352,7 @@ dependencies = [
  "colored",
  "difference",
  "id3",
+ "lazy_static",
  "regex",
  "walkdir",
 ]

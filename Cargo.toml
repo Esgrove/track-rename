@@ -17,6 +17,7 @@ clap = { version = "4.5.1", features = ["derive"] }
 colored = "2.1.0"
 difference = "2.0.0"
 id3 = { git = "https://github.com/polyfloyd/rust-id3", branch = "magic-format-detection" }
+lazy_static = "1.4.0"
 regex = "1.10.3"
 walkdir = "2.4.0"
 
