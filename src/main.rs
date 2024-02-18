@@ -20,7 +20,7 @@ use std::{env, fs};
 #[command(author, about, version, arg_required_else_help = true)]
 struct Args {
     /// Optional input directory with audio files to format
-    input_dir: Option<String>,
+    directory: Option<String>,
 
     /// Do not ask for confirmation
     #[arg(short, long)]
@@ -49,7 +49,7 @@ struct Args {
 
 fn main() -> Result<()> {
     let args = Args::parse();
-    let input_path = args.input_dir.unwrap_or_default().trim().to_string();
+    let input_path = args.directory.unwrap_or_default().trim().to_string();
     let filepath = if input_path.is_empty() {
         env::current_dir().context("Failed to get current working directory")?
     } else {

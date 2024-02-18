@@ -64,10 +64,10 @@ Only supports ID3 tags (mp3, aiff, wav) currently.
 ### Usage
 
 ```console
-Usage: track-renamer [OPTIONS] [INPUT_DIR]
+Usage: track-renamer [OPTIONS] [DIRECTORY]
 
 Arguments:
-  [INPUT_DIR]  Optional input directory with audio files to format
+  [DIRECTORY]  Optional input directory with audio files to format
 
 Options:
   -f, --force      Do not ask for confirmation
