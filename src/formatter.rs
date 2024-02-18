@@ -178,24 +178,36 @@ fn move_feat_from_title_to_artist(artist: &str, title: &str) -> (String, String)
                 .as_str()
                 .trim_end_matches(|c| c == '(' || c == ')' || c == '-');
 
-            formatted_title = title.replace(feat, "").replace("()", "");
+            // Remove the feat from the title
+            formatted_title = title.replace(feat, "").replace("()", "").replace("  ", " ");
 
-            let feat_artist = feat
+            // Format feat string
+            let feat = feat
                 .replacen("feat. ", "", 1)
                 .replace(", and ", " & ")
                 .replace(" and ", " & ")
                 .trim()
                 .to_string();
 
-            for delimiter in [", ", " & ", " and ", " + "] {
-                formatted_artist = formatted_artist
-                    .replace(&format!("{}{}", delimiter, feat_artist), "")
-                    .replace(&format!("{}{}", feat_artist, delimiter), "");
+            // Split featuring artists on common delimiters and handle them individually
+            let feat_artists: Vec<String> = feat
+                .split(&['&', ',', '+'][..])
+                .map(str::trim)
+                .map(|s| s.to_string())
+                .collect();
+
+            for feat_artist in &feat_artists {
+                for delimiter in [", ", " & ", " and ", " + "] {
+                    // Remove the individual featuring artist from the artist string if present
+                    formatted_artist = formatted_artist
+                        .replace(&format!("{delimiter}{feat_artist}"), "")
+                        .replace(&format!("{feat_artist}{delimiter}"), "");
+                }
             }
 
-            let new_feat = format!(" feat. {}", feat_artist);
-            if !formatted_artist.contains(&new_feat) {
-                formatted_artist.push_str(&new_feat);
+            let formatted_feat = format!(" feat. {feat}");
+            if !formatted_artist.contains(&formatted_feat) {
+                formatted_artist.push_str(&formatted_feat);
             }
         }
     }
