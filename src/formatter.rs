@@ -148,7 +148,7 @@ pub fn format_tags(artist: &str, title: &str) -> (String, String) {
     (formatted_artist.trim().to_string(), formatted_title.trim().to_string())
 }
 
-/// Apply filename formatting
+/// Apply filename formatting.
 pub fn format_filename(artist: &str, title: &str) -> (String, String) {
     let mut formatted_artist = artist.to_string();
     let mut formatted_title = title.to_string();
