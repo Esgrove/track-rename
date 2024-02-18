@@ -235,12 +235,7 @@ impl Renamer {
     /// Try to read tags from path.
     /// Will return empty tags when there are no tags.
     fn read_tags(track: &Track) -> Option<Tag> {
-        let result = match track.format {
-            FileFormat::Aif => Tag::read_from_aiff_path(&track.path),
-            FileFormat::Mp3 => Tag::read_from_path(&track.path),
-        };
-
-        match result {
+        match Tag::read_from_path(&track.path) {
             Ok(tag) => Some(tag),
             Err(Error {
                 kind: ErrorKind::NoTag, ..
@@ -248,8 +243,8 @@ impl Renamer {
                 println!("{}", format!("No tags: {}", track).yellow());
                 Some(Tag::new())
             }
-            Err(err) => {
-                eprintln!("{}", format!("Failed to read tags for: {}\n{}", track, err).red());
+            Err(error) => {
+                eprintln!("{}", format!("Failed to read tags for: {}\n{}", track, error).red());
                 None
             }
         }
