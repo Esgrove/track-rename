@@ -262,6 +262,9 @@ fabric.properties
 *.mp3
 *.wav
 
+!tests/files/**/*.aif
+!tests/files/**/*.mp3
+
 # Binary
 /track-renamer
 /track-renamer.exe
