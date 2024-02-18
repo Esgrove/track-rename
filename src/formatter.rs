@@ -71,7 +71,6 @@ impl TrackFormatter {
                 (Regex::new(r"[\[{]+").unwrap(), "("),
                 (Regex::new(r"[\]}]+").unwrap(), ")"),
                 (Regex::new(r"!{2,}").unwrap(), "!"),
-                (Regex::new(r"\s+").unwrap(), " "),
                 (Regex::new(r"\s{2,}").unwrap(), " "),
                 (Regex::new(r"\.{2,}").unwrap(), "."),
                 (Regex::new(r"\(\s*?\)").unwrap(), ""),
@@ -79,12 +78,15 @@ impl TrackFormatter {
                 (Regex::new(r"\)(\S)").unwrap(), ") $1"),
                 (Regex::new(r"\(\s*\){2,}").unwrap(), "("),
                 (Regex::new(r"\)\s*\){2,}").unwrap(), ")"),
+                (Regex::new(r"\({2,}").unwrap(), "("),
+                (Regex::new(r"\){2,}").unwrap(), ")"),
                 (
                     Regex::new(r"(?i)\bMissy Elliot\b|\bMissy Elliot$").unwrap(),
                     "Missy Elliott",
                 ),
                 (Regex::new(r"(?i)\bGangstarr\b|\bGangstarr$").unwrap(), "Gang Starr"),
                 (Regex::new(r"(?i)\sW/").unwrap(), " feat. "),
+                (Regex::new(r"\s+").unwrap(), " "),
             ],
             filename_regex_substitutes: vec![
                 (Regex::new("\"").unwrap(), "''"),

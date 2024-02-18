@@ -115,6 +115,12 @@ mod tests {
             title: "Sweat (Trayze Qh)",
             correct_title: "Sweat (Trayze Qh)",
         },
+        FormattingTestData {
+            artist: "Copyright",
+            correct_artist: "Copyright feat. Mr. V & Miss Patty",
+            title: "In Da Club (Shake Shit Up) (Feat. Mr. V & Miss Patty) (Copyright Main Mix)",
+            correct_title: "In Da Club (Shake Shit Up) (Copyright Main Mix)",
+        },
     ];
 
     static FORMATTING_TEST_DATA: &[FormattingTestData] = &[
