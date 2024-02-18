@@ -1,5 +1,5 @@
 use lazy_static::lazy_static;
-use regex::Regex;
+use regex::{Captures, Regex};
 
 use std::cmp::Ordering;
 
@@ -86,6 +86,11 @@ lazy_static! {
         (Regex::new(r"\s+").unwrap(), " "),
     ];
     static ref FEAT_REGEX: Regex = Regex::new(r"feat\. .*?( -|\(|\)|$)").unwrap();
+    static ref TEXT_AFTER_PARENTHESES: Regex = Regex::new(r"\)\s(.*?)\s\(").unwrap();
+    static ref BPM_IN_PARENTHESES: Regex = Regex::new(r" \((\d{2,3}(\.\d)?|\d{2,3} \d{1,2}a)\)$").unwrap();
+    static ref BPM_WITH_KEY: Regex = Regex::new(r"\s\(\d{1,2}(?:\s\d{1,2})?\s?[a-zA-Z]\)$").unwrap();
+    static ref BPM_WITH_LETTERS: Regex = Regex::new(r"\s\(\d{2,3}\s?[a-zA-Z]{2,3}\)$").unwrap();
+    static ref DASH_IN_PARENTHESES: Regex = Regex::new(r"\((.*?) - (.*?)\)").unwrap();
 }
 
 /// Return formatted artist and title string.
@@ -119,17 +124,16 @@ pub fn format_tags(artist: &str, title: &str) -> (String, String) {
     }
 
     use_parenthesis_for_mix(&mut formatted_title);
+    move_feat_from_title_to_artist(&mut formatted_artist, &mut formatted_title);
+    replace_dash_in_parentheses(&mut formatted_title);
+    fix_nested_parentheses(&mut formatted_title);
+    wrap_text_after_parentheses(&mut formatted_title);
+    remove_bpm_in_parentheses_from_end(&mut formatted_title);
 
-    (formatted_artist, formatted_title) = move_feat_from_title_to_artist(&formatted_artist, &formatted_title);
-
-    formatted_title = replace_dash_in_parentheses(&formatted_title);
-    formatted_title = fix_nested_parentheses(&formatted_title);
-    formatted_title = wrap_text_after_parentheses(&formatted_title);
-    formatted_title = remove_bpm_in_parentheses_from_end(&formatted_title);
     formatted_title = formatted_title.replace("((", "(").replace("))", ")");
 
-    formatted_artist = extract_feat_from_parentheses(&formatted_artist);
-    formatted_title = balance_parenthesis(formatted_title);
+    extract_feat_from_parentheses(&mut formatted_artist);
+    balance_parenthesis(&mut formatted_title);
 
     for (regex, replacement) in REGEX_SUBSTITUTES.iter() {
         formatted_artist = regex.replace_all(&formatted_artist, *replacement).to_string();
@@ -158,28 +162,30 @@ pub fn format_filename(artist: &str, title: &str) -> (String, String) {
 }
 
 /// Check parenthesis counts match and insert missing.
-fn balance_parenthesis(title: String) -> String {
+fn balance_parenthesis(title: &mut String) {
     let open_count = title.matches('(').count();
     let close_count = title.matches(')').count();
     match open_count.cmp(&close_count) {
-        Ordering::Greater => add_missing_closing_parentheses(&title),
-        Ordering::Less => add_missing_opening_parentheses(&title),
-        _ => title,
+        Ordering::Greater => add_missing_closing_parentheses(title),
+        Ordering::Less => add_missing_opening_parentheses(title),
+        _ => {}
     }
 }
 
-fn move_feat_from_title_to_artist(artist: &str, title: &str) -> (String, String) {
-    let mut formatted_artist = artist.to_string();
-    let mut formatted_title = title.to_string();
-
+fn move_feat_from_title_to_artist(artist: &mut String, title: &mut String) {
     if title.contains(" feat. ") || title.contains("(feat. ") {
-        if let Some(feat_match) = FEAT_REGEX.find(title) {
+        if let Some(feat_match) = FEAT_REGEX.find(&title.clone()) {
             let feat = feat_match
                 .as_str()
                 .trim_end_matches(|c| c == '(' || c == ')' || c == '-');
 
             // Remove the feat from the title
-            formatted_title = title.replace(feat, "").replace("()", "").replace("  ", " ");
+            *title = title
+                .replace(feat, "")
+                .replace("()", "")
+                .replace("  ", " ")
+                .trim()
+                .to_string();
 
             // Format feat string
             let feat = feat
@@ -199,23 +205,21 @@ fn move_feat_from_title_to_artist(artist: &str, title: &str) -> (String, String)
             for feat_artist in &feat_artists {
                 for delimiter in [", ", " & ", " and ", " + "] {
                     // Remove the individual featuring artist from the artist string if present
-                    formatted_artist = formatted_artist
+                    *artist = artist
                         .replace(&format!("{delimiter}{feat_artist}"), "")
                         .replace(&format!("{feat_artist}{delimiter}"), "");
                 }
             }
 
             let formatted_feat = format!(" feat. {feat}");
-            if !formatted_artist.contains(&formatted_feat) {
-                formatted_artist.push_str(&formatted_feat);
+            if !artist.contains(&formatted_feat) {
+                artist.push_str(&formatted_feat);
             }
         }
     }
-
-    (formatted_artist.trim().to_string(), formatted_title.trim().to_string())
 }
 
-fn add_missing_closing_parentheses(text: &str) -> String {
+fn add_missing_closing_parentheses(text: &mut String) {
     let mut open_count: usize = 0;
     let mut result = String::new();
 
@@ -241,10 +245,10 @@ fn add_missing_closing_parentheses(text: &str) -> String {
         result.push(')');
     }
 
-    result
+    *text = result;
 }
 
-fn add_missing_opening_parentheses(text: &str) -> String {
+fn add_missing_opening_parentheses(text: &mut String) {
     let mut open_count: usize = 0;
     let mut result = String::new();
 
@@ -270,7 +274,7 @@ fn add_missing_opening_parentheses(text: &str) -> String {
         result.push('(');
     }
 
-    result.chars().rev().collect()
+    *text = result.chars().rev().collect();
 }
 
 fn use_parenthesis_for_mix(title: &mut String) {
@@ -292,7 +296,7 @@ fn use_parenthesis_for_mix(title: &mut String) {
     }
 }
 
-fn fix_nested_parentheses(text: &str) -> String {
+fn fix_nested_parentheses(text: &mut String) {
     // Initialize a stack to keep track of parentheses
     let mut stack = Vec::new();
     let mut result = String::new();
@@ -330,62 +334,54 @@ fn fix_nested_parentheses(text: &str) -> String {
         result.push(')');
     }
 
-    result
+    *text = result
         .replace(" )", ")")
         .replace("( ", "(")
         .replace(" ()", "")
-        .replace("() ", "")
+        .replace("() ", "");
 }
 
-fn extract_feat_from_parentheses(artist: &str) -> String {
+fn extract_feat_from_parentheses(artist: &mut String) {
     let start_pattern = "(feat. ";
     if let Some(start) = artist.find(start_pattern) {
         if let Some(end) = artist[start..].find(')') {
             let feature_part = &artist[start..start + end + 1];
-            return artist.replacen(feature_part, &feature_part[1..feature_part.len() - 1], 1);
+            *artist = artist.replacen(feature_part, &feature_part[1..feature_part.len() - 1], 1);
         }
     }
-    artist.to_string()
 }
 
-fn remove_bpm_in_parentheses_from_end(text: &str) -> String {
+fn remove_bpm_in_parentheses_from_end(text: &mut String) {
     // Special case to skip one valid title
     if text.ends_with(" (4U)") {
-        return text.to_string();
+        return;
     }
 
     let mut result = text.to_string();
-
-    let re = Regex::new(r" \((\d{2,3}(\.\d)?|\d{2,3} \d{1,2}a)\)$").unwrap();
-    result = re.replace_all(&result, "").to_string();
-
-    let re = Regex::new(r"\s\(\d{1,2}(?:\s\d{1,2})?\s?[a-zA-Z]\)$").unwrap();
-    result = re.replace_all(&result, "").to_string();
-
+    result = BPM_IN_PARENTHESES.replace_all(&result, "").to_string();
+    result = BPM_WITH_KEY.replace_all(&result, "").to_string();
     if !result.to_lowercase().ends_with(" mix)") {
-        let re = Regex::new(r"\s\(\d{2,3}\s?[a-zA-Z]{2,3}\)$").unwrap();
-        result = re.replace_all(&result, "").to_string();
+        result = BPM_WITH_LETTERS.replace_all(&result, "").to_string();
     }
 
-    result
+    *text = result;
 }
 
-fn wrap_text_after_parentheses(text: &str) -> String {
-    let re = Regex::new(r"\)\s(.*?)\s\(").unwrap();
-
+fn wrap_text_after_parentheses(text: &mut String) {
     let (start, rest) = if text.starts_with('(') {
-        // If the text starts with a parenthesis, find the end of the first group and start replacing from there
+        // If the text starts with a parenthesis,
+        // find the end of the first group and start replacing from there
         if let Some(index) = text.find(") ") {
             text.split_at(index + 2)
         } else {
-            return text.to_string();
+            return;
         }
     } else {
-        ("", text)
+        ("", text.as_str())
     };
 
-    let mut result = re
-        .replace_all(rest, |caps: &regex::Captures| format!(") ({}) (", &caps[1]))
+    let mut result = TEXT_AFTER_PARENTHESES
+        .replace_all(rest, |caps: &Captures| format!(") ({}) (", &caps[1]))
         .to_string();
 
     if let Some(index) = result.rfind(')') {
@@ -395,13 +391,13 @@ fn wrap_text_after_parentheses(text: &str) -> String {
         }
     }
 
-    format!("{}{}", start, result)
+    *text = format!("{}{}", start, result);
 }
 
-fn replace_dash_in_parentheses(text: &str) -> String {
-    let re = Regex::new(r"\((.*?) - (.*?)\)").unwrap();
-    let result = re.replace_all(text, |caps: &regex::Captures| format!("({}) ({})", &caps[1], &caps[2]));
-    result.to_string()
+fn replace_dash_in_parentheses(text: &mut String) {
+    *text = DASH_IN_PARENTHESES
+        .replace_all(text, |caps: &Captures| format!("({}) ({})", &caps[1], &caps[2]))
+        .to_string();
 }
 
 #[cfg(test)]
@@ -423,10 +419,10 @@ mod tests {
 
     #[test]
     fn test_extract_feat_from_parentheses() {
-        let artist = "Major Lazer (feat. Laidback Luke & Ms. Dynamite)".to_string();
+        let mut artist = "Major Lazer (feat. Laidback Luke & Ms. Dynamite)".to_string();
         let correct_artist = "Major Lazer feat. Laidback Luke & Ms. Dynamite".to_string();
-        let result = extract_feat_from_parentheses(&artist);
-        assert_eq!(result, correct_artist);
+        extract_feat_from_parentheses(&mut artist);
+        assert_eq!(artist, correct_artist);
     }
 
     #[test]
@@ -454,8 +450,9 @@ mod tests {
         ];
 
         for (input, expected) in test_cases {
-            let result = remove_bpm_in_parentheses_from_end(input);
-            assert_eq!(result, expected);
+            let mut input_string = input.to_string();
+            remove_bpm_in_parentheses_from_end(&mut input_string);
+            assert_eq!(input_string, expected);
         }
     }
     #[test]
@@ -468,8 +465,9 @@ mod tests {
         ];
 
         for (input, expected) in test_cases {
-            let result = fix_nested_parentheses(input);
-            assert_eq!(result, expected);
+            let mut input_string = input.to_string();
+            fix_nested_parentheses(&mut input_string);
+            assert_eq!(input_string, expected);
         }
     }
 
@@ -494,8 +492,9 @@ mod tests {
         ];
 
         for (input, expected) in test_cases {
-            let result = wrap_text_after_parentheses(input);
-            assert_eq!(result, expected);
+            let mut input_string = input.to_string();
+            wrap_text_after_parentheses(&mut input_string);
+            assert_eq!(input_string, expected);
         }
     }
 }
