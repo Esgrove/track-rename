@@ -17,7 +17,7 @@ use std::path::PathBuf;
 use std::{env, fs};
 
 #[derive(Parser)]
-#[command(author, about, version, arg_required_else_help = true)]
+#[command(author, about, version)]
 struct Args {
     /// Optional input directory with audio files to format
     directory: Option<String>,
