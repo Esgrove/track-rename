@@ -1,10 +1,12 @@
 # Track Renamer
 
 CLI tool for formatting and renaming audio files.
-Originally made in Python,
-and contains a Rust version as well.
+Originally written in Python,
+and then created a Rust version as well.
 
 ## Python version
+
+Uses [pytaglib](https://github.com/supermihi/pytaglib) for tag handling.
 
 ### Dependencies
 
@@ -52,16 +54,20 @@ poetry run pytest -v --cov=rename tests/
 
 ## Rust version
 
+Only supports ID3 tags (mp3, aiff, wav) currently.
+
 ```shell
 ./build.sh
 ./install.sh
 ```
 
+### Usage
+
 ```console
-Usage: track-renamer.exe [OPTIONS] <INPUT_DIR>
+Usage: track-renamer [OPTIONS] [INPUT_DIR]
 
 Arguments:
-  <INPUT_DIR>  Optional input directory with audio files to format
+  [INPUT_DIR]  Optional input directory with audio files to format
 
 Options:
   -f, --force      Do not ask for confirmation
