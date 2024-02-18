@@ -80,17 +80,17 @@ lazy_static! {
         (Regex::new(r"(?i)\sW/").unwrap(), " feat. "),
         (Regex::new(r"\s+").unwrap(), " "),
     ];
-    static ref FILENAME_REGEX_SUBSTITUTES: [(Regex, &'static str); 3] = [
+    static ref REGEX_FILENAME_SUBSTITUTES: [(Regex, &'static str); 3] = [
         (Regex::new("\"").unwrap(), "''"),
         (Regex::new(r"([\\/<>|:\*\?])+").unwrap(), "-"),
         (Regex::new(r"\s+").unwrap(), " "),
     ];
-    static ref FEAT_REGEX: Regex = Regex::new(r"feat\. .*?( -|\(|\)|$)").unwrap();
-    static ref TEXT_AFTER_PARENTHESES: Regex = Regex::new(r"\)\s(.*?)\s\(").unwrap();
-    static ref BPM_IN_PARENTHESES: Regex = Regex::new(r" \((\d{2,3}(\.\d)?|\d{2,3} \d{1,2}a)\)$").unwrap();
-    static ref BPM_WITH_KEY: Regex = Regex::new(r"\s\(\d{1,2}(?:\s\d{1,2})?\s?[a-zA-Z]\)$").unwrap();
-    static ref BPM_WITH_LETTERS: Regex = Regex::new(r"\s\(\d{2,3}\s?[a-zA-Z]{2,3}\)$").unwrap();
-    static ref DASH_IN_PARENTHESES: Regex = Regex::new(r"\((.*?) - (.*?)\)").unwrap();
+    static ref RE_FEAT: Regex = Regex::new(r"feat\. .*?( -|\(|\)|$)").unwrap();
+    static ref RE_TEXT_AFTER_PARENTHESES: Regex = Regex::new(r"\)\s(.*?)\s\(").unwrap();
+    static ref RE_BPM_IN_PARENTHESES: Regex = Regex::new(r" \((\d{2,3}(\.\d)?|\d{2,3} \d{1,2}a)\)$").unwrap();
+    static ref RE_BPM_WITH_KEY: Regex = Regex::new(r"\s\(\d{1,2}(?:\s\d{1,2})?\s?[a-zA-Z]\)$").unwrap();
+    static ref RE_BPM_WITH_TEXT: Regex = Regex::new(r"\s\(\d{2,3}\s?[a-zA-Z]{2,3}\)$").unwrap();
+    static ref RE_DASH_IN_PARENTHESES: Regex = Regex::new(r"\((.*?) - (.*?)\)").unwrap();
 }
 
 /// Return formatted artist and title string.
@@ -153,7 +153,7 @@ pub fn format_filename(artist: &str, title: &str) -> (String, String) {
     let mut formatted_artist = artist.to_string();
     let mut formatted_title = title.to_string();
 
-    for (regex, replacement) in FILENAME_REGEX_SUBSTITUTES.iter() {
+    for (regex, replacement) in REGEX_FILENAME_SUBSTITUTES.iter() {
         formatted_artist = regex.replace_all(&formatted_artist, *replacement).to_string();
         formatted_title = regex.replace_all(&formatted_title, *replacement).to_string();
     }
@@ -174,7 +174,7 @@ fn balance_parenthesis(title: &mut String) {
 
 fn move_feat_from_title_to_artist(artist: &mut String, title: &mut String) {
     if title.contains(" feat. ") || title.contains("(feat. ") {
-        if let Some(feat_match) = FEAT_REGEX.find(&title.clone()) {
+        if let Some(feat_match) = RE_FEAT.find(&title.clone()) {
             let feat = feat_match
                 .as_str()
                 .trim_end_matches(|c| c == '(' || c == ')' || c == '-');
@@ -358,10 +358,10 @@ fn remove_bpm_in_parentheses_from_end(text: &mut String) {
     }
 
     let mut result = text.to_string();
-    result = BPM_IN_PARENTHESES.replace_all(&result, "").to_string();
-    result = BPM_WITH_KEY.replace_all(&result, "").to_string();
+    result = RE_BPM_IN_PARENTHESES.replace_all(&result, "").to_string();
+    result = RE_BPM_WITH_KEY.replace_all(&result, "").to_string();
     if !result.to_lowercase().ends_with(" mix)") {
-        result = BPM_WITH_LETTERS.replace_all(&result, "").to_string();
+        result = RE_BPM_WITH_TEXT.replace_all(&result, "").to_string();
     }
 
     *text = result;
@@ -380,7 +380,7 @@ fn wrap_text_after_parentheses(text: &mut String) {
         ("", text.as_str())
     };
 
-    let mut result = TEXT_AFTER_PARENTHESES
+    let mut result = RE_TEXT_AFTER_PARENTHESES
         .replace_all(rest, |caps: &Captures| format!(") ({}) (", &caps[1]))
         .to_string();
 
@@ -395,7 +395,7 @@ fn wrap_text_after_parentheses(text: &mut String) {
 }
 
 fn replace_dash_in_parentheses(text: &mut String) {
-    *text = DASH_IN_PARENTHESES
+    *text = RE_DASH_IN_PARENTHESES
         .replace_all(text, |caps: &Captures| format!("({}) ({})", &caps[1], &caps[2]))
         .to_string();
 }
