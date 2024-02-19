@@ -12,11 +12,11 @@ keywords = ["cli", "music", "audio", "rename"]
 categories = ["command-line-utilities"]
 
 [dependencies]
-anyhow = { version = "1.0.79", features = ["backtrace"] }
+anyhow = { version = "1.0.80", features = ["backtrace"] }
 clap = { version = "4.5.1", features = ["derive"] }
 colored = "2.1.0"
 difference = "2.0.0"
-id3 = { git = "https://github.com/polyfloyd/rust-id3", branch = "magic-format-detection" }
+id3 = "1.13.0"
 lazy_static = "1.4.0"
 regex = "1.10.3"
 walkdir = "2.4.0"
