@@ -91,7 +91,7 @@ lazy_static! {
         // Collapses multiple spaces into a single space
         (Regex::new(r"\s+").unwrap(), " "),
     ];
-    static ref REGEX_NAME_SUBSTITUTES: [(Regex, &'static str); 7] = [
+    static ref REGEX_NAME_SUBSTITUTES: [(Regex, &'static str); 8] = [
         // Standardize various forms of "featuring" to "feat."
         (Regex::new(r"(?i)\b(?:feat\.?|ft\.?|featuring)\b").unwrap(), "feat."),
         (Regex::new(r"(?i)\(\s*(?:feat\.?|ft\.?|featuring)\b").unwrap(), "(feat."),
@@ -108,6 +108,8 @@ lazy_static! {
         (Regex::new(r"(?i)\bYoure\b").unwrap(), "You're"),
         // Fix spelling for "I'm"
         (Regex::new(r"(?i)\bIm\b").unwrap(), "I'm"),
+        // Fix spelling for "You've"
+        (Regex::new(r"(?i)\bYouve\b").unwrap(), "You've"),
     ];
     static ref REGEX_FILENAME_SUBSTITUTES: [(Regex, &'static str); 3] = [
         // Replace double quotes with two single quotes
