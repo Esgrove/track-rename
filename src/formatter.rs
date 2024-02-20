@@ -20,7 +20,6 @@ lazy_static! {
         ("( ", "("),
         ("...", " "),
         ("..", " "),
-        ("***", ""),
         (" ***", ""),
         (" **", ""),
         (" *", ""),
@@ -28,51 +27,22 @@ lazy_static! {
         ("** ", ""),
         ("* ", ""),
         (" feat. - ", " feat. "),
+        (" feat.-", " feat. "),
     ];
-    static ref TITLE_SUBSTITUTES: [(&'static str, &'static str); 41] = [
-        (" (Dirty!)", " (Dirty)"),
-        ("(Original Mix)", ""),
+    static ref TITLE_SUBSTITUTES: [(&'static str, &'static str); 11] = [
         ("(Original Mix/", "("),
-        (" DJcity", ""),
-        (" DJCity", ""),
-        ("(DJcity - ", "("),
-        ("(DJcity ", "("),
-        ("DJcity ", ""),
-        ("DJCity ", ""),
         ("12\"", "12''"),
-        ("Intro - Dirty", "Dirty Intro"),
-        ("Intro - Clean", "Clean Intro"),
-        ("(Dirty - Intro)", "(Dirty Intro)"),
-        ("(Clean - Intro)", "(Clean Intro)"),
-        ("Acap - DIY", "Acapella DIY"),
-        ("(Acap)", "(Acapella)"),
-        ("Acap ", "Acapella "),
-        ("/Cyberkid ", " - Cyberkid "),
-        ("/Beat Junkie ", " - Beat Junkie "),
-        (" Aca In/Aca Out ", " Acapella In-Out "),
-        (" Aca In/aca Out ", " Acapella In-Out "),
-        ("/Clean-Beat Junkie Sound Edit", " - Clean Beat Junkie Sound Edit"),
-        ("-CleanBeat Junkie Sound Edit", " - Clean Beat Junkie Sound Edit"),
         ("(Inst)", "(Instrumental)"),
-        (" 12 Inch ", " 12'' "),
-        ("(12 Inch ", "(12'' "),
-        (" 12in ", " 12'' "),
-        ("(12in ", "(12'' "),
-        ("(7in ", "(7'' "),
-        (" 7in ", " 7'' "),
-        ("Intro/Outro", "Intro-Outro"),
-        (" In/Out", " Intro-Outro"),
-        ("In/Out ", "Intro-Outro "),
-        ("Intro/Outro", "Intro"),
-        ("Intro-Outro", "Intro"),
-        (" Intro - Outro ", " Intro "),
-        (" Intro / Outro ", " Intro "),
-        ("In+Out", "In-Out"),
-        ("In+out", "In-Out"),
         (" W/Drums", " With Drums"),
         ("), Pt. 1", ") (Pt. 1)"),
+        ("/Cyberkid ", " - Cyberkid "),
+        ("-Dirty/Beat Junkie Sound Edit", " - Dirty Beat Junkie Sound Edit"),
+        ("/Clean-Beat Junkie Sound Edit", " - Clean Beat Junkie Sound Edit"),
+        ("-Clean/Beat Junkie Sound Edit", " - Clean Beat Junkie Sound Edit"),
+        ("-CleanBeat Junkie Sound Edit", " - Clean Beat Junkie Sound Edit"),
+        ("/Beat Junkie ", " - Beat Junkie "),
     ];
-    static ref REGEX_SUBSTITUTES: [(Regex, &'static str); 12] = [
+    static ref REGEX_SUBSTITUTES: [(Regex, &'static str); 13] = [
         // Replace various opening bracket types with "("
         (Regex::new(r"[\[{]+").unwrap(), "("),
         // Replace various closing bracket types with ")"
@@ -95,10 +65,12 @@ lazy_static! {
         (Regex::new(r"\)\s*\){2,}").unwrap(), ")"),
         // Transforms underscore-wrapped text into single-quoted text
         (Regex::new(r"\s_(.*?)_\s").unwrap(), " '$1' "),
+        // Remove asterisks after a word boundary
+        (Regex::new(r"\b\*+\b").unwrap(), ""),
         // Collapses multiple spaces into a single space
         (Regex::new(r"\s+").unwrap(), " "),
     ];
-    static ref REGEX_NAME_SUBSTITUTES: [(Regex, &'static str); 10] = [
+    static ref REGEX_NAME_SUBSTITUTES: [(Regex, &'static str); 28] = [
         // Standardize various forms of "featuring" to "feat."
         (Regex::new(r"(?i)\b(?:feat\.?|ft\.?|featuring)\b").unwrap(), "feat."),
         (Regex::new(r"(?i)\(\s*(?:feat\.?|ft\.?|featuring)\b").unwrap(), "(feat."),
@@ -121,6 +93,30 @@ lazy_static! {
         (Regex::new(r"(?i)\bDj\b").unwrap(), "DJ"),
         // Ensure one whitespace after "feat."
         (Regex::new(r"\bfeat\.([A-Za-z0-9])").unwrap(), "feat. $1"),
+        (Regex::new(r"(?i)\b(dirty!)\b").unwrap(), "(Dirty)"),
+        // Removes "Original Mix" with case-insensitivity
+        (Regex::new(r"(?i)\b(original mix)\b").unwrap(), ""),
+        // Removes "DJCity" with case-insensitivity
+        (Regex::new(r"(?i)\bdjcity\b").unwrap(), ""),
+        (Regex::new(r"(?i)\bintro - dirty\b").unwrap(), "Dirty Intro"),
+        (Regex::new(r"(?i)\bintro - clean\b").unwrap(), "Clean Intro"),
+        (Regex::new(r"(?i)\(dirty - intro\)").unwrap(), "(Dirty Intro)"),
+        (Regex::new(r"(?i)\(clean - intro\)").unwrap(), "(Clean Intro)"),
+        (Regex::new(r"(?i)\bacap - diy\b").unwrap(), "Acapella DIY"),
+        (Regex::new(r"(?i)\(acap\)").unwrap(), "(Acapella)"),
+        (Regex::new(r"(?i)\bacap\b").unwrap(), "Acapella"),
+        (Regex::new(r"(?i)\baca in/aca out\b").unwrap(), "Acapella In-Out"),
+        (Regex::new(r"(?i)\baca intro/aca outro\b").unwrap(), "Acapella In-Out"),
+        // Matches "12 Inch" or "12Inch" with optional space, case-insensitive
+        (Regex::new(r"(?i)\b12\s?inch\b").unwrap(), "12''"),
+        // Matches "12in" or "12 in" with optional space, case-insensitive
+        (Regex::new(r"(?i)\b12\s?in\b").unwrap(), "12''"),
+        // Matches "7 Inch" or "7Inch" with optional space, case-insensitive
+        (Regex::new(r"(?i)\b7\s?inch\b").unwrap(), "7''"),
+        // Matches "7in" or "7 in" with optional space, case-insensitive
+        (Regex::new(r"(?i)\b7\s?in\b").unwrap(), "7''"),
+        (Regex::new(r"(?i)\bintro[\s/+-]*outro\b").unwrap(), "Intro"),
+        (Regex::new(r"(?i)\bin[\s/+-]*out\b").unwrap(), "In-Out"),
     ];
     static ref REGEX_FILENAME_SUBSTITUTES: [(Regex, &'static str); 3] = [
         // Replace double quotes with two single quotes

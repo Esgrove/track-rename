@@ -165,7 +165,7 @@ mod tests {
             artist: "GoRilla x Kendrick Lamar",
             correct_artist: "GoRilla x Kendrick Lamar",
             title: "FNF Let's Go (Nick Bike 'Humble' Edit)(Acap In Out)(Clean)",
-            correct_title: "FNF Let's Go (Nick Bike 'Humble' Edit) (Acapella In Out) (Clean)",
+            correct_title: "FNF Let's Go (Nick Bike 'Humble' Edit) (Acapella In-Out) (Clean)",
         },
         FormattingTestData {
             artist: "Big Sean",
@@ -208,6 +208,18 @@ mod tests {
             correct_artist: "Curtis Mayfield",
             title: "Do Do Wap Is Strong In Here (Ashley Beedle Re-Edit/Beat Junkie Sound Edit)",
             correct_title: "Do Do Wap Is Strong In Here (Ashley Beedle Re-Edit) (Beat Junkie Sound Edit)",
+        },
+        FormattingTestData {
+            artist: "L.B.C. Crew (Feat. - Tray D & South Sentrel)",
+            correct_artist: "L.B.C. Crew feat. Tray D & South Sentrel",
+            title: "Beware Of My Crew (Dj Pooh Remix Instrumental)",
+            correct_title: "Beware Of My Crew (DJ Pooh Remix Instrumental)",
+        },
+        FormattingTestData {
+            artist: "S'hustryi Beats",
+            correct_artist: "S'hustryi Beats feat. Theodor",
+            title: "Force (feat.Theodor) (Remaster)",
+            correct_title: "Force (Remaster)",
         },
     ];
 
