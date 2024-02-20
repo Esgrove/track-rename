@@ -42,7 +42,7 @@ struct Args {
     #[arg(short, long)]
     sort: bool,
 
-    /// Only fix tags, do not rename
+    /// Only fix tags without renaming
     #[arg(short, long)]
     tags_only: bool,
 
