@@ -185,6 +185,18 @@ mod tests {
             title: "Beyonce - Texas Hold Em (Flipout X KON _I Want To Thank You_ Edit)(Instrumental)",
             correct_title: "Texas Hold Em (Flipout X KON 'I Want To Thank You' Edit) (Instrumental)",
         },
+        FormattingTestData {
+            artist: "Evelyn 'Champagne' King",
+            correct_artist: "Evelyn 'Champagne' King",
+            title: "Im In Love (TRAYZE QUANT REMASTER)",
+            correct_title: "I'm In Love (TRAYZE QUANT REMASTER)",
+        },
+        FormattingTestData {
+            artist: "SWV",
+            correct_artist: "SWV",
+            title: "Youre The One (TRAYZE REMASTER EDIT EXT)",
+            correct_title: "You're The One (TRAYZE REMASTER EDIT EXT)",
+        },
     ];
 
     static NESTED_PARENTHESES_TEST_DATA: &[FormattingTestData] = &[

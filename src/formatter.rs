@@ -4,7 +4,9 @@ use regex::{Captures, Regex};
 use std::cmp::Ordering;
 
 lazy_static! {
-    static ref COMMON_SUBSTITUTES: [(&'static str, &'static str); 18] = [
+    static ref COMMON_SUBSTITUTES: [(&'static str, &'static str); 21] = [
+        ("`", "'"),
+        ("´", "'"),
         (")(", ") ("),
         ("()", " "),
         (") - (", ""),
@@ -17,6 +19,7 @@ lazy_static! {
         ("( ", "("),
         ("...", " "),
         ("..", " "),
+        ("***", ""),
         (" ***", ""),
         (" **", ""),
         (" *", ""),
@@ -83,7 +86,7 @@ lazy_static! {
         // Collapses multiple spaces into a single space
         (Regex::new(r"\s+").unwrap(), " "),
     ];
-    static ref REGEX_NAME_SUBSTITUTES: [(Regex, &'static str); 5] = [
+    static ref REGEX_NAME_SUBSTITUTES: [(Regex, &'static str); 7] = [
         // Standardize various forms of "featuring" to "feat."
         (Regex::new(r"(?i)\b(?:feat\.?|ft\.?|featuring)\b").unwrap(), "feat."),
         (Regex::new(r"(?i)\(\s*(?:feat\.?|ft\.?|featuring)\b").unwrap(), "(feat."),
@@ -96,6 +99,10 @@ lazy_static! {
         ),
         // Correct name for "Gang Starr"
         (Regex::new(r"(?i)\bGangstarr\b|\bGangstarr$").unwrap(), "Gang Starr"),
+        // Fix spelling for "You're"
+        (Regex::new(r"(?i)\bYoure\b").unwrap(), "You're"),
+        // Fix spelling for "I'm"
+        (Regex::new(r"(?i)\bIm\b").unwrap(), "I'm"),
     ];
     static ref REGEX_FILENAME_SUBSTITUTES: [(Regex, &'static str); 3] = [
         // Replace double quotes with two single quotes
