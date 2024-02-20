@@ -4,7 +4,8 @@ use regex::{Captures, Regex};
 use std::cmp::Ordering;
 
 lazy_static! {
-    static ref COMMON_SUBSTITUTES: [(&'static str, &'static str); 21] = [
+    static ref COMMON_SUBSTITUTES: [(&'static str, &'static str); 22] = [
+        ("\0", "/"),
         ("`", "'"),
         ("´", "'"),
         (")(", ") ("),
