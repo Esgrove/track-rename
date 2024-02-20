@@ -16,7 +16,7 @@ anyhow = { version = "1.0.80", features = ["backtrace"] }
 clap = { version = "4.5.1", features = ["derive"] }
 colored = "2.1.0"
 difference = "2.0.0"
-id3 = "1.13.0"
+id3 = { version = "1.13.0", default-features = false }
 lazy_static = "1.4.0"
 regex = "1.10.3"
 walkdir = "2.4.0"
