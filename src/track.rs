@@ -1,9 +1,9 @@
 use crate::fileformat::FileFormat;
 
 use anyhow::Context;
+use colored::Colorize;
 use unicode_normalization::UnicodeNormalization;
 
-use colored::Colorize;
 use std::cmp::Ordering;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -25,28 +25,15 @@ impl Track {
     #![allow(dead_code)]
     /// New Track from path
     pub fn new(path: PathBuf) -> anyhow::Result<Track> {
-        let name = Self::get_nfc_filename_from_path(&path);
         let extension = path
             .extension()
             .context("Failed to get file extension")?
-            .to_string_lossy()
+            .to_str()
+            .context("File extension contains invalid Unicode")?
             .to_string();
 
         let format = FileFormat::from_str(&extension)?;
-        let root = path.parent().context("Failed to get file root")?.to_owned();
-        // Rebuild full path with desired unicode handling
-        let path = root.join(format!("{}.{}", name, extension));
-
-        Ok(Track {
-            name,
-            extension,
-            format,
-            root,
-            path,
-            tags_updated: false,
-            renamed: false,
-            printed: false,
-        })
+        Self::new_with_extension(path, extension, format)
     }
 
     /// New Track with already extracted extension and file format.
@@ -54,10 +41,10 @@ impl Track {
     /// since the extension might differ from the one used by `FileFormat`,
     /// in which case it would not point to the original filename.
     pub fn new_with_extension(path: PathBuf, extension: String, format: FileFormat) -> anyhow::Result<Track> {
-        let name = Self::get_nfc_filename_from_path(&path);
+        let name = Self::get_nfc_filename_from_path(&path)?;
         let root = path.parent().context("Failed to get file root")?.to_owned();
         // Rebuild full path with desired unicode handling
-        let path = root.join(format!("{}.{}", name, extension));
+        let path = dunce::simplified(root.join(format!("{}.{}", name, extension)).as_path()).to_path_buf();
 
         Ok(Track {
             name,
@@ -112,12 +99,12 @@ impl Track {
     }
 
     /// Get filename from Path with special characters retained instead of decomposed.
-    fn get_nfc_filename_from_path(path: &Path) -> String {
-        path
+    fn get_nfc_filename_from_path(path: &Path) -> anyhow::Result<String> {
+        Ok(path
             .file_stem()
-            .expect("Failed to get file stem")
+            .context("Failed to get file stem")?
             .to_str()
-            .expect("Filename contains invalid Unicode")
+            .context("Filename contains invalid Unicode")?
             // Rust uses unicode NFD (Normalization Form Decomposed) by default,
             // which converts special chars like "å" to "a\u{30a}",
             // which then get printed as a regular "a".
@@ -125,7 +112,7 @@ impl Track {
             // to retain correct format.
             // https://github.com/unicode-rs/unicode-normalization
             .nfc()
-            .collect::<String>()
+            .collect::<String>())
     }
 }
 

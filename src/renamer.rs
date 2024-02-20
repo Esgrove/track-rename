@@ -179,8 +179,8 @@ impl Renamer {
             } else {
                 format!("{} - {}.{}", file_artist, file_title, track.format)
             };
-            let new_path = track.root.join(&new_file_name);
 
+            let new_path = dunce::simplified(&track.root.join(&new_file_name)).to_path_buf();
             if !new_path.is_file() {
                 // Rename files if flag was given or if tags were not changed
                 if self.rename_files || !track.tags_updated {

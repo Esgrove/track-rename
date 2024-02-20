@@ -13,8 +13,8 @@ use crate::renamer::Renamer;
 use anyhow::{Context, Result};
 use clap::Parser;
 
+use std::env;
 use std::path::PathBuf;
-use std::{env, fs};
 
 #[derive(Parser)]
 #[command(author, about, version)]
@@ -58,10 +58,10 @@ fn main() -> Result<()> {
     if !filepath.exists() {
         anyhow::bail!(
             "Input path does not exist or is not accessible: '{}'",
-            filepath.display()
+            dunce::simplified(&filepath).display()
         );
     }
-    let absolute_input_path = fs::canonicalize(filepath)?;
+    let absolute_input_path = dunce::canonicalize(filepath)?;
 
     Renamer::new(
         absolute_input_path,
