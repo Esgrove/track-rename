@@ -128,6 +128,18 @@ mod tests {
             title: "In Da Club (Shake Sh-T Up) (Feat. Mr. V & Miss Patty) (Copyright Main Mix)",
             correct_title: "In Da Club (Shake Sh-T Up) (Copyright Main Mix)",
         },
+        FormattingTestData {
+            artist: "The Weeknd",
+            correct_artist: "The Weeknd feat. Ariana Grande",
+            title: "Save Your Tears feat Ariana Grande (Flipout Purple Disco Machine Edit)",
+            correct_title: "Save Your Tears (Flipout Purple Disco Machine Edit)",
+        },
+        FormattingTestData {
+            artist: "The Weeknd",
+            correct_artist: "The Weeknd feat. Ariana Grande",
+            title: "Save Your Tears feat Ariana Grande - Flipout Purple Disco Machine Edit",
+            correct_title: "Save Your Tears (Flipout Purple Disco Machine Edit)",
+        },
     ];
 
     static FORMATTING_TEST_DATA: &[FormattingTestData] = &[
