@@ -27,9 +27,10 @@ lazy_static! {
         ("** ", ""),
         ("* ", ""),
     ];
-    static ref TITLE_SUBSTITUTES: [(&'static str, &'static str); 31] = [
+    static ref TITLE_SUBSTITUTES: [(&'static str, &'static str); 36] = [
         (" (Dirty!)", " (Dirty)"),
         (" (Original Mix)", ""),
+        (" (Original Mix/", " ("),
         (" DJcity", ""),
         (" DJCity", ""),
         ("(DJcity - ", "("),
@@ -44,6 +45,8 @@ lazy_static! {
         ("Acap - DIY", "Acapella DIY"),
         ("(Acap)", "(Acapella)"),
         ("Acap ", "Acapella "),
+        ("/Cyberkid ", " - Cyberkid "),
+        ("Aca In/Aca Out", "Acapella In-Out"),
         ("(Inst)", "(Instrumental)"),
         (" 12 Inch ", " 12'' "),
         ("(12 Inch ", "(12'' "),
@@ -54,11 +57,13 @@ lazy_static! {
         ("Intro/Outro", "Intro-Outro"),
         (" In/Out", " Intro-Outro"),
         ("In/Out ", "Intro-Outro "),
-        ("Aca In/Aca Out", "Acapella In-Out"),
         ("Intro/Outro", "Intro"),
         ("Intro-Outro", "Intro"),
+        (" Intro - Outro ", " Intro "),
+        (" Intro / Outro ", " Intro "),
         ("In+Out", "In-Out"),
         ("In+out", "In-Out"),
+        (" W/Drums", " With Drums"),
     ];
     static ref REGEX_SUBSTITUTES: [(Regex, &'static str); 12] = [
         // Replace various opening bracket types with "("
@@ -506,6 +511,7 @@ mod tests {
             assert_eq!(input_string, expected);
         }
     }
+
     #[test]
     fn test_fix_nested_parentheses() {
         let test_cases = vec![

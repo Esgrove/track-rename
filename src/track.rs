@@ -180,6 +180,7 @@ mod tests {
         assert_eq!(track.root, PathBuf::from("/users/test"));
         assert_eq!(track.filename(), "test_song.mp3");
     }
+
     #[test]
     fn test_track_with_special_characters() {
         let path = PathBuf::from("/Users/akseli/Räntä & Benjamin Mùll - Sippa På En Tequila (Ö Remix).mp3");
@@ -194,9 +195,14 @@ mod tests {
         );
         assert_eq!(
             track.path.to_str().expect("Failed to convert track path to string"),
-            "/Users/akseli/Räntä & Benjamin Mùll - Sippa På En Tequila (Ö Remix).mp3"
+            if cfg!(target_os = "windows") {
+                "/Users/akseli\\Räntä & Benjamin Mùll - Sippa På En Tequila (Ö Remix).mp3"
+            } else {
+                "/Users/akseli/Räntä & Benjamin Mùll - Sippa På En Tequila (Ö Remix).mp3"
+            }
         );
     }
+
     #[test]
     fn test_track_new_with_extension() {
         let path = PathBuf::from("/users/test/another/artist - test song.aiff");
@@ -208,6 +214,7 @@ mod tests {
         assert_eq!(track.root, PathBuf::from("/users/test/another"));
         assert_eq!(track.filename(), "artist - test song.aiff");
     }
+
     #[test]
     fn test_track_equality() {
         let track1 = Track::new(PathBuf::from("/users/test/Test - song1.mp3")).expect("Failed to create track");
@@ -218,6 +225,7 @@ mod tests {
         assert_eq!(track2.format, FileFormat::Aif);
         assert_eq!(track1, track2);
     }
+
     #[test]
     fn test_track_display() {
         let dir = env::current_dir().expect("Failed to get current dir");
@@ -228,6 +236,7 @@ mod tests {
         let path_display = format!("{}", track.path.display());
         assert!(path_display.contains("artist - title.mp3"));
     }
+
     #[test]
     fn test_track_display_with_special_characters() {
         let dir = env::current_dir().expect("Failed to get current dir");
