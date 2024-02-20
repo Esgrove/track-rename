@@ -19,8 +19,8 @@ use std::{env, fs};
 #[derive(Parser)]
 #[command(author, about, version)]
 struct Args {
-    /// Optional input directory with audio files to format
-    directory: Option<String>,
+    /// Optional input directory or audio file to format
+    path: Option<String>,
 
     /// Do not ask for confirmation
     #[arg(short, long)]
@@ -49,21 +49,21 @@ struct Args {
 
 fn main() -> Result<()> {
     let args = Args::parse();
-    let input_path = args.directory.unwrap_or_default().trim().to_string();
+    let input_path = args.path.unwrap_or_default().trim().to_string();
     let filepath = if input_path.is_empty() {
         env::current_dir().context("Failed to get current working directory")?
     } else {
         PathBuf::from(input_path)
     };
-    if !filepath.is_dir() {
+    if !filepath.exists() {
         anyhow::bail!(
-            "Input directory does not exist or is not accessible: '{}'",
+            "Input path does not exist or is not accessible: '{}'",
             filepath.display()
         );
     }
     let absolute_input_path = fs::canonicalize(filepath)?;
 
-    let mut renamer = Renamer::new(
+    Renamer::new(
         absolute_input_path,
         args.force,
         args.rename,
@@ -71,6 +71,6 @@ fn main() -> Result<()> {
         args.print,
         args.tags_only,
         args.verbose,
-    );
-    renamer.run()
+    )
+    .run()
 }

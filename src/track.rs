@@ -1,11 +1,12 @@
+use crate::fileformat::FileFormat;
+
 use anyhow::Context;
 
+use colored::Colorize;
 use std::cmp::Ordering;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::{env, fmt};
-
-use crate::fileformat::FileFormat;
 
 #[derive(Debug)]
 pub struct Track {
@@ -67,6 +68,33 @@ impl Track {
             renamed: false,
             printed: false,
         })
+    }
+
+    pub fn try_from_path(path: &Path) -> Option<Track> {
+        let extension = path.extension().and_then(|e| e.to_str()).unwrap_or_default().trim();
+        if extension.is_empty() {
+            return None;
+        }
+        match FileFormat::from_str(extension) {
+            Ok(format) => match Track::new_with_extension(path.to_path_buf(), extension.to_string(), format) {
+                Ok(track) => return Some(track),
+                Err(error) => {
+                    eprintln!(
+                        "{}",
+                        format!("Failed to create Track from: {}\n{error}", path.display()).red()
+                    );
+                }
+            },
+            Err(_) => {
+                if extension == "wav" {
+                    println!(
+                        "{}",
+                        format!("Wav should be converted to aif: {}", path.display()).yellow()
+                    );
+                }
+            }
+        }
+        None
     }
 
     /// Print track if it has not been already.

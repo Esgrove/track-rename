@@ -1,3 +1,6 @@
+use crate::formatter;
+use crate::track::Track;
+
 use anyhow::{Context, Result};
 use colored::*;
 use difference::{Changeset, Difference};
@@ -9,12 +12,7 @@ use std::fs;
 use std::io;
 use std::io::Write;
 use std::path::PathBuf;
-use std::str::FromStr;
 use std::string::String;
-
-use crate::fileformat::FileFormat;
-use crate::formatter;
-use crate::track::Track;
 
 /// Audio track tag and filename formatting.
 pub struct Renamer {
@@ -72,8 +70,15 @@ impl Renamer {
 
     /// Gather audio files recursively from the root path.
     pub fn gather_files(&mut self) -> Result<()> {
-        println!("Getting audio files from {}", format!("{}", self.root.display()).cyan());
-        let mut file_list = self.get_tracks_from_root();
+        let mut file_list: Vec<Track> = Vec::new();
+        if self.root.is_file() {
+            if let Some(track) = Track::try_from_path(&self.root) {
+                file_list.push(track);
+            }
+        } else {
+            println!("Getting audio files from {}", format!("{}", self.root.display()).cyan());
+            file_list = self.get_tracks_from_root_directory();
+        }
         if file_list.is_empty() {
             anyhow::bail!("no supported audio files found");
         }
@@ -97,35 +102,15 @@ impl Renamer {
     }
 
     /// Find and return a list of audio tracks from the root directory.
-    fn get_tracks_from_root(&mut self) -> Vec<Track> {
+    fn get_tracks_from_root_directory(&mut self) -> Vec<Track> {
         let mut file_list: Vec<Track> = Vec::new();
         for entry in WalkDir::new(&self.root)
             .into_iter()
             .filter_map(|e| e.ok())
             .filter(|e| e.path().is_file())
         {
-            let path = entry.path();
-            let extension = path.extension().and_then(|e| e.to_str()).unwrap_or_default().trim();
-
-            if extension.is_empty() {
-                continue;
-            }
-            match FileFormat::from_str(extension) {
-                Ok(format) => {
-                    if let Ok(track) = Track::new_with_extension(path.to_path_buf(), extension.to_string(), format) {
-                        file_list.push(track);
-                    } else {
-                        eprintln!("{}", format!("Failed to create Track from: {}", path.display()).red());
-                    }
-                }
-                Err(_) => {
-                    if extension == "wav" {
-                        println!(
-                            "{}",
-                            format!("Wav should be converted to aif: {}", path.display()).yellow()
-                        );
-                    }
-                }
+            if let Some(track) = Track::try_from_path(entry.path()) {
+                file_list.push(track);
             }
         }
         file_list
