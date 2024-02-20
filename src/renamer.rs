@@ -373,3 +373,14 @@ impl Renamer {
         println!("{}", "-".repeat(text.chars().count()));
     }
 }
+
+// TODO: add tests with real files
+//#[cfg(test)]
+//mod tests {
+//    use super::*;
+//
+//    #[test]
+//    fn test() {
+//
+//    }
+//}
