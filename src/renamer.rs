@@ -188,8 +188,8 @@ impl Renamer {
             } else if new_path != track.path {
                 track.show(number + 1, self.total_tracks);
                 println!("{}", "Duplicate:".red().bold());
-                println!("{}", track.path.display());
-                println!("{}", new_path.display());
+                println!("Old: {}", track.path.display());
+                println!("New: {}", new_path.display());
                 Self::print_divider(&new_file_name);
                 self.num_duplicates += 1;
             }

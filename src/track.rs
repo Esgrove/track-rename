@@ -1,6 +1,7 @@
 use crate::fileformat::FileFormat;
 
 use anyhow::Context;
+use unicode_normalization::UnicodeNormalization;
 
 use colored::Colorize;
 use std::cmp::Ordering;
@@ -22,13 +23,9 @@ pub struct Track {
 
 impl Track {
     #![allow(dead_code)]
+    /// New Track from path
     pub fn new(path: PathBuf) -> anyhow::Result<Track> {
-        let name = path
-            .file_stem()
-            .context("Failed to get file stem")?
-            .to_string_lossy()
-            .into_owned();
-
+        let name = Self::get_nfc_filename_from_path(&path);
         let extension = path
             .extension()
             .context("Failed to get file extension")?
@@ -37,6 +34,8 @@ impl Track {
 
         let format = FileFormat::from_str(&extension)?;
         let root = path.parent().context("Failed to get file root")?.to_owned();
+        // Rebuild full path with desired unicode handling
+        let path = root.join(format!("{}.{}", name, extension));
 
         Ok(Track {
             name,
@@ -50,13 +49,15 @@ impl Track {
         })
     }
 
+    /// New Track with already extracted extension and file format.
+    /// Note that extension string is needed in addition to format
+    /// since the extension might differ from the one used by `FileFormat`,
+    /// in which case it would not point to the original filename.
     pub fn new_with_extension(path: PathBuf, extension: String, format: FileFormat) -> anyhow::Result<Track> {
-        let name = path
-            .file_stem()
-            .context("Failed to get file stem")?
-            .to_string_lossy()
-            .into_owned();
+        let name = Self::get_nfc_filename_from_path(&path);
         let root = path.parent().context("Failed to get file root")?.to_owned();
+        // Rebuild full path with desired unicode handling
+        let path = root.join(format!("{}.{}", name, extension));
 
         Ok(Track {
             name,
@@ -108,6 +109,23 @@ impl Track {
     /// Get the original file name
     pub fn filename(&self) -> String {
         format!("{}.{}", self.name, self.extension)
+    }
+
+    /// Get filename from Path with special characters retained instead of decomposed.
+    fn get_nfc_filename_from_path(path: &Path) -> String {
+        path
+            .file_stem()
+            .expect("Failed to get file stem")
+            .to_str()
+            .expect("Filename contains invalid Unicode")
+            // Rust uses unicode NFD (Normalization Form Decomposed) by default,
+            // which converts special chars like "å" to "a\u{30a}",
+            // which then get printed as a regular "a".
+            // Use NFC (Normalization Form Composed) from unicode_normalization crate instead
+            // to retain correct format.
+            // https://github.com/unicode-rs/unicode-normalization
+            .nfc()
+            .collect::<String>()
     }
 }
 
@@ -163,6 +181,23 @@ mod tests {
         assert_eq!(track.filename(), "test_song.mp3");
     }
     #[test]
+    fn test_track_with_special_characters() {
+        let path = PathBuf::from("/Users/akseli/Räntä & Benjamin Mùll - Sippa På En Tequila (Ö Remix).mp3");
+        let track = Track::new(path).expect("Failed to create track");
+        assert_eq!(track.name, "Räntä & Benjamin Mùll - Sippa På En Tequila (Ö Remix)");
+        assert_eq!(track.extension, "mp3");
+        assert_eq!(track.format, FileFormat::Mp3);
+        assert_eq!(track.root, PathBuf::from("/Users/akseli"));
+        assert_eq!(
+            track.filename(),
+            "Räntä & Benjamin Mùll - Sippa På En Tequila (Ö Remix).mp3"
+        );
+        assert_eq!(
+            track.path.to_str().expect("Failed to convert track path to string"),
+            "/Users/akseli/Räntä & Benjamin Mùll - Sippa På En Tequila (Ö Remix).mp3"
+        );
+    }
+    #[test]
     fn test_track_new_with_extension() {
         let path = PathBuf::from("/users/test/another/artist - test song.aiff");
         let track = Track::new_with_extension(path, "aiff".to_string(), FileFormat::Aif)
@@ -177,6 +212,10 @@ mod tests {
     fn test_track_equality() {
         let track1 = Track::new(PathBuf::from("/users/test/Test - song1.mp3")).expect("Failed to create track");
         let track2 = Track::new(PathBuf::from("/users/other/Test - song1.aif")).expect("Failed to create track");
+        assert_eq!(track1.extension, "mp3");
+        assert_eq!(track1.format, FileFormat::Mp3);
+        assert_eq!(track2.extension, "aif");
+        assert_eq!(track2.format, FileFormat::Aif);
         assert_eq!(track1, track2);
     }
     #[test]
@@ -185,5 +224,21 @@ mod tests {
         let track = Track::new(dir.join("artist - title.mp3")).expect("Failed to create track");
         let displayed = format!("{}", track);
         assert!(displayed.contains("artist - title.mp3"));
+
+        let path_display = format!("{}", track.path.display());
+        assert!(path_display.contains("artist - title.mp3"));
+    }
+    #[test]
+    fn test_track_display_with_special_characters() {
+        let dir = env::current_dir().expect("Failed to get current dir");
+        let track = Track::new(dir.join("Ääkköset - Test.aif")).expect("Failed to create track");
+        assert_eq!(track.extension, "aif");
+        assert_eq!(track.format, FileFormat::Aif);
+
+        let displayed = format!("{}", track);
+        assert!(displayed.contains("Ääkköset - Test.aif"));
+
+        let path_display = format!("{}", track.path.display());
+        assert!(path_display.contains("Ääkköset - Test.aif"));
     }
 }
