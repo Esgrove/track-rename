@@ -57,40 +57,72 @@ lazy_static! {
         ("In+Out", "In-Out"),
         ("In+out", "In-Out"),
     ];
-    static ref REGEX_SUBSTITUTES: [(Regex, &'static str); 19] = [
+    static ref REGEX_SUBSTITUTES: [(Regex, &'static str); 12] = [
+        // Replace various opening bracket types with "("
+        (Regex::new(r"[\[{]+").unwrap(), "("),
+        // Replace various closing bracket types with ")"
+        (Regex::new(r"[\]}]+").unwrap(), ")"),
+        // Collapse multiple exclamation marks into one
+        (Regex::new(r"!{2,}").unwrap(), "!"),
+        // Collapse multiple spaces into a single space
+        (Regex::new(r"\s{2,}").unwrap(), " "),
+        // Collapse multiple periods into a single period
+        (Regex::new(r"\.{2,}").unwrap(), "."),
+        // Remove empty parentheses
+        (Regex::new(r"\(\s*?\)").unwrap(), ""),
+        // Ensure a space before an opening parenthesis
+        (Regex::new(r"(\S)\(").unwrap(), "$1 ("),
+        // Ensure a space after a closing parenthesis
+        (Regex::new(r"\)(\S)").unwrap(), ") $1"),
+        // Collapse multiple consecutive opening parentheses into one
+        (Regex::new(r"\(\s*\){2,}").unwrap(), "("),
+        // Collapse multiple consecutive closing parentheses into one
+        (Regex::new(r"\)\s*\){2,}").unwrap(), ")"),
+        // Transforms underscore-wrapped text into single-quoted text
+        (Regex::new(r"\s_(.*?)_\s").unwrap(), " '$1' "),
+        // Collapses multiple spaces into a single space
+        (Regex::new(r"\s+").unwrap(), " "),
+    ];
+    static ref REGEX_NAME_SUBSTITUTES: [(Regex, &'static str); 5] = [
+        // Standardize various forms of "featuring" to "feat."
         (Regex::new(r"(?i)\b(?:feat\.?|ft\.?|featuring)\b").unwrap(), "feat."),
         (Regex::new(r"(?i)\(\s*(?:feat\.?|ft\.?|featuring)\b").unwrap(), "(feat."),
-        (Regex::new(r"[\[{]+").unwrap(), "("),
-        (Regex::new(r"[\]}]+").unwrap(), ")"),
-        (Regex::new(r"!{2,}").unwrap(), "!"),
-        (Regex::new(r"\s{2,}").unwrap(), " "),
-        (Regex::new(r"\.{2,}").unwrap(), "."),
-        (Regex::new(r"\(\s*?\)").unwrap(), ""),
-        (Regex::new(r"(\S)\(").unwrap(), "$1 ("),
-        (Regex::new(r"\)(\S)").unwrap(), ") $1"),
-        (Regex::new(r"\(\s*\){2,}").unwrap(), "("),
-        (Regex::new(r"\)\s*\){2,}").unwrap(), ")"),
-        (Regex::new(r"\({2,}").unwrap(), "("),
-        (Regex::new(r"\){2,}").unwrap(), ")"),
+        // Standardize "w/" to "feat."
+        (Regex::new(r"(?i)\sW/").unwrap(), " feat. "),
+        // Correct name for "Missy Elliott"
         (
             Regex::new(r"(?i)\bMissy Elliot\b|\bMissy Elliot$").unwrap(),
             "Missy Elliott",
         ),
-        (Regex::new(r"\s_(.*?)_\s").unwrap(), " '$1' "),
+        // Correct name for "Gang Starr"
         (Regex::new(r"(?i)\bGangstarr\b|\bGangstarr$").unwrap(), "Gang Starr"),
-        (Regex::new(r"(?i)\sW/").unwrap(), " feat. "),
-        (Regex::new(r"\s+").unwrap(), " "),
     ];
     static ref REGEX_FILENAME_SUBSTITUTES: [(Regex, &'static str); 3] = [
+        // Replace double quotes with two single quotes
         (Regex::new("\"").unwrap(), "''"),
+        // Replace characters that are not allowed in filenames with a hyphen
         (Regex::new(r"([\\/<>|:\*\?])+").unwrap(), "-"),
+        // Collapse multiple spaces into a single space
         (Regex::new(r"\s+").unwrap(), " "),
     ];
+    // Matches "feat." followed by any text until a dash, parenthesis, or end of string
     static ref RE_FEAT: Regex = Regex::new(r"feat\. .*?( -|\(|\)|$)").unwrap();
+
+    // Matches text after a closing parenthesis until the next opening parenthesis
     static ref RE_TEXT_AFTER_PARENTHESES: Regex = Regex::new(r"\)\s(.*?)\s\(").unwrap();
+
+    // Matches BPM information inside parentheses at the end of a string,
+    // allowing for decimal BPMs or BPM with a trailing "a"
     static ref RE_BPM_IN_PARENTHESES: Regex = Regex::new(r" \((\d{2,3}(\.\d)?|\d{2,3} \d{1,2}a)\)$").unwrap();
+
+    // Matches BPM with an optional key, formatted within parentheses at the end of a string
     static ref RE_BPM_WITH_KEY: Regex = Regex::new(r"\s\(\d{1,2}(?:\s\d{1,2})?\s?[a-zA-Z]\)$").unwrap();
+
+    // Matches BPM followed by two or three letters (likely denoting key or mode),
+    // formatted within parentheses at the end of a string
     static ref RE_BPM_WITH_TEXT: Regex = Regex::new(r"\s\(\d{2,3}\s?[a-zA-Z]{2,3}\)$").unwrap();
+
+    // Matches any text within parentheses that contains a dash, separating it into two groups
     static ref RE_DASH_IN_PARENTHESES: Regex = Regex::new(r"\((.*?) - (.*?)\)").unwrap();
 }
 
@@ -123,6 +155,11 @@ pub fn format_tags(artist: &str, title: &str) -> (String, String) {
 
     for (pattern, replacement) in TITLE_SUBSTITUTES.iter() {
         formatted_title = formatted_title.replace(pattern, replacement);
+    }
+
+    for (regex, replacement) in REGEX_NAME_SUBSTITUTES.iter() {
+        formatted_artist = regex.replace_all(&formatted_artist, *replacement).to_string();
+        formatted_title = regex.replace_all(&formatted_title, *replacement).to_string();
     }
 
     for (regex, replacement) in REGEX_SUBSTITUTES.iter() {
