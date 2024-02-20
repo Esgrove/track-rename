@@ -189,7 +189,9 @@ impl Renamer {
                     Renamer::show_diff(&track.filename(), &new_file_name);
                     self.num_renamed += 1;
                     if !self.print_only && (self.force || Renamer::confirm()) {
-                        fs::rename(&track.path, &new_path)?;
+                        if let Err(error) = fs::rename(&track.path, &new_path) {
+                            eprintln!("{}", format!("Failed to rename file: {}", error).red());
+                        }
                     }
                     Self::print_divider(&new_file_name);
                 }
