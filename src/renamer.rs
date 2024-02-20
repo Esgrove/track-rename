@@ -62,9 +62,7 @@ impl Renamer {
     pub fn run(&mut self) -> Result<()> {
         self.gather_files()?;
         self.process_files()?;
-        if self.verbose {
-            self.print_stats();
-        }
+        self.print_stats();
         Ok(())
     }
 
