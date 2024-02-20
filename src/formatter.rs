@@ -29,8 +29,8 @@ lazy_static! {
     ];
     static ref TITLE_SUBSTITUTES: [(&'static str, &'static str); 37] = [
         (" (Dirty!)", " (Dirty)"),
-        (" (Original Mix)", ""),
-        (" (Original Mix/", " ("),
+        ("(Original Mix)", ""),
+        ("(Original Mix/", "("),
         (" DJcity", ""),
         (" DJCity", ""),
         ("(DJcity - ", "("),

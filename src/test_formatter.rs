@@ -197,6 +197,18 @@ mod tests {
             title: "Youre The One (TRAYZE REMASTER EDIT EXT)",
             correct_title: "You're The One (TRAYZE REMASTER EDIT EXT)",
         },
+        FormattingTestData {
+            artist: "Giacca & Flores",
+            correct_artist: "Giacca & Flores",
+            title: "New Monday (Original Mix/Cyberkid Re-Edit)",
+            correct_title: "New Monday (Cyberkid Re-Edit)",
+        },
+        FormattingTestData {
+            artist: "Curtis Mayfield",
+            correct_artist: "Curtis Mayfield",
+            title: "Do Do Wap Is Strong In Here (Ashley Beedle Re-Edit/Beat Junkie Sound Edit)",
+            correct_title: "Do Do Wap Is Strong In Here (Ashley Beedle Re-Edit) (Beat Junkie Sound Edit)",
+        },
     ];
 
     static NESTED_PARENTHESES_TEST_DATA: &[FormattingTestData] = &[
