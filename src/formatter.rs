@@ -91,7 +91,7 @@ lazy_static! {
         // Collapses multiple spaces into a single space
         (Regex::new(r"\s+").unwrap(), " "),
     ];
-    static ref REGEX_NAME_SUBSTITUTES: [(Regex, &'static str); 8] = [
+    static ref REGEX_NAME_SUBSTITUTES: [(Regex, &'static str); 9] = [
         // Standardize various forms of "featuring" to "feat."
         (Regex::new(r"(?i)\b(?:feat\.?|ft\.?|featuring)\b").unwrap(), "feat."),
         (Regex::new(r"(?i)\(\s*(?:feat\.?|ft\.?|featuring)\b").unwrap(), "(feat."),
@@ -110,6 +110,8 @@ lazy_static! {
         (Regex::new(r"(?i)\bIm\b").unwrap(), "I'm"),
         // Fix spelling for "You've"
         (Regex::new(r"(?i)\bYouve\b").unwrap(), "You've"),
+        // Fix capitalization for "DJ"
+        (Regex::new(r"(?i)\bDj\b").unwrap(), "DJ"),
     ];
     static ref REGEX_FILENAME_SUBSTITUTES: [(Regex, &'static str); 3] = [
         // Replace double quotes with two single quotes
@@ -188,6 +190,7 @@ pub fn format_tags(artist: &str, title: &str) -> (String, String) {
     wrap_text_after_parentheses(&mut formatted_title);
     remove_bpm_in_parentheses_from_end(&mut formatted_title);
 
+    // TODO: Fix above so this is not needed
     formatted_title = formatted_title.replace("((", "(").replace("))", ")");
 
     extract_feat_from_parentheses(&mut formatted_artist);
