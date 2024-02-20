@@ -27,7 +27,7 @@ lazy_static! {
         ("** ", ""),
         ("* ", ""),
     ];
-    static ref TITLE_SUBSTITUTES: [(&'static str, &'static str); 36] = [
+    static ref TITLE_SUBSTITUTES: [(&'static str, &'static str); 37] = [
         (" (Dirty!)", " (Dirty)"),
         (" (Original Mix)", ""),
         (" (Original Mix/", " ("),
@@ -46,6 +46,7 @@ lazy_static! {
         ("(Acap)", "(Acapella)"),
         ("Acap ", "Acapella "),
         ("/Cyberkid ", " - Cyberkid "),
+        ("/Beat Junkie ", " - Beat Junkie "),
         ("Aca In/Aca Out", "Acapella In-Out"),
         ("(Inst)", "(Instrumental)"),
         (" 12 Inch ", " 12'' "),
