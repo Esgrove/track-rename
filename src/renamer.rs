@@ -1,7 +1,7 @@
 use crate::formatter;
 use crate::track::Track;
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use colored::*;
 use difference::{Changeset, Difference};
 use id3::{Error, ErrorKind, Tag, TagLike};
@@ -170,8 +170,9 @@ impl Renamer {
                 if !self.print_only && (self.force || Renamer::confirm()) {
                     tags.set_artist(formatted_artist.clone());
                     tags.set_title(formatted_title.clone());
-                    tags.write_to_path(&track.path, id3::Version::Id3v23)
-                        .context("Failed to write tags")?;
+                    if let Err(error) = tags.write_to_path(&track.path, id3::Version::Id3v24) {
+                        eprintln!("{}", format!("Failed to write tags: {}", error).red());
+                    }
                     track.tags_updated = true;
                 }
                 Self::print_divider(&formatted_tags);
