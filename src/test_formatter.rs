@@ -167,6 +167,12 @@ mod tests {
             title: "Dance (A$$)",
             correct_title: "Dance (A$$)",
         },
+        FormattingTestData {
+            artist: "Beyonce",
+            correct_artist: "Beyonce",
+            title: "Beyonce - Texas Hold Em (Flipout X KON _I Want To Thank You_ Edit)(Instrumental)",
+            correct_title: "Texas Hold Em (Flipout X KON 'I Want To Thank You' Edit) (Instrumental)",
+        },
     ];
 
     static NESTED_PARENTHESES_TEST_DATA: &[FormattingTestData] = &[

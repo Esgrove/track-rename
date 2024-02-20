@@ -57,7 +57,7 @@ lazy_static! {
         ("In+Out", "In-Out"),
         ("In+out", "In-Out"),
     ];
-    static ref REGEX_SUBSTITUTES: [(Regex, &'static str); 18] = [
+    static ref REGEX_SUBSTITUTES: [(Regex, &'static str); 19] = [
         (Regex::new(r"(?i)\b(?:feat\.?|ft\.?|featuring)\b").unwrap(), "feat."),
         (Regex::new(r"(?i)\(\s*(?:feat\.?|ft\.?|featuring)\b").unwrap(), "(feat."),
         (Regex::new(r"[\[{]+").unwrap(), "("),
@@ -76,6 +76,7 @@ lazy_static! {
             Regex::new(r"(?i)\bMissy Elliot\b|\bMissy Elliot$").unwrap(),
             "Missy Elliott",
         ),
+        (Regex::new(r"\s_(.*?)_\s").unwrap(), " '$1' "),
         (Regex::new(r"(?i)\bGangstarr\b|\bGangstarr$").unwrap(), "Gang Starr"),
         (Regex::new(r"(?i)\sW/").unwrap(), " feat. "),
         (Regex::new(r"\s+").unwrap(), " "),
@@ -97,6 +98,12 @@ lazy_static! {
 pub fn format_tags(artist: &str, title: &str) -> (String, String) {
     let mut formatted_artist = artist.to_string();
     let mut formatted_title = title.to_string();
+
+    // Remove duplicate artist name from title
+    let artist_with_dash = format!("{formatted_artist} - ");
+    if formatted_title.starts_with(&artist_with_dash) {
+        formatted_title = formatted_title.replacen(&artist_with_dash, "", 1);
+    }
 
     // Remove extra extension from end
     let extensions = [".mp3", ".flac", ".aif", ".aiff", ".m4a"];
