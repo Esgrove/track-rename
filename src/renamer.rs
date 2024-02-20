@@ -136,6 +136,16 @@ impl Renamer {
                 }
             }
 
+            // File might have been deleted between gathering files and now,
+            // for example when handling duplicates.
+            if !track.path.exists() {
+                track.show(number + 1, self.total_tracks);
+                let message = format!("Track no longer exists: {}", track);
+                eprintln!("{}", message.red());
+                Self::print_divider(&message);
+                continue;
+            }
+
             let mut tags = match Renamer::read_tags(track) {
                 Some(tag) => tag,
                 None => continue,
