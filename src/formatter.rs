@@ -4,7 +4,7 @@ use regex::{Captures, Regex};
 use std::cmp::Ordering;
 
 lazy_static! {
-    static ref COMMON_SUBSTITUTES: [(&'static str, &'static str); 22] = [
+    static ref COMMON_SUBSTITUTES: [(&'static str, &'static str); 23] = [
         ("\0", "/"),
         ("`", "'"),
         ("´", "'"),
@@ -12,7 +12,7 @@ lazy_static! {
         ("()", " "),
         (") - (", ""),
         (" - (", " ("),
-        ("(- ", "("),
+        ("(-", "("),
         ("( - ", "("),
         (" -)", " )"),
         (" - ) ", ")"),
@@ -27,8 +27,9 @@ lazy_static! {
         ("*** ", ""),
         ("** ", ""),
         ("* ", ""),
+        (" feat. - ", " feat. "),
     ];
-    static ref TITLE_SUBSTITUTES: [(&'static str, &'static str); 37] = [
+    static ref TITLE_SUBSTITUTES: [(&'static str, &'static str); 41] = [
         (" (Dirty!)", " (Dirty)"),
         ("(Original Mix)", ""),
         ("(Original Mix/", "("),
@@ -48,7 +49,10 @@ lazy_static! {
         ("Acap ", "Acapella "),
         ("/Cyberkid ", " - Cyberkid "),
         ("/Beat Junkie ", " - Beat Junkie "),
-        ("Aca In/Aca Out", "Acapella In-Out"),
+        (" Aca In/Aca Out ", " Acapella In-Out "),
+        (" Aca In/aca Out ", " Acapella In-Out "),
+        ("/Clean-Beat Junkie Sound Edit", " - Clean Beat Junkie Sound Edit"),
+        ("-CleanBeat Junkie Sound Edit", " - Clean Beat Junkie Sound Edit"),
         ("(Inst)", "(Instrumental)"),
         (" 12 Inch ", " 12'' "),
         ("(12 Inch ", "(12'' "),
@@ -66,6 +70,7 @@ lazy_static! {
         ("In+Out", "In-Out"),
         ("In+out", "In-Out"),
         (" W/Drums", " With Drums"),
+        ("), Pt. 1", ") (Pt. 1)"),
     ];
     static ref REGEX_SUBSTITUTES: [(Regex, &'static str); 12] = [
         // Replace various opening bracket types with "("
@@ -93,7 +98,7 @@ lazy_static! {
         // Collapses multiple spaces into a single space
         (Regex::new(r"\s+").unwrap(), " "),
     ];
-    static ref REGEX_NAME_SUBSTITUTES: [(Regex, &'static str); 9] = [
+    static ref REGEX_NAME_SUBSTITUTES: [(Regex, &'static str); 10] = [
         // Standardize various forms of "featuring" to "feat."
         (Regex::new(r"(?i)\b(?:feat\.?|ft\.?|featuring)\b").unwrap(), "feat."),
         (Regex::new(r"(?i)\(\s*(?:feat\.?|ft\.?|featuring)\b").unwrap(), "(feat."),
@@ -114,6 +119,8 @@ lazy_static! {
         (Regex::new(r"(?i)\bYouve\b").unwrap(), "You've"),
         // Fix capitalization for "DJ"
         (Regex::new(r"(?i)\bDj\b").unwrap(), "DJ"),
+        // Ensure one whitespace after "feat."
+        (Regex::new(r"\bfeat\.([A-Za-z0-9])").unwrap(), "feat. $1"),
     ];
     static ref REGEX_FILENAME_SUBSTITUTES: [(Regex, &'static str); 3] = [
         // Replace double quotes with two single quotes
