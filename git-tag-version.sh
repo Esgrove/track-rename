@@ -57,11 +57,12 @@ for commit_hash in $(git log --format="%H" --reverse -- Cargo.toml); do
         else
             current_tag="$version_number"
         fi
-        print_magenta "$version_number"
+        print_magenta "Version $version_number"
         if [ -n "$version_number" ]; then
             tag="v$version_number"
             if git tag -l | grep -q "^${tag}$"; then
                 print_red "Tag $tag already exists, skipping..."
+                continue
             else
                 run_command git tag -a "$tag" "$commit_hash" -m "Rust version $version_number"
             fi
