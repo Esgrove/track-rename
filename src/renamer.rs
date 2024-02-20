@@ -181,7 +181,11 @@ impl Renamer {
             }
 
             let (file_artist, file_title) = formatter::format_filename(&formatted_artist, &formatted_title);
-            let new_file_name = format!("{} - {}.{}", file_artist, file_title, track.format);
+            let new_file_name = if file_artist.is_empty() {
+                format!("{}.{}", file_title, track.format)
+            } else {
+                format!("{} - {}.{}", file_artist, file_title, track.format)
+            };
             let new_path = track.root.join(&new_file_name);
 
             if !new_path.is_file() {
