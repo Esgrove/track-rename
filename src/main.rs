@@ -22,6 +22,10 @@ struct Args {
     /// Optional input directory or audio file to format
     path: Option<String>,
 
+    /// Enable debug prints
+    #[arg(short, long)]
+    debug: bool,
+
     /// Do not ask for confirmation
     #[arg(short, long)]
     force: bool,
@@ -71,6 +75,7 @@ fn main() -> Result<()> {
         args.print,
         args.tags_only,
         args.verbose,
+        args.debug,
     )
     .run()
 }

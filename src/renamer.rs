@@ -23,6 +23,7 @@ pub struct Renamer {
     print_only: bool,
     tags_only: bool,
     verbose: bool,
+    debug: bool,
     file_list: Vec<Track>,
     total_tracks: usize,
     num_tags_fixed: usize,
@@ -40,6 +41,7 @@ impl Renamer {
         print_only: bool,
         tags_only: bool,
         verbose: bool,
+        debug: bool,
     ) -> Renamer {
         Renamer {
             root: path,
@@ -49,6 +51,7 @@ impl Renamer {
             print_only,
             tags_only,
             verbose,
+            debug,
             file_list: Vec::new(),
             total_tracks: 0,
             num_tags_fixed: 0,
@@ -151,9 +154,14 @@ impl Renamer {
                 None => continue,
             };
             let (artist, title, current_tags) = Self::parse_artist_and_title(&track, &mut tags);
+            if self.debug {
+                println!("current_tags: {current_tags}");
+            }
             let (formatted_artist, formatted_title) = formatter::format_tags(&artist, &title);
             let formatted_tags = format!("{} - {}", formatted_artist, formatted_title);
-
+            if self.debug {
+                println!("formatted_tags: {formatted_tags}");
+            }
             if current_tags != formatted_tags {
                 track.show(number + 1, self.total_tracks);
                 println!("{}", "Fix tags:".blue().bold());
