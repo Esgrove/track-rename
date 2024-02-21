@@ -8,7 +8,7 @@ mod test_formatter;
 
 extern crate colored;
 
-use crate::renamer::Renamer;
+use crate::renamer::{Config, Renamer};
 
 use anyhow::{Context, Result};
 use clap::Parser;
@@ -66,16 +66,15 @@ fn main() -> Result<()> {
         );
     }
     let absolute_input_path = dunce::canonicalize(filepath)?;
+    let config = Config {
+        force: args.force,
+        rename_files: args.rename,
+        sort_files: args.sort,
+        print_only: args.print,
+        tags_only: args.tags_only,
+        verbose: args.verbose,
+        debug: args.debug,
+    };
 
-    Renamer::new(
-        absolute_input_path,
-        args.force,
-        args.rename,
-        args.sort,
-        args.print,
-        args.tags_only,
-        args.verbose,
-        args.debug,
-    )
-    .run()
+    Renamer::new(absolute_input_path, config).run()
 }

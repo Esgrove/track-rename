@@ -14,16 +14,21 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::string::String;
 
+// Renamer settings.
+pub struct Config {
+    pub force: bool,
+    pub rename_files: bool,
+    pub sort_files: bool,
+    pub print_only: bool,
+    pub tags_only: bool,
+    pub verbose: bool,
+    pub debug: bool,
+}
+
 /// Audio track tag and filename formatting.
 pub struct Renamer {
     root: PathBuf,
-    force: bool,
-    rename_files: bool,
-    sort_files: bool,
-    print_only: bool,
-    tags_only: bool,
-    verbose: bool,
-    debug: bool,
+    config: Config,
     file_list: Vec<Track>,
     total_tracks: usize,
     num_tags_fixed: usize,
@@ -33,25 +38,10 @@ pub struct Renamer {
 }
 
 impl Renamer {
-    pub fn new(
-        path: PathBuf,
-        force: bool,
-        rename_files: bool,
-        sort_files: bool,
-        print_only: bool,
-        tags_only: bool,
-        verbose: bool,
-        debug: bool,
-    ) -> Renamer {
+    pub fn new(path: PathBuf, config: Config) -> Renamer {
         Renamer {
             root: path,
-            force,
-            rename_files,
-            sort_files,
-            print_only,
-            tags_only,
-            verbose,
-            debug,
+            config,
             file_list: Vec::new(),
             total_tracks: 0,
             num_tags_fixed: 0,
@@ -85,12 +75,12 @@ impl Renamer {
         }
 
         self.total_tracks = file_list.len();
-        if self.sort_files {
+        if self.config.sort_files {
             file_list.sort();
         }
 
         self.file_list = file_list;
-        if self.verbose {
+        if self.config.verbose {
             if self.file_list.len() < 100 {
                 for track in &self.file_list {
                     println!("{}", track);
@@ -120,12 +110,12 @@ impl Renamer {
     /// Format all tracks.
     pub fn process_files(&mut self) -> Result<()> {
         println!("{}", format!("Processing {} tracks...", self.total_tracks).bold());
-        if self.print_only {
+        if self.config.print_only {
             println!("{}", "Running in print-only mode".yellow().bold())
         }
         let mut current_path = self.root.clone();
         for (number, track) in self.file_list.iter_mut().enumerate() {
-            if !self.sort_files {
+            if !self.config.sort_files {
                 // Print current directory when iterating in directory order
                 if current_path != track.root {
                     current_path = track.root.clone();
@@ -154,12 +144,12 @@ impl Renamer {
                 None => continue,
             };
             let (artist, title, current_tags) = Self::parse_artist_and_title(&track, &mut tags);
-            if self.debug {
+            if self.config.debug {
                 println!("current_tags: {current_tags}");
             }
             let (formatted_artist, formatted_title) = formatter::format_tags(&artist, &title);
             let formatted_tags = format!("{} - {}", formatted_artist, formatted_title);
-            if self.debug {
+            if self.config.debug {
                 println!("formatted_tags: {formatted_tags}");
             }
             if current_tags != formatted_tags {
@@ -167,7 +157,7 @@ impl Renamer {
                 println!("{}", "Fix tags:".blue().bold());
                 Renamer::show_diff(&current_tags, &formatted_tags);
                 self.num_tags_fixed += 1;
-                if !self.print_only && (self.force || Renamer::confirm()) {
+                if !self.config.print_only && (self.config.force || Renamer::confirm()) {
                     tags.set_artist(formatted_artist.clone());
                     tags.set_title(formatted_title.clone());
                     if let Err(error) = tags.write_to_path(&track.path, id3::Version::Id3v24) {
@@ -178,7 +168,7 @@ impl Renamer {
                 Self::print_divider(&formatted_tags);
             }
 
-            if self.tags_only {
+            if self.config.tags_only {
                 continue;
             }
 
@@ -192,12 +182,12 @@ impl Renamer {
             let new_path = dunce::simplified(&track.root.join(&new_file_name)).to_path_buf();
             if !new_path.is_file() {
                 // Rename files if flag was given or if tags were not changed
-                if self.rename_files || !track.tags_updated {
+                if self.config.rename_files || !track.tags_updated {
                     track.show(number + 1, self.total_tracks);
                     println!("{}", "Rename file:".yellow().bold());
                     Renamer::show_diff(&track.filename(), &new_file_name);
                     self.num_renamed += 1;
-                    if !self.print_only && (self.force || Renamer::confirm()) {
+                    if !self.config.print_only && (self.config.force || Renamer::confirm()) {
                         if let Err(error) = fs::rename(&track.path, &new_path) {
                             eprintln!("{}", format!("Failed to rename file: {}", error).red());
                         }
