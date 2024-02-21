@@ -227,6 +227,18 @@ mod tests {
             title: "Hours (Marshall F Remix)",
             correct_title: "Hours (Marshall F Remix)",
         },
+        FormattingTestData {
+            artist: "Nina Sky",
+            correct_artist: "Nina Sky",
+            title: "Move Ya Body (Trayze Acap-In)",
+            correct_title: "Move Ya Body (Trayze Acapella Intro)",
+        },
+        FormattingTestData {
+            artist: "Beyoncé",
+            correct_artist: "Beyoncé",
+            title: "Break My Soul (Trayze Acap-In Out)",
+            correct_title: "Break My Soul (Trayze Acapella In-Out)",
+        },
     ];
 
     static NESTED_PARENTHESES_TEST_DATA: &[FormattingTestData] = &[
@@ -334,6 +346,12 @@ mod tests {
             correct_artist: "Rihanna",
             title: "Lift Me Up (Trayze Drop Leaf Edit) (89 11b)",
             correct_title: "Lift Me Up (Trayze Drop Leaf Edit)",
+        },
+        FormattingTestData {
+            artist: "Don Omar feat. Lucenzo",
+            correct_artist: "Don Omar feat. Lucenzo",
+            title: "Danza Kuduro (Trayze Acapella In Out Edit) (130 8b)",
+            correct_title: "Danza Kuduro (Trayze Acapella In-Out Edit)",
         },
     ];
 

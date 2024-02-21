@@ -71,7 +71,7 @@ lazy_static! {
         // Collapses multiple spaces into a single space
         (Regex::new(r"\s+").unwrap(), " "),
     ];
-    static ref REGEX_NAME_SUBSTITUTES: [(Regex, &'static str); 36] = [
+    static ref REGEX_NAME_SUBSTITUTES: [(Regex, &'static str); 37] = [
         // Matches "12 Inch" or "12Inch" with optional space, case-insensitive
         (Regex::new(r"(?i)\b12\s?inch\b").unwrap(), "12''"),
         // Matches "12in" or "12 in" with optional space, case-insensitive
@@ -117,11 +117,12 @@ lazy_static! {
         (Regex::new(r"(?i)\bAca intro[\s/+\-&]*aca outro\b").unwrap(), "Acapella In-Out"),
         (Regex::new(r"(?i)\bAcapella Intro[\s/+\-&]*aca out\b").unwrap(), "Acapella In-Out"),
         (Regex::new(r"(?i)\bAca Out\b").unwrap(), "Acapella Out"),
+        (Regex::new(r"(?i)\bAcap-In\b").unwrap(), "Acapella Intro"),
         (Regex::new(r"(?i)\bAcap - diy\b").unwrap(), "Acapella DIY"),
         (Regex::new(r"(?i)\bAcap in[\s/+\-&]*out\b").unwrap(), "Acapella In-Out"),
         (Regex::new(r"(?i)\bAcap\b").unwrap(), "Acapella"),
-        (Regex::new(r"(?i)\bAcapella In[\s/+\-&]*Out\b").unwrap(), "Acapella In-Out"),
-        (Regex::new(r"(?i)\bAcapella In\b").unwrap(), "Acapella Intro"),
+        (Regex::new(r"(?i)\bAcapella[\s/+\-]*In[\s/+\-&]*Out\b").unwrap(), "Acapella In-Out"),
+        (Regex::new(r"(?i)\bAcapella[\s/+\-]*In\b").unwrap(), "Acapella Intro"),
         (Regex::new(r"(?i)\bAcapella Intro[\s/+\-&]*Out\b").unwrap(), "Acapella In-Out"),
         (Regex::new(r"(?i)\bAcapella-Intro[\s/+\-&]*Out\b").unwrap(), "Acapella In-Out"),
         (Regex::new(r"(?i)\bAcapella-Intro\b").unwrap(), "Acapella Intro"),
@@ -146,11 +147,12 @@ lazy_static! {
     static ref RE_BPM_IN_PARENTHESES: Regex = Regex::new(r" \((\d{2,3}(\.\d)?|\d{2,3} \d{1,2}a)\)$").unwrap();
 
     // Matches BPM with an optional key, formatted within parentheses at the end of a string
-    static ref RE_BPM_WITH_KEY: Regex = Regex::new(r"\s\(\d{1,2}(?:\s\d{1,2})?\s?[a-zA-Z]\)$").unwrap();
+    static ref RE_BPM_WITH_KEY: Regex = Regex::new(r"\s\(\d{1,3}(?:\s\d{1,2})?\s?[a-zA-Z]\)$").unwrap();
 
     // Matches BPM followed by two or three letters (likely denoting key or mode),
     // formatted within parentheses at the end of a string
-    static ref RE_BPM_WITH_TEXT: Regex = Regex::new(r"\s\(\d{2,3}\s?[a-zA-Z]{2,3}\)$").unwrap();
+    static ref RE_BPM_WITH_TEXT_PARENTHESES: Regex = Regex::new(r"\s\(\d{2,3}\s?[a-zA-Z]{2,3}\)$").unwrap();
+    static ref RE_BPM_WITH_TEXT: Regex = Regex::new(r"\b\d{2,3}\s?[a-zA-Z]{2,3}\)$").unwrap();
 
     // Matches any text within parentheses that contains a dash, separating it into two groups
     static ref RE_DASH_IN_PARENTHESES: Regex = Regex::new(r"\((.*?) - (.*?)\)").unwrap();
@@ -430,6 +432,7 @@ fn remove_bpm_in_parentheses_from_end(text: &mut String) {
     result = RE_BPM_IN_PARENTHESES.replace_all(&result, "").to_string();
     result = RE_BPM_WITH_KEY.replace_all(&result, "").to_string();
     if !result.to_lowercase().ends_with(" mix)") {
+        result = RE_BPM_WITH_TEXT_PARENTHESES.replace_all(&result, "").to_string();
         result = RE_BPM_WITH_TEXT.replace_all(&result, "").to_string();
     }
 
