@@ -29,7 +29,7 @@ lazy_static! {
         (" feat. - ", " feat. "),
         (" feat.-", " feat. "),
     ];
-    static ref TITLE_SUBSTITUTES: [(&'static str, &'static str); 13] = [
+    static ref TITLE_SUBSTITUTES: [(&'static str, &'static str); 14] = [
         ("(Original Mix/", "("),
         ("12\"", "12''"),
         ("(Inst)", "(Instrumental)"),
@@ -41,6 +41,7 @@ lazy_static! {
         ("/Clean-Beat Junkie Sound ", " - Clean Beat Junkie Sound "),
         ("-Clean/Beat Junkie Sound ", " - Clean Beat Junkie Sound "),
         ("-CleanBeat Junkie Sound ", " - Clean Beat Junkie Sound "),
+        (" Version/cyberkid ", " Version - Cyberkid "),
         ("/Beat Junkie ", " - Beat Junkie "),
         ("(Clean- ", "(Clean "),
     ];
@@ -433,17 +434,17 @@ fn extract_feat_from_parentheses(artist: &mut String) {
 
 fn remove_bpm_in_parentheses_from_end(text: &mut String) {
     // Skip some valid titles
-    if text.ends_with(" (4U)") || text.ends_with("33rpm)") {
+    let suffixes = [" (4u)", "33rpm)", "45rpm)", " mix)", " dub)", " eq)"];
+    let text_lower = text.to_lowercase();
+    if suffixes.iter().any(|suffix| text_lower.ends_with(suffix)) {
         return;
     }
 
     let mut result = text.to_string();
     result = RE_BPM_IN_PARENTHESES.replace_all(&result, "").to_string();
     result = RE_BPM_WITH_KEY.replace_all(&result, "").to_string();
-    if !result.to_lowercase().ends_with(" mix)") {
-        result = RE_BPM_WITH_TEXT_PARENTHESES.replace_all(&result, "").to_string();
-        result = RE_BPM_WITH_TEXT.replace_all(&result, "").to_string();
-    }
+    result = RE_BPM_WITH_TEXT_PARENTHESES.replace_all(&result, "").to_string();
+    result = RE_BPM_WITH_TEXT.replace_all(&result, "").to_string();
 
     *text = result;
 }

@@ -257,6 +257,18 @@ mod tests {
             title: "Pussy & Millions (Nick Bike Acap In:Out)",
             correct_title: "Pussy & Millions (Nick Bike Acapella In-Out)",
         },
+        FormattingTestData {
+            artist: "Tony Touch, Oscar G",
+            correct_artist: "Tony Touch, Oscar G",
+            title: "Sacude (Oscar G 305 Dub)",
+            correct_title: "Sacude (Oscar G 305 Dub)",
+        },
+        FormattingTestData {
+            artist: "The Prodigy",
+            correct_artist: "The Prodigy",
+            title: "Poison (95 EQ)",
+            correct_title: "Poison (95 EQ)",
+        },
     ];
 
     static NESTED_PARENTHESES_TEST_DATA: &[FormattingTestData] = &[
