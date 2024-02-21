@@ -245,6 +245,18 @@ mod tests {
             title: "Get By (Trayze Resist Acapella In Edit)",
             correct_title: "Get By (Trayze Resist Acapella Intro Edit)",
         },
+        FormattingTestData {
+            artist: "Drake & 21 Savage",
+            correct_artist: "Drake & 21 Savage",
+            title: "Pussy & Millions (Nick Bike Acapella In:Out)",
+            correct_title: "Pussy & Millions (Nick Bike Acapella In-Out)",
+        },
+        FormattingTestData {
+            artist: "Drake & 21 Savage",
+            correct_artist: "Drake & 21 Savage",
+            title: "Pussy & Millions (Nick Bike Acap In:Out)",
+            correct_title: "Pussy & Millions (Nick Bike Acapella In-Out)",
+        },
     ];
 
     static NESTED_PARENTHESES_TEST_DATA: &[FormattingTestData] = &[
