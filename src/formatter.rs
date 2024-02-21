@@ -67,7 +67,7 @@ lazy_static! {
         // Transforms underscore-wrapped text into single-quoted text
         (Regex::new(r"\s_(.*?)_\s").unwrap(), " '$1' "),
         // Remove asterisks after a word boundary
-        (Regex::new(r"\b\*+\b").unwrap(), ""),
+        (Regex::new(r"\s\*+\b").unwrap(), ""),
         // Collapses multiple spaces into a single space
         (Regex::new(r"\s+").unwrap(), " "),
     ];
@@ -131,7 +131,7 @@ lazy_static! {
         // Replace double quotes with two single quotes
         (Regex::new("\"").unwrap(), "''"),
         // Replace characters that are not allowed in filenames with a hyphen
-        (Regex::new(r"([\\/<>|:\*\?])+").unwrap(), "-"),
+        (Regex::new(r"([\\/<>|:\*\?])").unwrap(), "-"),
         // Collapse multiple spaces into a single space
         (Regex::new(r"\s+").unwrap(), " "),
     ];
