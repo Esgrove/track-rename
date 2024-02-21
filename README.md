@@ -64,17 +64,18 @@ Only supports ID3 tags (mp3, aiff, wav) currently.
 ### Usage
 
 ```console
-Usage: track-renamer [OPTIONS] [DIRECTORY]
+Usage: track-rename [OPTIONS] [PATH]
 
 Arguments:
-  [DIRECTORY]  Optional input directory with audio files to format
+  [PATH]  Optional input directory or audio file to format
 
 Options:
+  -d, --debug      Enable debug prints
   -f, --force      Do not ask for confirmation
   -p, --print      Only print changes
   -r, --rename     Rename all audio files
   -s, --sort       Sort audio files by name
-  -t, --tags-only  Only fix tags, do not rename
+  -t, --tags-only  Only fix tags without renaming
   -v, --verbose    Verbose output
   -h, --help       Print help
   -V, --version    Print version
@@ -85,3 +86,7 @@ Options:
 ```shell
 cargo test
 ```
+
+### TODO
+
+- File ignore list feature
