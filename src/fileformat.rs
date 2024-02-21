@@ -5,7 +5,7 @@ use std::str::FromStr;
 
 /// Supported audio file formats.
 // TODO: add support for "flac", "m4a", "mp4"
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Ord, PartialOrd, Eq)]
 pub enum FileFormat {
     Mp3,
     Aif,
@@ -49,10 +49,12 @@ mod tests {
         assert_eq!(FileFormat::from_str("AIF").unwrap(), FileFormat::Aif);
         assert_eq!(FileFormat::from_str("AIFF").unwrap(), FileFormat::Aif);
     }
+
     #[test]
     fn test_from_str_invalid_format() {
         assert!(FileFormat::from_str("wav").is_err());
     }
+
     #[test]
     fn test_display() {
         assert_eq!(format!("{}", FileFormat::Mp3), "mp3");

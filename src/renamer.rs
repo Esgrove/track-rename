@@ -1,7 +1,7 @@
 use crate::formatter;
 use crate::track::Track;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use colored::*;
 use difference::{Changeset, Difference};
 use id3::{Error, ErrorKind, Tag, TagLike};
@@ -14,7 +14,8 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::string::String;
 
-// Renamer settings.
+/// Renamer settings.
+#[derive(Default, Debug)]
 pub struct Config {
     pub force: bool,
     pub rename_files: bool,
@@ -23,9 +24,11 @@ pub struct Config {
     pub tags_only: bool,
     pub verbose: bool,
     pub debug: bool,
+    pub test_mode: bool,
 }
 
 /// Audio track tag and filename formatting.
+#[derive(Debug)]
 pub struct Renamer {
     root: PathBuf,
     config: Config,
@@ -35,6 +38,21 @@ pub struct Renamer {
     num_renamed: usize,
     num_removed: usize,
     num_duplicates: usize,
+}
+
+impl Config {
+    pub fn new_for_tests() -> Self {
+        Config {
+            force: true,
+            rename_files: true,
+            sort_files: false,
+            print_only: false,
+            tags_only: false,
+            verbose: false,
+            debug: false,
+            test_mode: true,
+        }
+    }
 }
 
 impl Renamer {
@@ -189,7 +207,13 @@ impl Renamer {
                     self.num_renamed += 1;
                     if !self.config.print_only && (self.config.force || Renamer::confirm()) {
                         if let Err(error) = fs::rename(&track.path, &new_path) {
-                            eprintln!("{}", format!("Failed to rename file: {}", error).red());
+                            let message = format!("Failed to rename file: {}", error);
+                            eprintln!("{}", message.red());
+                            if self.config.test_mode {
+                                panic!("{}", message);
+                            }
+                        } else if self.config.test_mode {
+                            fs::remove_file(new_path).context("Failed to remove renamed file")?;
                         }
                     }
                     Self::print_divider(&new_file_name);
@@ -364,13 +388,122 @@ impl Renamer {
     }
 }
 
-// TODO: add tests with real files
-//#[cfg(test)]
-//mod tests {
-//    use super::*;
-//
-//    #[test]
-//    fn test() {
-//
-//    }
-//}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use rand::{distributions::Alphanumeric, Rng};
+
+    use std::env;
+    use std::fs::copy;
+    use std::path::Path;
+    use std::path::PathBuf;
+
+    #[test]
+    fn test_no_tags() {
+        let test_dir: PathBuf = ["tests", "files", "no_tags"].iter().collect();
+        run_test_on_files(test_dir, |temp_file| {
+            let track = Track::try_from_path(&temp_file).expect("Failed to create Track for temp file");
+            let tags = Renamer::read_tags(&track).expect("Tags should be present");
+            assert!(tags.artist().is_none());
+            assert!(tags.title().is_none());
+            fs::remove_file(temp_file).expect("Failed to remove temp file");
+        });
+    }
+
+    #[test]
+    fn test_basic_tags() {
+        let test_dir: PathBuf = ["tests", "files", "basic_tags"].iter().collect();
+        run_test_on_files(test_dir, |temp_file| {
+            let track = Track::try_from_path(&temp_file).expect("Failed to create Track for temp file");
+            let tags = Renamer::read_tags(&track).expect("Tags should be present");
+            assert!(!tags.artist().unwrap().is_empty());
+            assert!(!tags.title().unwrap().is_empty());
+            fs::remove_file(temp_file).expect("Failed to remove temp file");
+        });
+    }
+
+    #[test]
+    fn test_extended_tags() {
+        let test_dir: PathBuf = ["tests", "files", "extended_tags"].iter().collect();
+        run_test_on_files(test_dir, |temp_file| {
+            let track = Track::try_from_path(&temp_file).expect("Failed to create Track for temp file");
+            let tags = Renamer::read_tags(&track).expect("Tags should be present");
+            assert!(!tags.artist().unwrap().is_empty());
+            assert!(!tags.title().unwrap().is_empty());
+            fs::remove_file(temp_file).expect("Failed to remove temp file");
+        });
+    }
+
+    #[test]
+    fn test_rename_no_tags() {
+        let test_dir: PathBuf = ["tests", "files", "no_tags"].iter().collect();
+        run_test_on_files(test_dir, |temp_file| {
+            let mut renamer = Renamer::new(temp_file, Config::new_for_tests());
+            renamer.run().expect("Rename failed");
+        });
+    }
+
+    #[test]
+    fn test_rename_basic_tags() {
+        let test_dir: PathBuf = ["tests", "files", "basic_tags"].iter().collect();
+        run_test_on_files(test_dir, |temp_file| {
+            let mut renamer = Renamer::new(temp_file, Config::new_for_tests());
+            renamer.run().expect("Rename failed");
+        });
+    }
+
+    #[test]
+    fn test_rename_extended_tags() {
+        let test_dir: PathBuf = ["tests", "files", "extended_tags"].iter().collect();
+        run_test_on_files(test_dir, |temp_file| {
+            let mut renamer = Renamer::new(temp_file, Config::new_for_tests());
+            renamer.run().expect("Rename failed");
+        });
+    }
+
+    /// Generic test function that takes a function or closure with one PathBuf as input argument
+    fn run_test_on_files<F: Fn(PathBuf)>(test_dir: PathBuf, test_func: F) {
+        for entry in fs::read_dir(test_dir).expect("Failed to read test directory") {
+            let entry = entry.expect("Failed to read entry");
+            let path = entry.path();
+            if path.is_file() && not_hidden_file(&path) {
+                let temp_file = temp_test_file(&path).expect("Failed to create temp file path");
+                copy(&path, &temp_file).expect("Failed to copy test file");
+                assert!(temp_file.exists());
+                test_func(temp_file.clone());
+            }
+        }
+    }
+
+    /// Check if this is a hidden file like ".DS_Store" on macOS
+    fn not_hidden_file(path: &Path) -> bool {
+        !path
+            .file_name()
+            .unwrap()
+            .to_str()
+            .map(|s| s.starts_with('.'))
+            .unwrap_or(false)
+    }
+
+    /// Create a new temporary file with an added random string in the name
+    fn temp_test_file(path: &Path) -> Option<PathBuf> {
+        let file_stem = path.file_stem()?.to_owned();
+        let extension = path.extension()?.to_owned();
+        let random_string: String = rand::thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(10)
+            .map(char::from)
+            .collect();
+
+        let new_file_name = format!(
+            "{} ({}).{}",
+            file_stem.to_string_lossy(),
+            random_string,
+            extension.to_string_lossy()
+        );
+
+        let new_path = env::temp_dir().join(new_file_name);
+        Some(new_path)
+    }
+}

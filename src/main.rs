@@ -46,6 +46,10 @@ struct Args {
     #[arg(short, long)]
     tags_only: bool,
 
+    /// Run in test mode
+    #[arg(long)]
+    test: bool,
+
     /// Verbose output
     #[arg(short, long)]
     verbose: bool,
@@ -74,6 +78,7 @@ fn main() -> Result<()> {
         tags_only: args.tags_only,
         verbose: args.verbose,
         debug: args.debug,
+        test_mode: args.test,
     };
 
     Renamer::new(absolute_input_path, config).run()

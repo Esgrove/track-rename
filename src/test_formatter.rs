@@ -2,7 +2,7 @@
 mod tests {
     use crate::formatter;
 
-    #[derive(Debug)]
+    #[derive(Debug, Ord, PartialOrd, Eq, PartialEq)]
     struct FormattingTestData {
         artist: &'static str,
         correct_artist: &'static str,
