@@ -529,6 +529,10 @@ mod tests {
             .map(char::from)
             .collect();
 
+        let temp_dir = format!("track-rename-{random_string}");
+        let temp_dir_path = env::temp_dir().join(temp_dir);
+        fs::create_dir_all(&temp_dir_path).expect("Failed to create temp subdir");
+
         let new_file_name = format!(
             "{} ({}).{}",
             file_stem.to_string_lossy(),
@@ -536,7 +540,7 @@ mod tests {
             extension.to_string_lossy()
         );
 
-        let new_path = env::temp_dir().join(new_file_name);
-        Some(new_path)
+        let temp_file_path = temp_dir_path.join(new_file_name);
+        Some(temp_file_path)
     }
 }
