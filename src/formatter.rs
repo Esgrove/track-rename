@@ -434,7 +434,7 @@ fn extract_feat_from_parentheses(artist: &mut String) {
 
 fn remove_bpm_in_parentheses_from_end(text: &mut String) {
     // Skip some valid titles
-    let suffixes = [" (4u)", "33rpm)", "45rpm)", " mix)", " dub)", " eq)"];
+    let suffixes = [" (4u)", "33rpm)", "45rpm)", " mix)", " dub)", " eq)", " rip)"];
     let text_lower = text.to_lowercase();
     if suffixes.iter().any(|suffix| text_lower.ends_with(suffix)) {
         return;
