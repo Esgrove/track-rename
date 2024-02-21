@@ -72,10 +72,27 @@ impl Config {
 }
 
 impl Renamer {
+    #![allow(dead_code)]
+
+    /// Create Renamer from command line arguments.
     pub fn new(path: PathBuf, args: RenamerArgs) -> Renamer {
         Renamer {
             root: path,
             config: Config::from_args(args),
+            file_list: Vec::new(),
+            total_tracks: 0,
+            num_tags_fixed: 0,
+            num_renamed: 0,
+            num_removed: 0,
+            num_duplicates: 0,
+        }
+    }
+
+    /// Create Renamer with config directly. Used in tests.
+    pub fn new_with_config(path: PathBuf, config: Config) -> Renamer {
+        Renamer {
+            root: path,
+            config,
             file_list: Vec::new(),
             total_tracks: 0,
             num_tags_fixed: 0,
@@ -455,7 +472,7 @@ mod tests {
     fn test_rename_no_tags() {
         let test_dir: PathBuf = ["tests", "files", "no_tags"].iter().collect();
         run_test_on_files(test_dir, |temp_file| {
-            let mut renamer = Renamer::new(temp_file, Config::new_for_tests());
+            let mut renamer = Renamer::new_with_config(temp_file, Config::new_for_tests());
             renamer.run().expect("Rename failed");
         });
     }
@@ -464,7 +481,7 @@ mod tests {
     fn test_rename_basic_tags() {
         let test_dir: PathBuf = ["tests", "files", "basic_tags"].iter().collect();
         run_test_on_files(test_dir, |temp_file| {
-            let mut renamer = Renamer::new(temp_file, Config::new_for_tests());
+            let mut renamer = Renamer::new_with_config(temp_file, Config::new_for_tests());
             renamer.run().expect("Rename failed");
         });
     }
@@ -473,7 +490,7 @@ mod tests {
     fn test_rename_extended_tags() {
         let test_dir: PathBuf = ["tests", "files", "extended_tags"].iter().collect();
         run_test_on_files(test_dir, |temp_file| {
-            let mut renamer = Renamer::new(temp_file, Config::new_for_tests());
+            let mut renamer = Renamer::new_with_config(temp_file, Config::new_for_tests());
             renamer.run().expect("Rename failed");
         });
     }
