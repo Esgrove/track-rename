@@ -432,8 +432,8 @@ fn extract_feat_from_parentheses(artist: &mut String) {
 }
 
 fn remove_bpm_in_parentheses_from_end(text: &mut String) {
-    // Special case to skip one valid title
-    if text.ends_with(" (4U)") {
+    // Skip some valid titles
+    if text.ends_with(" (4U)") || text.ends_with("33rpm)") {
         return;
     }
 
