@@ -29,17 +29,18 @@ lazy_static! {
         (" feat. - ", " feat. "),
         (" feat.-", " feat. "),
     ];
-    static ref TITLE_SUBSTITUTES: [(&'static str, &'static str); 11] = [
+    static ref TITLE_SUBSTITUTES: [(&'static str, &'static str); 12] = [
         ("(Original Mix/", "("),
         ("12\"", "12''"),
         ("(Inst)", "(Instrumental)"),
         (" W/Drums", " With Drums"),
         ("), Pt. 1", ") (Pt. 1)"),
         ("/Cyberkid ", " - Cyberkid "),
-        ("-Dirty/Beat Junkie Sound Edit", " - Dirty Beat Junkie Sound Edit"),
-        ("/Clean-Beat Junkie Sound Edit", " - Clean Beat Junkie Sound Edit"),
-        ("-Clean/Beat Junkie Sound Edit", " - Clean Beat Junkie Sound Edit"),
-        ("-CleanBeat Junkie Sound Edit", " - Clean Beat Junkie Sound Edit"),
+        ("-Dirty/Beat Junkie Sound ", " - Dirty Beat Junkie Sound "),
+        ("-DirtyBeat Junkie Sound ", " - Dirty Beat Junkie Sound "),
+        ("/Clean-Beat Junkie Sound ", " - Clean Beat Junkie Sound "),
+        ("-Clean/Beat Junkie Sound ", " - Clean Beat Junkie Sound "),
+        ("-CleanBeat Junkie Sound ", " - Clean Beat Junkie Sound "),
         ("/Beat Junkie ", " - Beat Junkie "),
     ];
     static ref REGEX_SUBSTITUTES: [(Regex, &'static str); 13] = [
@@ -58,7 +59,7 @@ lazy_static! {
         // Ensure a space before an opening parenthesis
         (Regex::new(r"(\S)\(").unwrap(), "$1 ("),
         // Ensure a space after a closing parenthesis
-        (Regex::new(r"\)(\S)").unwrap(), ") $1"),
+        (Regex::new(r"\)([A-Za-z0-9])").unwrap(), ") $1"),
         // Collapse multiple consecutive opening parentheses into one
         (Regex::new(r"\(\s*\){2,}").unwrap(), "("),
         // Collapse multiple consecutive closing parentheses into one
@@ -70,7 +71,15 @@ lazy_static! {
         // Collapses multiple spaces into a single space
         (Regex::new(r"\s+").unwrap(), " "),
     ];
-    static ref REGEX_NAME_SUBSTITUTES: [(Regex, &'static str); 28] = [
+    static ref REGEX_NAME_SUBSTITUTES: [(Regex, &'static str); 36] = [
+        // Matches "12 Inch" or "12Inch" with optional space, case-insensitive
+        (Regex::new(r"(?i)\b12\s?inch\b").unwrap(), "12''"),
+        // Matches "12in" or "12 in" with optional space, case-insensitive
+        (Regex::new(r"(?i)\b12\s?in\b").unwrap(), "12''"),
+        // Matches "7 Inch" or "7Inch" with optional space, case-insensitive
+        (Regex::new(r"(?i)\b7\s?inch\b").unwrap(), "7''"),
+        // Matches "7in" or "7 in" with optional space, case-insensitive
+        (Regex::new(r"(?i)\b7\s?in\b").unwrap(), "7''"),
         // Standardize various forms of "featuring" to "feat."
         (Regex::new(r"(?i)\b(?:feat\.?|ft\.?|featuring)\b").unwrap(), "feat."),
         (Regex::new(r"(?i)\(\s*(?:feat\.?|ft\.?|featuring)\b").unwrap(), "(feat."),
@@ -98,25 +107,25 @@ lazy_static! {
         (Regex::new(r"(?i)\b(original mix)\b").unwrap(), ""),
         // Removes "DJCity" with case-insensitivity
         (Regex::new(r"(?i)\bdjcity\b").unwrap(), ""),
-        (Regex::new(r"(?i)\bintro - dirty\b").unwrap(), "Dirty Intro"),
         (Regex::new(r"(?i)\bintro - clean\b").unwrap(), "Clean Intro"),
-        (Regex::new(r"(?i)\(dirty - intro\)").unwrap(), "(Dirty Intro)"),
+        (Regex::new(r"(?i)\bintro - dirty\b").unwrap(), "Dirty Intro"),
         (Regex::new(r"(?i)\(clean - intro\)").unwrap(), "(Clean Intro)"),
-        (Regex::new(r"(?i)\bacap - diy\b").unwrap(), "Acapella DIY"),
-        (Regex::new(r"(?i)\(acap\)").unwrap(), "(Acapella)"),
-        (Regex::new(r"(?i)\bacap\b").unwrap(), "Acapella"),
-        (Regex::new(r"(?i)\baca in/aca out\b").unwrap(), "Acapella In-Out"),
-        (Regex::new(r"(?i)\baca intro/aca outro\b").unwrap(), "Acapella In-Out"),
-        // Matches "12 Inch" or "12Inch" with optional space, case-insensitive
-        (Regex::new(r"(?i)\b12\s?inch\b").unwrap(), "12''"),
-        // Matches "12in" or "12 in" with optional space, case-insensitive
-        (Regex::new(r"(?i)\b12\s?in\b").unwrap(), "12''"),
-        // Matches "7 Inch" or "7Inch" with optional space, case-insensitive
-        (Regex::new(r"(?i)\b7\s?inch\b").unwrap(), "7''"),
-        // Matches "7in" or "7 in" with optional space, case-insensitive
-        (Regex::new(r"(?i)\b7\s?in\b").unwrap(), "7''"),
-        (Regex::new(r"(?i)\bintro[\s/+-]*outro\b").unwrap(), "Intro"),
-        (Regex::new(r"(?i)\bin[\s/+-]*out\b").unwrap(), "In-Out"),
+        (Regex::new(r"(?i)\(dirty - intro\)").unwrap(), "(Dirty Intro)"),
+        (Regex::new(r"(?i)\bIn[\s/+\-&]*out\b").unwrap(), "In-Out"),
+        (Regex::new(r"(?i)\bIntro[\s/+\-&]*outro\b").unwrap(), "Intro"),
+        (Regex::new(r"(?i)\bAca In\b").unwrap(), "Acapella Intro"),
+        (Regex::new(r"(?i)\bAca intro[\s/+\-&]*aca outro\b").unwrap(), "Acapella In-Out"),
+        (Regex::new(r"(?i)\bAcapella Intro[\s/+\-&]*aca out\b").unwrap(), "Acapella In-Out"),
+        (Regex::new(r"(?i)\bAca Out\b").unwrap(), "Acapella Out"),
+        (Regex::new(r"(?i)\bAcap - diy\b").unwrap(), "Acapella DIY"),
+        (Regex::new(r"(?i)\bAcap in[\s/+\-&]*out\b").unwrap(), "Acapella In-Out"),
+        (Regex::new(r"(?i)\bAcap\b").unwrap(), "Acapella"),
+        (Regex::new(r"(?i)\bAcapella In[\s/+\-&]*Out\b").unwrap(), "Acapella In-Out"),
+        (Regex::new(r"(?i)\bAcapella In\b").unwrap(), "Acapella Intro"),
+        (Regex::new(r"(?i)\bAcapella Intro[\s/+\-&]*Out\b").unwrap(), "Acapella In-Out"),
+        (Regex::new(r"(?i)\bAcapella-Intro[\s/+\-&]*Out\b").unwrap(), "Acapella In-Out"),
+        (Regex::new(r"(?i)\bAcapella-Intro\b").unwrap(), "Acapella Intro"),
+        (Regex::new(r"(?i)\bAcapella-out\b").unwrap(), "Acapella Out"),
     ];
     static ref REGEX_FILENAME_SUBSTITUTES: [(Regex, &'static str); 3] = [
         // Replace double quotes with two single quotes

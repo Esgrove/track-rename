@@ -147,7 +147,7 @@ mod tests {
             artist: "ASAP Ferg x A-Ha",
             correct_artist: "ASAP Ferg x A-Ha",
             title: "Plain Jane (Nick Bike Edit + Acap In & Out)[Clean]",
-            correct_title: "Plain Jane (Nick Bike Edit + Acapella In & Out) (Clean)",
+            correct_title: "Plain Jane (Nick Bike Edit + Acapella In-Out) (Clean)",
         },
         FormattingTestData {
             artist: "Aazar ft. French Montana",
@@ -220,6 +220,12 @@ mod tests {
             correct_artist: "S'hustryi Beats feat. Theodor",
             title: "Force (feat.Theodor) (Remaster)",
             correct_title: "Force (Remaster)",
+        },
+        FormattingTestData {
+            artist: "Son Of Kick & Paigey Cakey feat.Lady Leshurr",
+            correct_artist: "Son Of Kick & Paigey Cakey feat. Lady Leshurr",
+            title: "Hours (Marshall F Remix)",
+            correct_title: "Hours (Marshall F Remix)",
         },
     ];
 
