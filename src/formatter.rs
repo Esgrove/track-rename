@@ -12,7 +12,7 @@ lazy_static! {
         ("()", " "),
         (") - (", ""),
         (" - (", " ("),
-        ("(-", "("),
+        ("(- ", "("),
         ("( - ", "("),
         (" -)", " )"),
         (" - ) ", ")"),
@@ -29,7 +29,7 @@ lazy_static! {
         (" feat. - ", " feat. "),
         (" feat.-", " feat. "),
     ];
-    static ref TITLE_SUBSTITUTES: [(&'static str, &'static str); 12] = [
+    static ref TITLE_SUBSTITUTES: [(&'static str, &'static str); 13] = [
         ("(Original Mix/", "("),
         ("12\"", "12''"),
         ("(Inst)", "(Instrumental)"),
@@ -42,6 +42,7 @@ lazy_static! {
         ("-Clean/Beat Junkie Sound ", " - Clean Beat Junkie Sound "),
         ("-CleanBeat Junkie Sound ", " - Clean Beat Junkie Sound "),
         ("/Beat Junkie ", " - Beat Junkie "),
+        ("(Clean- ", "(Clean "),
     ];
     static ref REGEX_SUBSTITUTES: [(Regex, &'static str); 13] = [
         // Replace various opening bracket types with "("
@@ -208,6 +209,7 @@ pub fn format_tags(artist: &str, title: &str) -> (String, String) {
     fix_nested_parentheses(&mut formatted_title);
     wrap_text_after_parentheses(&mut formatted_title);
     remove_bpm_in_parentheses_from_end(&mut formatted_title);
+    remove_unmatched_closing_parenthesis(&mut formatted_artist);
 
     // TODO: Fix above so this is not needed
     formatted_title = formatted_title.replace("((", "(").replace("))", ")");
@@ -249,6 +251,13 @@ fn balance_parenthesis(title: &mut String) {
         Ordering::Greater => add_missing_closing_parentheses(title),
         Ordering::Less => add_missing_opening_parentheses(title),
         _ => {}
+    }
+}
+
+fn remove_unmatched_closing_parenthesis(input: &mut String) {
+    *input = input.trim().to_string();
+    if input.ends_with(')') && !input.contains('(') {
+        input.pop();
     }
 }
 

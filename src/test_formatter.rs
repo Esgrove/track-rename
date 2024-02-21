@@ -239,6 +239,12 @@ mod tests {
             title: "Break My Soul (Trayze Acap-In Out)",
             correct_title: "Break My Soul (Trayze Acapella In-Out)",
         },
+        FormattingTestData {
+            artist: "Talib Kweli feat. Anny Dobson & William Taylor & Nina Simone)",
+            correct_artist: "Talib Kweli feat. Anny Dobson & William Taylor & Nina Simone",
+            title: "Get By (Trayze Resist Acapella In Edit)",
+            correct_title: "Get By (Trayze Resist Acapella Intro Edit)",
+        },
     ];
 
     static NESTED_PARENTHESES_TEST_DATA: &[FormattingTestData] = &[
@@ -352,6 +358,12 @@ mod tests {
             correct_artist: "Don Omar feat. Lucenzo",
             title: "Danza Kuduro (Trayze Acapella In Out Edit) (130 8b)",
             correct_title: "Danza Kuduro (Trayze Acapella In-Out Edit)",
+        },
+        FormattingTestData {
+            artist: "Libianca feat. Ayra Starr & Omah Lay",
+            correct_artist: "Libianca feat. Ayra Starr & Omah Lay",
+            title: "People (Trayze Remix) (113 4b)",
+            correct_title: "People (Trayze Remix)",
         },
     ];
 
