@@ -136,7 +136,7 @@ lazy_static! {
         (Regex::new(r"\s+").unwrap(), " "),
     ];
     // Matches "feat." followed by any text until a dash, parenthesis, or end of string
-    static ref RE_FEAT: Regex = Regex::new(r"feat\. .*?( -|\(|\)|$)").unwrap();
+    static ref RE_FEAT: Regex = Regex::new(r"\bfeat\. .*?( -|\(|\)|$)").unwrap();
 
     // Matches text after a closing parenthesis until the next opening parenthesis
     static ref RE_TEXT_AFTER_PARENTHESES: Regex = Regex::new(r"\)\s(.*?)\s\(").unwrap();
@@ -154,6 +154,9 @@ lazy_static! {
 
     // Matches any text within parentheses that contains a dash, separating it into two groups
     static ref RE_DASH_IN_PARENTHESES: Regex = Regex::new(r"\((.*?) - (.*?)\)").unwrap();
+
+    // Matches variations on "and" in feat artist names
+    static ref RE_FEAT_AND: Regex = Regex::new(r"(?i),?\s+and\s+").unwrap();
 }
 
 /// Return formatted artist and title string.
@@ -248,48 +251,39 @@ fn balance_parenthesis(title: &mut String) {
 }
 
 fn move_feat_from_title_to_artist(artist: &mut String, title: &mut String) {
-    if title.contains(" feat. ") || title.contains("(feat. ") {
-        if let Some(feat_match) = RE_FEAT.find(&title.clone()) {
-            let feat = feat_match
-                .as_str()
-                .trim_end_matches(|c| c == '(' || c == ')' || c == '-');
+    if let Some(feat_match) = RE_FEAT.find(&title.clone()) {
+        let feat = feat_match
+            .as_str()
+            .trim_end_matches(|c| c == '(' || c == ')' || c == '-');
 
-            // Remove the feat from the title
-            *title = title
-                .replace(feat, "")
-                .replace("()", "")
-                .replace("  ", " ")
-                .trim()
-                .to_string();
+        // Remove the feat from the title
+        *title = title.replace(feat, "").trim().to_string();
 
-            // Format feat string
-            let feat = feat
-                .replacen("feat. ", "", 1)
-                .replace(", and ", " & ")
-                .replace(" and ", " & ")
-                .trim()
-                .to_string();
+        // Format feat artists string: remove "feat. ", and change all "and" variations to "&"
+        let feat = RE_FEAT_AND
+            .replace_all(&feat.replacen("feat. ", "", 1), " & ")
+            .trim()
+            .to_string();
 
-            // Split featuring artists on common delimiters and handle them individually
-            let feat_artists: Vec<String> = feat
-                .split(&['&', ',', '+'][..])
-                .map(str::trim)
-                .map(|s| s.to_string())
-                .collect();
+        // Split featuring artists on common delimiters and handle them individually
+        let feat_artists: Vec<String> = feat
+            .split(&['&', ',', '+'][..])
+            .map(str::trim)
+            .map(|s| s.to_string())
+            .collect();
 
-            for feat_artist in &feat_artists {
-                for delimiter in [", ", " & ", " and ", " + "] {
-                    // Remove the individual featuring artist from the artist string if present
-                    *artist = artist
-                        .replace(&format!("{delimiter}{feat_artist}"), "")
-                        .replace(&format!("{feat_artist}{delimiter}"), "");
-                }
+        for feat_artist in &feat_artists {
+            for delimiter in [", ", " & ", " and ", " + "] {
+                // Remove the individual featuring artist from the artist string if present
+                *artist = artist
+                    .replace(&format!("{delimiter}{feat_artist}"), "")
+                    .replace(&format!("{feat_artist}{delimiter}"), "");
             }
+        }
 
-            let formatted_feat = format!(" feat. {feat}");
-            if !artist.contains(&formatted_feat) {
-                artist.push_str(&formatted_feat);
-            }
+        let formatted_feat = format!(" feat. {feat}");
+        if !artist.contains(&formatted_feat) {
+            artist.push_str(&formatted_feat);
         }
     }
 }
