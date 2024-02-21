@@ -2,6 +2,7 @@ mod fileformat;
 mod formatter;
 mod renamer;
 mod track;
+mod user_config;
 
 #[cfg(test)]
 mod test_formatter;

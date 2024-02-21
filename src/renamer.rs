@@ -1,4 +1,5 @@
 use crate::track::Track;
+use crate::user_config::{get_user_config, UserConfig};
 use crate::{formatter, RenamerArgs};
 
 use anyhow::{Context, Result};
@@ -18,7 +19,8 @@ use std::string::String;
 #[derive(Debug)]
 pub struct Renamer {
     root: PathBuf,
-    config: Config,
+    config: CliConfig,
+    user_config: UserConfig,
     file_list: Vec<Track>,
     total_tracks: usize,
     num_tags_fixed: usize,
@@ -29,7 +31,7 @@ pub struct Renamer {
 
 /// Renamer settings.
 #[derive(Default, Debug)]
-pub struct Config {
+pub struct CliConfig {
     pub force: bool,
     pub rename_files: bool,
     pub sort_files: bool,
@@ -40,11 +42,11 @@ pub struct Config {
     pub test_mode: bool,
 }
 
-impl Config {
+impl CliConfig {
     #![allow(dead_code)]
     /// Create config from command line args.
     pub fn from_args(args: RenamerArgs) -> Self {
-        Config {
+        CliConfig {
             force: args.force,
             rename_files: args.rename,
             sort_files: args.sort,
@@ -58,7 +60,7 @@ impl Config {
 
     /// Used in tests.
     pub fn new_for_tests() -> Self {
-        Config {
+        CliConfig {
             force: true,
             rename_files: true,
             sort_files: false,
@@ -78,7 +80,8 @@ impl Renamer {
     pub fn new(path: PathBuf, args: RenamerArgs) -> Renamer {
         Renamer {
             root: path,
-            config: Config::from_args(args),
+            config: CliConfig::from_args(args),
+            user_config: get_user_config(),
             file_list: Vec::new(),
             total_tracks: 0,
             num_tags_fixed: 0,
@@ -89,10 +92,11 @@ impl Renamer {
     }
 
     /// Create Renamer with config directly. Used in tests.
-    pub fn new_with_config(path: PathBuf, config: Config) -> Renamer {
+    pub fn new_with_config(path: PathBuf, config: CliConfig) -> Renamer {
         Renamer {
             root: path,
             config,
+            user_config: get_user_config(),
             file_list: Vec::new(),
             total_tracks: 0,
             num_tags_fixed: 0,
@@ -104,6 +108,10 @@ impl Renamer {
 
     /// Gather and process supported audio files.
     pub fn run(&mut self) -> Result<()> {
+        if self.config.debug {
+            println!("{:?}", self.config);
+            println!("{:?}", self.user_config);
+        }
         self.gather_files()?;
         self.process_files()?;
         self.print_stats();
@@ -180,6 +188,21 @@ impl Renamer {
                 }
             }
 
+            // Skip filenames in user configs exclude list
+            if self
+                .user_config
+                .exclude
+                .files
+                .iter()
+                .any(|excluded_file| excluded_file == track)
+            {
+                track.show(number + 1, self.total_tracks);
+                let message = format!("Skipping track in exclude list: {}", track);
+                println!("{}", message.yellow());
+                Self::print_divider(&message);
+                continue;
+            }
+
             // File might have been deleted between gathering files and now,
             // for example when handling duplicates.
             if !track.path.exists() {
@@ -195,14 +218,14 @@ impl Renamer {
                 None => continue,
             };
             let (artist, title, current_tags) = Self::parse_artist_and_title(&track, &mut tags);
-            if self.config.debug {
-                println!("current_tags: {current_tags}");
-            }
+            //if self.config.debug {
+            //    println!("current_tags: {current_tags}");
+            //}
             let (formatted_artist, formatted_title) = formatter::format_tags(&artist, &title);
             let formatted_tags = format!("{} - {}", formatted_artist, formatted_title);
-            if self.config.debug {
-                println!("formatted_tags: {formatted_tags}");
-            }
+            //if self.config.debug {
+            //    println!("formatted_tags: {formatted_tags}");
+            //}
             if current_tags != formatted_tags {
                 track.show(number + 1, self.total_tracks);
                 println!("{}", "Fix tags:".blue().bold());
@@ -472,7 +495,7 @@ mod tests {
     fn test_rename_no_tags() {
         let test_dir: PathBuf = ["tests", "files", "no_tags"].iter().collect();
         run_test_on_files(test_dir, |temp_file| {
-            let mut renamer = Renamer::new_with_config(temp_file, Config::new_for_tests());
+            let mut renamer = Renamer::new_with_config(temp_file, CliConfig::new_for_tests());
             renamer.run().expect("Rename failed");
         });
     }
@@ -481,7 +504,7 @@ mod tests {
     fn test_rename_basic_tags() {
         let test_dir: PathBuf = ["tests", "files", "basic_tags"].iter().collect();
         run_test_on_files(test_dir, |temp_file| {
-            let mut renamer = Renamer::new_with_config(temp_file, Config::new_for_tests());
+            let mut renamer = Renamer::new_with_config(temp_file, CliConfig::new_for_tests());
             renamer.run().expect("Rename failed");
         });
     }
@@ -490,7 +513,7 @@ mod tests {
     fn test_rename_extended_tags() {
         let test_dir: PathBuf = ["tests", "files", "extended_tags"].iter().collect();
         run_test_on_files(test_dir, |temp_file| {
-            let mut renamer = Renamer::new_with_config(temp_file, Config::new_for_tests());
+            let mut renamer = Renamer::new_with_config(temp_file, CliConfig::new_for_tests());
             renamer.run().expect("Rename failed");
         });
     }

@@ -136,6 +136,31 @@ impl Ord for Track {
     }
 }
 
+impl PartialEq<String> for Track {
+    fn eq(&self, other: &String) -> bool {
+        format!("{}.{}", self.name, self.extension) == *other || self.name == *other
+    }
+}
+
+impl PartialEq<&str> for Track {
+    fn eq(&self, other: &&str) -> bool {
+        format!("{}.{}", self.name, self.extension) == *other || self.name == *other
+    }
+}
+
+// Symmetry for comparisons (String == Track and &str == Track)
+impl PartialEq<Track> for String {
+    fn eq(&self, other: &Track) -> bool {
+        *self == format!("{}.{}", other.name, other.extension) || *self == other.name
+    }
+}
+
+impl PartialEq<Track> for &str {
+    fn eq(&self, other: &Track) -> bool {
+        *self == format!("{}.{}", other.name, other.extension) || *self == other.name
+    }
+}
+
 impl fmt::Display for Track {
     // Try to print full filepath relative to current working directory,
     // otherwise fallback to absolute path.
@@ -236,5 +261,33 @@ mod tests {
 
         let path_display = format!("{}", track.path.display());
         assert!(path_display.contains("Ääkköset - Test.aif"));
+    }
+
+    #[test]
+    fn test_full_match() {
+        let track = Track::new(PathBuf::from("/users/test/Test - song1.mp3")).expect("Failed to create track");
+        assert_eq!(track, "Test - song1.mp3".to_string());
+    }
+
+    #[test]
+    fn test_name_match() {
+        let track = Track::new(PathBuf::from("/users/test/Ääkköset - song2.mp3")).expect("Failed to create track");
+        assert_eq!(track, "Ääkköset - song2".to_string());
+        assert_eq!(track, "Ääkköset - song2.mp3".to_string());
+    }
+
+    #[test]
+    fn test_mismatch() {
+        let track = Track::new(PathBuf::from("/users/test/Test - song3.mp3")).expect("Failed to create track");
+        assert!(track != "Test - song3.wav"); // Different extension
+        assert!(track != "Test - song4.mp3"); // Different name
+    }
+
+    #[test]
+    fn test_extension_ignored() {
+        let track = Track::new(PathBuf::from("/users/test/song5.mp3")).expect("Failed to create track");
+        assert_eq!(track, "song5".to_string());
+        assert_eq!(track, "song5.mp3".to_string());
+        assert!(track != "song");
     }
 }

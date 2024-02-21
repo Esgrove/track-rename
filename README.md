@@ -76,9 +76,25 @@ Options:
   -r, --rename     Rename all audio files
   -s, --sort       Sort audio files by name
   -t, --tags-only  Only fix tags without renaming
+      --test       Run in test mode
   -v, --verbose    Verbose output
   -h, --help       Print help
   -V, --version    Print version
+```
+
+### User config
+
+Optional user config can be put under `~/.config/track-rename.toml`.
+Supports specifying track names to exclude, which will be skipped during the processing.
+These can include a file extension or not, and should _not_ contain a path, just the filename.
+
+```toml
+[exclude]
+files = [
+    "artist - name without extension",
+    "track.mp3",
+    "another to exclude.aif",
+]
 ```
 
 ### Run tests
@@ -86,7 +102,3 @@ Options:
 ```shell
 cargo test
 ```
-
-### TODO
-
-- File ignore list feature
