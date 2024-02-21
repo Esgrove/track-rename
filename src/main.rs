@@ -8,7 +8,7 @@ mod test_formatter;
 
 extern crate colored;
 
-use crate::renamer::{Config, Renamer};
+use crate::renamer::Renamer;
 
 use anyhow::{Context, Result};
 use clap::Parser;
@@ -18,7 +18,7 @@ use std::path::PathBuf;
 
 #[derive(Parser)]
 #[command(author, about, version)]
-struct Args {
+pub struct RenamerArgs {
     /// Optional input directory or audio file to format
     path: Option<String>,
 
@@ -56,8 +56,8 @@ struct Args {
 }
 
 fn main() -> Result<()> {
-    let args = Args::parse();
-    let input_path = args.path.unwrap_or_default().trim().to_string();
+    let args = RenamerArgs::parse();
+    let input_path = args.path.clone().unwrap_or_default().trim().to_string();
     let filepath = if input_path.is_empty() {
         env::current_dir().context("Failed to get current working directory")?
     } else {
@@ -69,17 +69,8 @@ fn main() -> Result<()> {
             dunce::simplified(&filepath).display()
         );
     }
-    let absolute_input_path = dunce::canonicalize(filepath)?;
-    let config = Config {
-        force: args.force,
-        rename_files: args.rename,
-        sort_files: args.sort,
-        print_only: args.print,
-        tags_only: args.tags_only,
-        verbose: args.verbose,
-        debug: args.debug,
-        test_mode: args.test,
-    };
 
-    Renamer::new(absolute_input_path, config).run()
+    let absolute_input_path = dunce::canonicalize(filepath)?;
+
+    Renamer::new(absolute_input_path, args).run()
 }

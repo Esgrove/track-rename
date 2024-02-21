@@ -1,5 +1,5 @@
-use crate::formatter;
 use crate::track::Track;
+use crate::{formatter, RenamerArgs};
 
 use anyhow::{Context, Result};
 use colored::*;
@@ -14,19 +14,6 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::string::String;
 
-/// Renamer settings.
-#[derive(Default, Debug)]
-pub struct Config {
-    pub force: bool,
-    pub rename_files: bool,
-    pub sort_files: bool,
-    pub print_only: bool,
-    pub tags_only: bool,
-    pub verbose: bool,
-    pub debug: bool,
-    pub test_mode: bool,
-}
-
 /// Audio track tag and filename formatting.
 #[derive(Debug)]
 pub struct Renamer {
@@ -40,7 +27,36 @@ pub struct Renamer {
     num_duplicates: usize,
 }
 
+/// Renamer settings.
+#[derive(Default, Debug)]
+pub struct Config {
+    pub force: bool,
+    pub rename_files: bool,
+    pub sort_files: bool,
+    pub print_only: bool,
+    pub tags_only: bool,
+    pub verbose: bool,
+    pub debug: bool,
+    pub test_mode: bool,
+}
+
 impl Config {
+    #![allow(dead_code)]
+    /// Create config from command line args.
+    pub fn from_args(args: RenamerArgs) -> Self {
+        Config {
+            force: args.force,
+            rename_files: args.rename,
+            sort_files: args.sort,
+            print_only: args.print,
+            tags_only: args.tags_only,
+            verbose: args.verbose,
+            debug: args.debug,
+            test_mode: args.test,
+        }
+    }
+
+    /// Used in tests.
     pub fn new_for_tests() -> Self {
         Config {
             force: true,
@@ -56,10 +72,10 @@ impl Config {
 }
 
 impl Renamer {
-    pub fn new(path: PathBuf, config: Config) -> Renamer {
+    pub fn new(path: PathBuf, args: RenamerArgs) -> Renamer {
         Renamer {
             root: path,
-            config,
+            config: Config::from_args(args),
             file_list: Vec::new(),
             total_tracks: 0,
             num_tags_fixed: 0,
