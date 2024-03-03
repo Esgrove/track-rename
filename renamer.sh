@@ -1,22 +1,12 @@
 #!/bin/bash
 set -eo pipefail
 
+# Import common functions
 DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=./common.sh
+source "$DIR/common.sh"
 
-# Check platform:
-case "$(uname -s)" in
-    "Darwin")
-        export PLATFORM="mac"
-        ;;
-    "MINGW"*)
-        export PLATFORM="windows"
-        ;;
-    *)
-        export PLATFORM="linux"
-        ;;
-esac
-
-if [ "$PLATFORM" = windows ]; then
+if [ "$BASH_PLATFORM" = windows ]; then
     music_path="/d/Dropbox/DJ MUSIC"
     python="python"
 else
