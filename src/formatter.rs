@@ -174,7 +174,7 @@ pub fn format_tags(artist: &str, title: &str) -> (String, String) {
         formatted_title = formatted_title.replacen(&artist_with_dash, "", 1);
     }
 
-    // Remove extra extension from end
+    // Remove an extra file extension from the end
     let extensions = [".mp3", ".flac", ".aif", ".aiff", ".m4a"];
     for ext in &extensions {
         if formatted_artist.to_lowercase().ends_with(ext) {

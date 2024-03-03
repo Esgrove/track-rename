@@ -302,7 +302,7 @@ impl Renamer {
         }
     }
 
-    /// Try to read tags from path.
+    /// Try to read tags from file.
     /// Will return empty tags when there are no tags.
     fn read_tags(track: &Track) -> Option<Tag> {
         match Tag::read_from_path(&track.path) {
@@ -442,12 +442,12 @@ impl Renamer {
 mod tests {
     use super::*;
 
-    use rand::{distributions::Alphanumeric, Rng};
-
     use std::env;
     use std::fs::copy;
     use std::path::Path;
     use std::path::PathBuf;
+
+    use rand::{distributions::Alphanumeric, Rng};
 
     #[test]
     fn test_no_tags() {
