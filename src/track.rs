@@ -1,13 +1,13 @@
-use crate::fileformat::FileFormat;
+use std::cmp::Ordering;
+use std::path::{Path, PathBuf};
+use std::str::FromStr;
+use std::{env, fmt};
 
 use anyhow::Context;
 use colored::Colorize;
 use unicode_normalization::UnicodeNormalization;
 
-use std::cmp::Ordering;
-use std::path::{Path, PathBuf};
-use std::str::FromStr;
-use std::{env, fmt};
+use crate::file_format::FileFormat;
 
 #[derive(Debug)]
 pub struct Track {

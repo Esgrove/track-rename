@@ -1,8 +1,8 @@
+use std::{fs, path::PathBuf};
+
 use anyhow::{anyhow, Context};
 use dirs::home_dir;
 use serde::Deserialize;
-
-use std::{fs, path::PathBuf};
 
 #[derive(Debug, Default, Deserialize)]
 pub struct UserConfig {

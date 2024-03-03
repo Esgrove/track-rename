@@ -1,4 +1,4 @@
-mod fileformat;
+mod file_format;
 mod formatter;
 mod renamer;
 mod track;
@@ -7,15 +7,13 @@ mod user_config;
 #[cfg(test)]
 mod test_formatter;
 
-extern crate colored;
-
-use crate::renamer::Renamer;
+use std::env;
+use std::path::PathBuf;
 
 use anyhow::{Context, Result};
 use clap::Parser;
 
-use std::env;
-use std::path::PathBuf;
+use crate::renamer::Renamer;
 
 #[derive(Parser)]
 #[command(author, about, version)]
@@ -31,7 +29,7 @@ pub struct RenamerArgs {
     #[arg(short, long)]
     force: bool,
 
-    /// Only print changes
+    /// Only print changes without modifying files
     #[arg(short, long)]
     print: bool,
 
@@ -43,7 +41,7 @@ pub struct RenamerArgs {
     #[arg(short, long)]
     sort: bool,
 
-    /// Only fix tags without renaming
+    /// Only fix tags without renaming files
     #[arg(short, long)]
     tags_only: bool,
 

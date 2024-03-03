@@ -1,6 +1,9 @@
-use crate::track::Track;
-use crate::user_config::{get_user_config, UserConfig};
-use crate::{formatter, RenamerArgs};
+use std::collections::HashMap;
+use std::fs;
+use std::io;
+use std::io::Write;
+use std::path::PathBuf;
+use std::string::String;
 
 use anyhow::{Context, Result};
 use colored::*;
@@ -8,12 +11,9 @@ use difference::{Changeset, Difference};
 use id3::{Error, ErrorKind, Tag, TagLike};
 use walkdir::WalkDir;
 
-use std::collections::HashMap;
-use std::fs;
-use std::io;
-use std::io::Write;
-use std::path::PathBuf;
-use std::string::String;
+use crate::track::Track;
+use crate::user_config::{get_user_config, UserConfig};
+use crate::{formatter, RenamerArgs};
 
 /// Audio track tag and filename formatting.
 #[derive(Debug)]
@@ -218,14 +218,8 @@ impl Renamer {
                 None => continue,
             };
             let (artist, title, current_tags) = Self::parse_artist_and_title(&track, &mut tags);
-            //if self.config.debug {
-            //    println!("current_tags: {current_tags}");
-            //}
             let (formatted_artist, formatted_title) = formatter::format_tags(&artist, &title);
             let formatted_tags = format!("{} - {}", formatted_artist, formatted_title);
-            //if self.config.debug {
-            //    println!("formatted_tags: {formatted_tags}");
-            //}
             if current_tags != formatted_tags {
                 track.show(number + 1, self.total_tracks);
                 println!("{}", "Fix tags:".blue().bold());
@@ -255,7 +249,7 @@ impl Renamer {
 
             let new_path = dunce::simplified(&track.root.join(&new_file_name)).to_path_buf();
             if !new_path.is_file() {
-                // Rename files if flag was given or if tags were not changed
+                // Rename files if the flag was given or if tags were not changed
                 if self.config.rename_files || !track.tags_updated {
                     track.show(number + 1, self.total_tracks);
                     println!("{}", "Rename file:".yellow().bold());
@@ -283,7 +277,7 @@ impl Renamer {
                 self.num_duplicates += 1;
             }
 
-            // TODO: handle duplicates and same track in different file formats
+            // TODO: handle duplicates and same track in different file format
         }
         Ok(())
     }
