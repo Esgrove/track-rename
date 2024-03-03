@@ -43,7 +43,6 @@ pub struct CliConfig {
 }
 
 impl CliConfig {
-    #![allow(dead_code)]
     /// Create config from command line args.
     pub fn from_args(args: RenamerArgs) -> Self {
         CliConfig {
@@ -58,6 +57,7 @@ impl CliConfig {
         }
     }
 
+    #[cfg(test)]
     /// Used in tests.
     pub fn new_for_tests() -> Self {
         CliConfig {
@@ -74,8 +74,6 @@ impl CliConfig {
 }
 
 impl Renamer {
-    #![allow(dead_code)]
-
     /// Create Renamer from command line arguments.
     pub fn new(path: PathBuf, args: RenamerArgs) -> Renamer {
         Renamer {
@@ -91,12 +89,13 @@ impl Renamer {
         }
     }
 
+    #[cfg(test)]
     /// Create Renamer with config directly. Used in tests.
     pub fn new_with_config(path: PathBuf, config: CliConfig) -> Renamer {
         Renamer {
             root: path,
             config,
-            user_config: get_user_config(),
+            user_config: UserConfig::default(),
             file_list: Vec::new(),
             total_tracks: 0,
             num_tags_fixed: 0,
