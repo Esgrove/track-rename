@@ -140,6 +140,12 @@ mod tests {
             title: "Save Your Tears feat Ariana Grande - Flipout Purple Disco Machine Edit",
             correct_title: "Save Your Tears (Flipout Purple Disco Machine Edit)",
         },
+        FormattingTestData {
+            artist: "Madonna Feat. Kanye West",
+            correct_artist: "Madonna feat. Kanye West",
+            title: "Beat Goes On (feat. Kanye West) (Featuring Kanye West Album Version)",
+            correct_title: "Beat Goes On (Album Version)",
+        },
     ];
 
     static FORMATTING_TEST_DATA: &[FormattingTestData] = &[
