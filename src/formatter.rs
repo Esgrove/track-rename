@@ -73,7 +73,7 @@ lazy_static! {
         // Collapses multiple spaces into a single space
         (Regex::new(r"\s+").unwrap(), " "),
     ];
-    static ref REGEX_NAME_SUBSTITUTES: [(Regex, &'static str); 37] = [
+    static ref REGEX_NAME_SUBSTITUTES: [(Regex, &'static str); 38] = [
         // Matches "12 Inch" or "12Inch" with optional space, case-insensitive
         (Regex::new(r"(?i)\b12\s?inch\b").unwrap(), "12''"),
         // Matches "12in" or "12 in" with optional space, case-insensitive
@@ -87,6 +87,8 @@ lazy_static! {
         (Regex::new(r"(?i)\(\s*(?:feat\.?|ft\.?|featuring)\b").unwrap(), "(feat."),
         // Standardize "w/" to "feat."
         (Regex::new(r"(?i)\sW/").unwrap(), " feat. "),
+        // Remove trademark symbols
+        (Regex::new(r"[®™]").unwrap(), ""),
         // Correct name for "Missy Elliott"
         (
             Regex::new(r"(?i)\bMissy Elliot\b|\bMissy Elliot$").unwrap(),
