@@ -14,9 +14,8 @@ fi
 
 cargo install --path "$REPO_ROOT"
 
-if [ -z "$(command -v playfmt)" ]; then
-    print_error_and_exit "Binary not found. Is the Cargo install directory in path?"
-fi
-
 executable=$(get_rust_executable_name)
+if [ -z "$(command -v "$executable")" ]; then
+    print_error_and_exit "Binary $executable not found. Is the Cargo install directory in path?"
+fi
 echo "$($executable --version) from $(which "$executable")"
