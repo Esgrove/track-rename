@@ -187,6 +187,7 @@ target/
 !tests/files/**/*.mp3
 
 # Binary
+/trackrename
 /track-rename
 /track-renamer
 *.exe
