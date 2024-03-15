@@ -5,7 +5,7 @@ mod track;
 mod user_config;
 
 #[cfg(test)]
-mod test_formatter;
+mod formatter_tests;
 
 use std::env;
 use std::path::PathBuf;
