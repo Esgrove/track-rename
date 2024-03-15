@@ -254,8 +254,10 @@ impl Renamer {
             };
 
             let new_path = dunce::simplified(&track.root.join(&new_file_name)).to_path_buf();
-            let new_path_string = utils::path_to_string(&new_path);
-            let original_path_string = utils::path_to_string(&track.path);
+            let new_path_string =
+                utils::path_to_string(&utils::get_relative_path_from_current_working_directory(&new_path));
+            let original_path_string =
+                utils::path_to_string(&utils::get_relative_path_from_current_working_directory(&track.path));
             if new_path_string != original_path_string {
                 if !new_path.is_file() {
                     // Rename files if the flag was given or if tags were not changed

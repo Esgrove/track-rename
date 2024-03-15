@@ -1,13 +1,14 @@
 use std::cmp::Ordering;
+use std::fmt;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
-use std::{env, fmt};
 
 use anyhow::Context;
 use colored::Colorize;
 use unicode_normalization::UnicodeNormalization;
 
 use crate::file_format::FileFormat;
+use crate::utils;
 
 #[derive(Debug)]
 pub struct Track {
@@ -163,22 +164,13 @@ impl PartialEq<Track> for &str {
 
 impl fmt::Display for Track {
     // Try to print full filepath relative to current working directory,
-    // otherwise fallback to absolute path.
+    // otherwise fallback to the original path.
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let current_dir = match env::current_dir() {
-            Ok(dir) => dir,
-            Err(_) => return write!(f, "{}/{}.{}", self.root.display(), self.name, self.format),
-        };
-        let relative_path = match self.root.strip_prefix(&current_dir) {
-            Ok(path) => path,
-            Err(_) => &self.root,
-        };
+        let relative_path = utils::get_relative_path_from_current_working_directory(&self.root);
         write!(
             f,
-            "{}/{}.{}",
-            dunce::simplified(relative_path).display(),
-            self.name,
-            self.format
+            "{}",
+            dunce::simplified(&relative_path).join(self.filename()).display()
         )
     }
 }
@@ -186,6 +178,8 @@ impl fmt::Display for Track {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use std::env;
     use std::path::PathBuf;
 
     #[test]

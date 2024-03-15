@@ -1,6 +1,6 @@
-use std::io;
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::{env, io};
 
 use colored::Colorize;
 use difference::{Changeset, Difference};
@@ -122,8 +122,17 @@ pub fn show_diff(old: &str, new: &str) {
     println!("{}", new_diff);
 }
 
+/// Print a divider line that matches the length of the reference text.
 pub fn print_divider(text: &str) {
     println!("{}", "-".repeat(text.chars().count()));
+}
+
+/// Convert the given path to be relative to the current working directory.
+/// Returns the original path if the relative path cannot be created.
+pub fn get_relative_path_from_current_working_directory(path: &Path) -> PathBuf {
+    env::current_dir()
+        .map(|current_dir| path.strip_prefix(&current_dir).unwrap_or(path).to_path_buf())
+        .unwrap_or(path.to_path_buf())
 }
 
 /// Convert filename to artist and title tags.
