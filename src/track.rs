@@ -38,7 +38,7 @@ impl Track {
 
     /// New Track with already extracted extension and file format.
     /// Note that extension string is needed in addition to format
-    /// since the extension might differ from the one used by `FileFormat`,
+    /// since the file name extension might differ from the one used by `FileFormat`,
     /// in which case it would not point to the original filename.
     pub fn new_with_extension(path: PathBuf, extension: String, format: FileFormat) -> anyhow::Result<Track> {
         let name = Self::get_nfc_filename_from_path(&path)?;
@@ -279,8 +279,8 @@ mod tests {
     #[test]
     fn test_mismatch() {
         let track = Track::new(PathBuf::from("/users/test/Test - song3.mp3")).expect("Failed to create track");
-        assert!(track != "Test - song3.wav"); // Different extension
-        assert!(track != "Test - song4.mp3"); // Different name
+        assert_ne!(track, "Test - song3.wav"); // Different extension
+        assert_ne!(track, "Test - song4.mp3"); // Different name
     }
 
     #[test]
@@ -288,6 +288,6 @@ mod tests {
         let track = Track::new(PathBuf::from("/users/test/song5.mp3")).expect("Failed to create track");
         assert_eq!(track, "song5".to_string());
         assert_eq!(track, "song5.mp3".to_string());
-        assert!(track != "song");
+        assert_ne!(track, "song");
     }
 }

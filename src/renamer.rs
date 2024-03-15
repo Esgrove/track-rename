@@ -457,14 +457,18 @@ mod tests {
     use std::path::Path;
     use std::path::PathBuf;
 
+    use once_cell::sync::Lazy;
     use rand::{distributions::Alphanumeric, Rng};
+
+    static NO_TAGS_DIR: Lazy<PathBuf> = Lazy::new(|| ["tests", "files", "no_tags"].iter().collect());
+    static BASIC_TAGS_DIR: Lazy<PathBuf> = Lazy::new(|| ["tests", "files", "basic_tags"].iter().collect());
+    static EXTENDED_TAGS_DIR: Lazy<PathBuf> = Lazy::new(|| ["tests", "files", "extended_tags"].iter().collect());
 
     #[test]
     fn test_no_tags() {
-        let test_dir: PathBuf = ["tests", "files", "no_tags"].iter().collect();
-        run_test_on_files(test_dir, |temp_file| {
+        run_test_on_files(&NO_TAGS_DIR, |temp_file| {
             let track = Track::try_from_path(&temp_file).expect("Failed to create Track for temp file");
-            let tags = Renamer::read_tags(&track).expect("Tags should be present");
+            let tags = utils::read_tags(&track).expect("Tags should be present");
             assert!(tags.artist().is_none());
             assert!(tags.title().is_none());
             fs::remove_file(temp_file).expect("Failed to remove temp file");
@@ -473,10 +477,9 @@ mod tests {
 
     #[test]
     fn test_basic_tags() {
-        let test_dir: PathBuf = ["tests", "files", "basic_tags"].iter().collect();
-        run_test_on_files(test_dir, |temp_file| {
+        run_test_on_files(&BASIC_TAGS_DIR, |temp_file| {
             let track = Track::try_from_path(&temp_file).expect("Failed to create Track for temp file");
-            let tags = Renamer::read_tags(&track).expect("Tags should be present");
+            let tags = utils::read_tags(&track).expect("Tags should be present");
             assert!(!tags.artist().unwrap().is_empty());
             assert!(!tags.title().unwrap().is_empty());
             fs::remove_file(temp_file).expect("Failed to remove temp file");
@@ -485,10 +488,9 @@ mod tests {
 
     #[test]
     fn test_extended_tags() {
-        let test_dir: PathBuf = ["tests", "files", "extended_tags"].iter().collect();
-        run_test_on_files(test_dir, |temp_file| {
+        run_test_on_files(&EXTENDED_TAGS_DIR, |temp_file| {
             let track = Track::try_from_path(&temp_file).expect("Failed to create Track for temp file");
-            let tags = Renamer::read_tags(&track).expect("Tags should be present");
+            let tags = utils::read_tags(&track).expect("Tags should be present");
             assert!(!tags.artist().unwrap().is_empty());
             assert!(!tags.title().unwrap().is_empty());
             fs::remove_file(temp_file).expect("Failed to remove temp file");
@@ -497,8 +499,7 @@ mod tests {
 
     #[test]
     fn test_rename_no_tags() {
-        let test_dir: PathBuf = ["tests", "files", "no_tags"].iter().collect();
-        run_test_on_files(test_dir, |temp_file| {
+        run_test_on_files(&NO_TAGS_DIR, |temp_file| {
             let mut renamer = Renamer::new_with_config(temp_file, CliConfig::new_for_tests());
             renamer.run().expect("Rename failed");
         });
@@ -506,8 +507,7 @@ mod tests {
 
     #[test]
     fn test_rename_basic_tags() {
-        let test_dir: PathBuf = ["tests", "files", "basic_tags"].iter().collect();
-        run_test_on_files(test_dir, |temp_file| {
+        run_test_on_files(&BASIC_TAGS_DIR, |temp_file| {
             let mut renamer = Renamer::new_with_config(temp_file, CliConfig::new_for_tests());
             renamer.run().expect("Rename failed");
         });
@@ -515,15 +515,14 @@ mod tests {
 
     #[test]
     fn test_rename_extended_tags() {
-        let test_dir: PathBuf = ["tests", "files", "extended_tags"].iter().collect();
-        run_test_on_files(test_dir, |temp_file| {
+        run_test_on_files(&EXTENDED_TAGS_DIR, |temp_file| {
             let mut renamer = Renamer::new_with_config(temp_file, CliConfig::new_for_tests());
             renamer.run().expect("Rename failed");
         });
     }
 
     /// Generic test function that takes a function or closure with one PathBuf as input argument
-    fn run_test_on_files<F: Fn(PathBuf)>(test_dir: PathBuf, test_func: F) {
+    fn run_test_on_files<F: Fn(PathBuf)>(test_dir: &Path, test_func: F) {
         for entry in fs::read_dir(test_dir).expect("Failed to read test directory") {
             let entry = entry.expect("Failed to read entry");
             let path = entry.path();
