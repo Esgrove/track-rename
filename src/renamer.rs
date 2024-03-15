@@ -8,6 +8,7 @@ use colored::Colorize;
 use id3::TagLike;
 use walkdir::WalkDir;
 
+use crate::cli_config::CliConfig;
 use crate::track::Track;
 use crate::user_config::{get_user_config, UserConfig};
 use crate::{formatter, utils, RenamerArgs};
@@ -27,50 +28,6 @@ pub struct Renamer {
     num_to_remove: usize,
     num_removed: usize,
     num_duplicates: usize,
-}
-
-/// Renamer settings.
-#[derive(Default, Debug)]
-pub struct CliConfig {
-    pub force: bool,
-    pub rename_files: bool,
-    pub sort_files: bool,
-    pub print_only: bool,
-    pub tags_only: bool,
-    pub verbose: bool,
-    pub debug: bool,
-    pub test_mode: bool,
-}
-
-impl CliConfig {
-    /// Create config from command line args.
-    pub fn from_args(args: RenamerArgs) -> Self {
-        CliConfig {
-            force: args.force,
-            rename_files: args.rename,
-            sort_files: args.sort,
-            print_only: args.print,
-            tags_only: args.tags_only,
-            verbose: args.verbose,
-            debug: args.debug,
-            test_mode: args.test,
-        }
-    }
-
-    #[cfg(test)]
-    /// Used in tests.
-    pub fn new_for_tests() -> Self {
-        CliConfig {
-            force: true,
-            rename_files: true,
-            sort_files: false,
-            print_only: false,
-            tags_only: false,
-            verbose: false,
-            debug: false,
-            test_mode: true,
-        }
-    }
 }
 
 impl Renamer {

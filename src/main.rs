@@ -1,3 +1,4 @@
+mod cli_config;
 mod file_format;
 mod formatter;
 mod renamer;
@@ -29,6 +30,10 @@ pub struct RenamerArgs {
     /// Do not ask for confirmation
     #[arg(short, long)]
     force: bool,
+
+    /// Log files that can't be read
+    #[arg(short, long)]
+    log: bool,
 
     /// Only print changes without modifying files
     #[arg(short, long)]
