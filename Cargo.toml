@@ -2,7 +2,7 @@
 
 [package]
 name = "track-rename"
-version = "1.11.0"
+version = "1.11.1"
 edition = "2021"
 authors = ["Esgrove <esgrove@outlook.com>"]
 license = "MIT"
@@ -13,7 +13,7 @@ categories = ["command-line-utilities"]
 
 [dependencies]
 anyhow = { version = "1.0.81", features = ["backtrace"] }
-clap = { version = "4.5.2", features = ["derive"] }
+clap = { version = "4.5.3", features = ["derive"] }
 colored = "2.1.0"
 difference = "2.0.0"
 dirs = "5.0.1"
