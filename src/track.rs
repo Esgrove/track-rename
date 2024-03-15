@@ -10,7 +10,7 @@ use unicode_normalization::UnicodeNormalization;
 use crate::file_format::FileFormat;
 use crate::utils;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Track {
     pub name: String,
     pub extension: String,
@@ -24,7 +24,7 @@ pub struct Track {
 
 impl Track {
     #![allow(dead_code)]
-    /// New Track from path
+    /// New Track from given path.
     pub fn new(path: PathBuf) -> anyhow::Result<Track> {
         let extension = path
             .extension()
@@ -94,9 +94,13 @@ impl Track {
         }
     }
 
-    /// Get the original file name
+    /// Get the original file name.
     pub fn filename(&self) -> String {
         format!("{}.{}", self.name, self.extension)
+    }
+
+    pub fn path_with_new_name(&self, filename: &str) -> PathBuf {
+        dunce::simplified(&self.root.join(filename)).to_path_buf()
     }
 
     /// Get filename from Path with special characters retained instead of decomposed.
@@ -109,8 +113,8 @@ impl Track {
             // Rust uses unicode NFD (Normalization Form Decomposed) by default,
             // which converts special chars like "å" to "a\u{30a}",
             // which then get printed as a regular "a".
-            // Use NFC (Normalization Form Composed) from unicode_normalization crate instead
-            // to retain correct format.
+            // Use NFC (Normalization Form Composed) from unicode_normalization crate
+            // to retain the correct format and not cause issues later on.
             // https://github.com/unicode-rs/unicode-normalization
             .nfc()
             .collect::<String>())

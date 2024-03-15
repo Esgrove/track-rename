@@ -28,6 +28,7 @@ pub struct Renamer {
     num_to_remove: usize,
     num_removed: usize,
     num_duplicates: usize,
+    num_failed: usize,
 }
 
 impl Renamer {
@@ -46,6 +47,7 @@ impl Renamer {
             num_to_remove: 0,
             num_removed: 0,
             num_duplicates: 0,
+            num_failed: 0,
         }
     }
 
@@ -65,6 +67,7 @@ impl Renamer {
             num_to_remove: 0,
             num_removed: 0,
             num_duplicates: 0,
+            num_failed: 0,
         }
     }
 
@@ -134,6 +137,7 @@ impl Renamer {
         if self.config.print_only {
             println!("{}", "Running in print-only mode".yellow().bold())
         }
+        let mut failed_files: Vec<String> = Vec::new();
         let mut current_path = self.root.clone();
         for (number, track) in self.file_list.iter_mut().enumerate() {
             if !self.config.sort_files {
@@ -177,7 +181,13 @@ impl Renamer {
 
             let mut tags = match utils::read_tags(track) {
                 Some(tag) => tag,
-                None => continue,
+                None => {
+                    self.num_failed += 1;
+                    if self.config.log_failures {
+                        failed_files.push(utils::path_to_string(&track.path));
+                    }
+                    continue;
+                }
             };
             let (artist, title, current_tags) = utils::parse_artist_and_title(&track, &mut tags);
             let (formatted_artist, formatted_title) = formatter::format_tags(&artist, &title);
@@ -210,11 +220,9 @@ impl Renamer {
                 format!("{} - {}.{}", file_artist, file_title, track.format)
             };
 
-            let new_path = dunce::simplified(&track.root.join(&new_file_name)).to_path_buf();
-            let new_path_string =
-                utils::path_to_string(&utils::get_relative_path_from_current_working_directory(&new_path));
-            let original_path_string =
-                utils::path_to_string(&utils::get_relative_path_from_current_working_directory(&track.path));
+            let new_path = track.path_with_new_name(&new_file_name);
+            let new_path_string = utils::path_to_string_relative(&new_path);
+            let original_path_string = utils::path_to_string_relative(&track.path);
             if new_path_string != original_path_string {
                 if !new_path.is_file() {
                     // Rename files if the flag was given or if tags were not changed
@@ -250,6 +258,12 @@ impl Renamer {
 
             // TODO: handle duplicates and same track in different file format
         }
+
+        if self.config.log_failures && !failed_files.is_empty() {
+            println!("Logging failed filepaths");
+            utils::write_log_for_failed_files(&failed_files)?;
+        }
+
         Ok(())
     }
 
@@ -276,10 +290,17 @@ impl Renamer {
     /// Print number of changes made.
     fn print_stats(&self) {
         println!("{}", "Finished".green());
-        println!("Tags:      {} / {}", self.num_tags_fixed, self.num_tags);
-        println!("Rename:    {} / {}", self.num_renamed, self.num_to_rename);
-        println!("Delete:    {} / {}", self.num_removed, self.num_to_remove);
-        println!("Duplicate: {}", self.num_duplicates);
+        println!("Tags:       {} / {}", self.num_tags_fixed, self.num_tags);
+        println!("Renamed:    {} / {}", self.num_renamed, self.num_to_rename);
+        if self.num_to_remove > 0 {
+            println!("Deleted:    {} / {}", self.num_removed, self.num_to_remove);
+        }
+        if self.num_duplicates > 0 {
+            println!("Duplicate:  {}", self.num_duplicates);
+        }
+        if self.num_failed > 0 {
+            println!("Failed:     {}", self.num_failed);
+        }
     }
 }
 

@@ -5,7 +5,7 @@ use anyhow::{anyhow, Result};
 
 /// Supported audio file formats.
 // TODO: add support for "flac", "m4a", "mp4"
-#[derive(Debug, PartialEq, Ord, PartialOrd, Eq)]
+#[derive(Debug, Clone, PartialEq, Ord, PartialOrd, Eq)]
 pub enum FileFormat {
     Mp3,
     Aif,

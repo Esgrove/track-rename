@@ -1,3 +1,4 @@
+use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::{env, io};
@@ -19,6 +20,15 @@ pub fn confirm() -> bool {
     ans.trim().to_lowercase() != "n"
 }
 
+/// Convert the given path to be relative to the current working directory.
+/// Returns the original path if the relative path cannot be created.
+pub fn get_relative_path_from_current_working_directory(path: &Path) -> PathBuf {
+    env::current_dir()
+        .map(|current_dir| path.strip_prefix(&current_dir).unwrap_or(path).to_path_buf())
+        .unwrap_or(path.to_path_buf())
+}
+
+/// Convert path to string with invalid unicode handling.
 pub fn path_to_string(path: &Path) -> String {
     if let Some(string) = path.to_str() {
         string.to_string()
@@ -29,6 +39,11 @@ pub fn path_to_string(path: &Path) -> String {
         eprintln!("{}", string);
         string
     }
+}
+
+/// Get relative path and convert to string with invalid unicode handling.
+pub fn path_to_string_relative(path: &Path) -> String {
+    path_to_string(&get_relative_path_from_current_working_directory(path))
 }
 
 /// Try to read tags from file.
@@ -127,12 +142,13 @@ pub fn print_divider(text: &str) {
     println!("{}", "-".repeat(text.chars().count()));
 }
 
-/// Convert the given path to be relative to the current working directory.
-/// Returns the original path if the relative path cannot be created.
-pub fn get_relative_path_from_current_working_directory(path: &Path) -> PathBuf {
-    env::current_dir()
-        .map(|current_dir| path.strip_prefix(&current_dir).unwrap_or(path).to_path_buf())
-        .unwrap_or(path.to_path_buf())
+pub fn write_log_for_failed_files(paths: &[String]) -> anyhow::Result<()> {
+    let mut file = File::create("track-rename-failed.txt")?;
+    let index_width: usize = paths.len().to_string().chars().count();
+    for (number, path) in paths.iter().enumerate() {
+        writeln!(file, "{:<width$}: {}", number, path, width = index_width)?;
+    }
+    Ok(())
 }
 
 /// Convert filename to artist and title tags.
