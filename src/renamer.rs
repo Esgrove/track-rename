@@ -1,19 +1,16 @@
 use std::collections::HashMap;
 use std::fs;
-use std::io;
-use std::io::Write;
 use std::path::PathBuf;
 use std::string::String;
 
 use anyhow::{Context, Result};
-use colored::*;
-use difference::{Changeset, Difference};
-use id3::{Error, ErrorKind, Tag, TagLike};
+use colored::Colorize;
+use id3::TagLike;
 use walkdir::WalkDir;
 
 use crate::track::Track;
 use crate::user_config::{get_user_config, UserConfig};
-use crate::{formatter, RenamerArgs};
+use crate::{formatter, utils, RenamerArgs};
 
 /// Audio track tag and filename formatting.
 #[derive(Debug)]
@@ -207,7 +204,7 @@ impl Renamer {
                 track.show(number + 1, self.total_tracks);
                 let message = format!("Skipping track in exclude list: {}", track);
                 println!("{}", message.yellow());
-                Self::print_divider(&message);
+                utils::print_divider(&message);
                 continue;
             }
 
@@ -217,23 +214,23 @@ impl Renamer {
                 track.show(number + 1, self.total_tracks);
                 let message = format!("Track no longer exists: {}", track);
                 eprintln!("{}", message.red());
-                Self::print_divider(&message);
+                utils::print_divider(&message);
                 continue;
             }
 
-            let mut tags = match Renamer::read_tags(track) {
+            let mut tags = match utils::read_tags(track) {
                 Some(tag) => tag,
                 None => continue,
             };
-            let (artist, title, current_tags) = Self::parse_artist_and_title(&track, &mut tags);
+            let (artist, title, current_tags) = utils::parse_artist_and_title(&track, &mut tags);
             let (formatted_artist, formatted_title) = formatter::format_tags(&artist, &title);
             let formatted_tags = format!("{} - {}", formatted_artist, formatted_title);
             if current_tags != formatted_tags {
                 self.num_tags += 1;
                 track.show(number + 1, self.total_tracks);
                 println!("{}", "Fix tags:".blue().bold());
-                Renamer::show_diff(&current_tags, &formatted_tags);
-                if !self.config.print_only && (self.config.force || Renamer::confirm()) {
+                utils::show_diff(&current_tags, &formatted_tags);
+                if !self.config.print_only && (self.config.force || utils::confirm()) {
                     tags.set_artist(formatted_artist.clone());
                     tags.set_title(formatted_title.clone());
                     if let Err(error) = tags.write_to_path(&track.path, id3::Version::Id3v24) {
@@ -242,7 +239,7 @@ impl Renamer {
                     track.tags_updated = true;
                     self.num_tags_fixed += 1;
                 }
-                Self::print_divider(&formatted_tags);
+                utils::print_divider(&formatted_tags);
             }
 
             if self.config.tags_only {
@@ -262,9 +259,9 @@ impl Renamer {
                 if self.config.rename_files || !track.tags_updated {
                     track.show(number + 1, self.total_tracks);
                     println!("{}", "Rename file:".yellow().bold());
-                    Renamer::show_diff(&track.filename(), &new_file_name);
+                    utils::show_diff(&track.filename(), &new_file_name);
                     self.num_to_rename += 1;
-                    if !self.config.print_only && (self.config.force || Renamer::confirm()) {
+                    if !self.config.print_only && (self.config.force || utils::confirm()) {
                         if let Err(error) = fs::rename(&track.path, &new_path) {
                             let message = format!("Failed to rename file: {}", error);
                             eprintln!("{}", message.red());
@@ -276,14 +273,14 @@ impl Renamer {
                         }
                         self.num_renamed += 1;
                     }
-                    Self::print_divider(&new_file_name);
+                    utils::print_divider(&new_file_name);
                 }
             } else if new_path != track.path {
                 track.show(number + 1, self.total_tracks);
                 println!("{}", "Duplicate:".red().bold());
                 println!("Old: {}", track.path.display());
                 println!("New: {}", new_path.display());
-                Self::print_divider(&new_file_name);
+                utils::print_divider(&new_file_name);
                 self.num_duplicates += 1;
             }
 
@@ -312,128 +309,6 @@ impl Renamer {
         }
     }
 
-    /// Try to read tags from file.
-    /// Will return empty tags when there are no tags.
-    fn read_tags(track: &Track) -> Option<Tag> {
-        match Tag::read_from_path(&track.path) {
-            Ok(tag) => Some(tag),
-            Err(Error {
-                kind: ErrorKind::NoTag, ..
-            }) => {
-                println!("{}", format!("No tags: {}", track).yellow());
-                Some(Tag::new())
-            }
-            Err(error) => {
-                eprintln!("{}", format!("Failed to read tags for: {}\n{}", track, error).red());
-                None
-            }
-        }
-    }
-
-    /// Ask user to confirm action.
-    /// Note: everything except `n` is a yes.
-    fn confirm() -> bool {
-        print!("Proceed (y/n)? ");
-        io::stdout().flush().expect("Failed to flush stdout");
-        let mut ans = String::new();
-        io::stdin().read_line(&mut ans).expect("Failed to read line");
-        ans.trim().to_lowercase() != "n"
-    }
-
-    /// Try to read artist and title from tags.
-    /// Fallback to parsing them from filename if tags are empty.
-    fn parse_artist_and_title(track: &&mut Track, tag: &mut Tag) -> (String, String, String) {
-        let mut artist = String::new();
-        let mut title = String::new();
-        let mut current_tags = " - ".to_string();
-
-        match (tag.artist(), tag.title()) {
-            (Some(a), Some(t)) => {
-                artist = a.to_string();
-                title = t.to_string();
-                current_tags = format!("{} - {}", artist, title);
-            }
-            (None, None) => {
-                eprintln!("{}", format!("Missing tags: {}", track.path.display()).yellow());
-                if let Some((a, t)) = Renamer::get_tags_from_filename(&track.name) {
-                    artist = a;
-                    title = t;
-                }
-            }
-            (None, Some(t)) => {
-                eprintln!("{}", format!("Missing artist tag: {}", track.path.display()).yellow());
-                if let Some((a, _)) = Renamer::get_tags_from_filename(&track.name) {
-                    artist = a;
-                }
-                title = t.to_string();
-                current_tags = format!(" - {}", title);
-            }
-            (Some(a), None) => {
-                eprintln!("{}", format!("Missing title tag: {}", track.path.display()).yellow());
-                artist = a.to_string();
-                if let Some((_, t)) = Renamer::get_tags_from_filename(&track.name) {
-                    title = t;
-                }
-                current_tags = format!("{} - ", artist);
-            }
-        }
-        (artist, title, current_tags)
-    }
-
-    /// Convert filename to artist and title tags.
-    /// Expects filename to be in format 'artist - title'.
-    fn get_tags_from_filename(filename: &str) -> Option<(String, String)> {
-        if !filename.contains(" - ") {
-            eprintln!(
-                "{}",
-                format!("Can't parse tag data from malformed filename: {filename}").red()
-            );
-            return None;
-        }
-
-        let parts: Vec<&str> = filename.splitn(2, " - ").collect();
-        if parts.len() == 2 {
-            let artist = parts[0].to_string();
-            let title = parts[1].to_string();
-            Some((artist, title))
-        } else {
-            None
-        }
-    }
-
-    /// Print a stacked diff of the changes.
-    fn show_diff(old: &str, new: &str) {
-        let changeset = Changeset::new(old, new, "");
-        let mut old_diff = String::new();
-        let mut new_diff = String::new();
-
-        for diff in changeset.diffs {
-            match diff {
-                Difference::Same(ref x) => {
-                    old_diff.push_str(x);
-                    new_diff.push_str(x);
-                }
-                Difference::Add(ref x) => {
-                    if x.chars().all(char::is_whitespace) {
-                        new_diff.push_str(&x.to_string().on_green().to_string());
-                    } else {
-                        new_diff.push_str(&x.to_string().green().to_string());
-                    }
-                }
-                Difference::Rem(ref x) => {
-                    if x.chars().all(char::is_whitespace) {
-                        old_diff.push_str(&x.to_string().on_red().to_string());
-                    } else {
-                        old_diff.push_str(&x.to_string().red().to_string());
-                    }
-                }
-            }
-        }
-
-        println!("{}", old_diff);
-        println!("{}", new_diff);
-    }
-
     /// Print number of changes made.
     fn print_stats(&self) {
         println!("{}", "Finished".green());
@@ -441,10 +316,6 @@ impl Renamer {
         println!("Rename:    {} / {}", self.num_renamed, self.num_to_rename);
         println!("Delete:    {} / {}", self.num_removed, self.num_to_remove);
         println!("Duplicate: {}", self.num_duplicates);
-    }
-
-    fn print_divider(text: &str) {
-        println!("{}", "-".repeat(text.chars().count()));
     }
 }
 

@@ -3,6 +3,7 @@ mod formatter;
 mod renamer;
 mod track;
 mod user_config;
+mod utils;
 
 #[cfg(test)]
 mod formatter_tests;
