@@ -5,6 +5,7 @@ use std::path::Path;
 use colored::Colorize;
 use difference::{Changeset, Difference};
 use id3::{Error, ErrorKind, Tag, TagLike};
+use unicode_normalization::UnicodeNormalization;
 
 use crate::track::Track;
 
@@ -57,8 +58,8 @@ pub fn parse_artist_and_title(track: &&mut Track, tag: &mut Tag) -> (String, Str
 
     match (tag.artist(), tag.title()) {
         (Some(a), Some(t)) => {
-            artist = a.to_string();
-            title = t.to_string();
+            artist = a.nfc().collect::<String>();
+            title = t.nfc().collect::<String>();
             current_tags = format!("{} - {}", artist, title);
         }
         (None, None) => {
@@ -73,12 +74,12 @@ pub fn parse_artist_and_title(track: &&mut Track, tag: &mut Tag) -> (String, Str
             if let Some((a, _)) = get_tags_from_filename(&track.name) {
                 artist = a;
             }
-            title = t.to_string();
+            title = t.nfc().collect::<String>();
             current_tags = format!(" - {}", title);
         }
         (Some(a), None) => {
             eprintln!("{}", format!("Missing title tag: {}", track.path.display()).yellow());
-            artist = a.to_string();
+            artist = a.nfc().collect::<String>();
             if let Some((_, t)) = get_tags_from_filename(&track.name) {
                 title = t;
             }
@@ -138,8 +139,8 @@ fn get_tags_from_filename(filename: &str) -> Option<(String, String)> {
 
     let parts: Vec<&str> = filename.splitn(2, " - ").collect();
     if parts.len() == 2 {
-        let artist = parts[0].to_string();
-        let title = parts[1].to_string();
+        let artist = parts[0].nfc().collect::<String>();
+        let title = parts[1].nfc().collect::<String>();
         Some((artist, title))
     } else {
         None
