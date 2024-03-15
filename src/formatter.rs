@@ -4,7 +4,7 @@ use lazy_static::lazy_static;
 use regex::{Captures, Regex};
 
 lazy_static! {
-    static ref COMMON_SUBSTITUTES: [(&'static str, &'static str); 26] = [
+    static ref COMMON_SUBSTITUTES: [(&'static str, &'static str); 27] = [
         ("\0", "/"),
         ("`", "'"),
         ("´", "'"),
@@ -31,6 +31,7 @@ lazy_static! {
         ("o¨", "ö"),
         ("e¨", "ë"),
         (" ,", ","),
+        ("\u{FFFD}", ""),
     ];
     static ref TITLE_SUBSTITUTES: [(&'static str, &'static str); 14] = [
         ("(Original Mix/", "("),
