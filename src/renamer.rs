@@ -23,8 +23,11 @@ pub struct Renamer {
     user_config: UserConfig,
     file_list: Vec<Track>,
     total_tracks: usize,
+    num_tags: usize,
     num_tags_fixed: usize,
+    num_to_rename: usize,
     num_renamed: usize,
+    num_to_remove: usize,
     num_removed: usize,
     num_duplicates: usize,
 }
@@ -82,8 +85,11 @@ impl Renamer {
             user_config: get_user_config(),
             file_list: Vec::new(),
             total_tracks: 0,
+            num_tags: 0,
             num_tags_fixed: 0,
+            num_to_rename: 0,
             num_renamed: 0,
+            num_to_remove: 0,
             num_removed: 0,
             num_duplicates: 0,
         }
@@ -98,8 +104,11 @@ impl Renamer {
             user_config: UserConfig::default(),
             file_list: Vec::new(),
             total_tracks: 0,
+            num_tags: 0,
             num_tags_fixed: 0,
+            num_to_rename: 0,
             num_renamed: 0,
+            num_to_remove: 0,
             num_removed: 0,
             num_duplicates: 0,
         }
@@ -220,10 +229,10 @@ impl Renamer {
             let (formatted_artist, formatted_title) = formatter::format_tags(&artist, &title);
             let formatted_tags = format!("{} - {}", formatted_artist, formatted_title);
             if current_tags != formatted_tags {
+                self.num_tags += 1;
                 track.show(number + 1, self.total_tracks);
                 println!("{}", "Fix tags:".blue().bold());
                 Renamer::show_diff(&current_tags, &formatted_tags);
-                self.num_tags_fixed += 1;
                 if !self.config.print_only && (self.config.force || Renamer::confirm()) {
                     tags.set_artist(formatted_artist.clone());
                     tags.set_title(formatted_title.clone());
@@ -231,6 +240,7 @@ impl Renamer {
                         eprintln!("{}", format!("Failed to write tags: {}", error).red());
                     }
                     track.tags_updated = true;
+                    self.num_tags_fixed += 1;
                 }
                 Self::print_divider(&formatted_tags);
             }
@@ -253,7 +263,7 @@ impl Renamer {
                     track.show(number + 1, self.total_tracks);
                     println!("{}", "Rename file:".yellow().bold());
                     Renamer::show_diff(&track.filename(), &new_file_name);
-                    self.num_renamed += 1;
+                    self.num_to_rename += 1;
                     if !self.config.print_only && (self.config.force || Renamer::confirm()) {
                         if let Err(error) = fs::rename(&track.path, &new_path) {
                             let message = format!("Failed to rename file: {}", error);
@@ -264,6 +274,7 @@ impl Renamer {
                         } else if self.config.test_mode {
                             fs::remove_file(new_path).context("Failed to remove renamed file")?;
                         }
+                        self.num_renamed += 1;
                     }
                     Self::print_divider(&new_file_name);
                 }
@@ -426,9 +437,9 @@ impl Renamer {
     /// Print number of changes made.
     fn print_stats(&self) {
         println!("{}", "Finished".green());
-        println!("Tags:      {}", self.num_tags_fixed);
-        println!("Rename:    {}", self.num_renamed);
-        println!("Delete:    {}", self.num_removed);
+        println!("Tags:      {} / {}", self.num_tags_fixed, self.num_tags);
+        println!("Rename:    {} / {}", self.num_renamed, self.num_to_rename);
+        println!("Delete:    {} / {}", self.num_removed, self.num_to_remove);
         println!("Duplicate: {}", self.num_duplicates);
     }
 
