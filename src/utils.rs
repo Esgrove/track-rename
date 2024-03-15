@@ -144,9 +144,8 @@ pub fn print_divider(text: &str) {
 
 pub fn write_log_for_failed_files(paths: &[String]) -> anyhow::Result<()> {
     let mut file = File::create("track-rename-failed.txt")?;
-    let index_width: usize = paths.len().to_string().chars().count();
-    for (number, path) in paths.iter().enumerate() {
-        writeln!(file, "{:<width$}: {}", number + 1, path, width = index_width)?;
+    for path in paths.iter() {
+        writeln!(file, "{}", path)?;
     }
     Ok(())
 }
