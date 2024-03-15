@@ -1,5 +1,6 @@
 use std::io;
 use std::io::Write;
+use std::path::Path;
 
 use colored::Colorize;
 use difference::{Changeset, Difference};
@@ -15,6 +16,18 @@ pub fn confirm() -> bool {
     let mut ans = String::new();
     io::stdin().read_line(&mut ans).expect("Failed to read line");
     ans.trim().to_lowercase() != "n"
+}
+
+pub fn path_to_string(path: &Path) -> String {
+    if let Some(string) = path.to_str() {
+        string.to_string()
+    } else {
+        let string = path.to_string_lossy().to_string().replace('\u{FFFD}', "");
+        eprintln!("{}", "Path contains invalid unicode".red());
+        eprintln!("{:?}", path);
+        eprintln!("{}", string);
+        string
+    }
 }
 
 /// Try to read tags from file.

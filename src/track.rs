@@ -173,7 +173,13 @@ impl fmt::Display for Track {
             Ok(path) => path,
             Err(_) => &self.root,
         };
-        write!(f, "{}/{}.{}", relative_path.display(), self.name, self.format)
+        write!(
+            f,
+            "{}/{}.{}",
+            dunce::simplified(relative_path).display(),
+            self.name,
+            self.format
+        )
     }
 }
 

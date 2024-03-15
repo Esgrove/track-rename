@@ -254,34 +254,39 @@ impl Renamer {
             };
 
             let new_path = dunce::simplified(&track.root.join(&new_file_name)).to_path_buf();
-            if !new_path.is_file() {
-                // Rename files if the flag was given or if tags were not changed
-                if self.config.rename_files || !track.tags_updated {
-                    track.show(number + 1, self.total_tracks);
-                    println!("{}", "Rename file:".yellow().bold());
-                    utils::show_diff(&track.filename(), &new_file_name);
-                    self.num_to_rename += 1;
-                    if !self.config.print_only && (self.config.force || utils::confirm()) {
-                        if let Err(error) = fs::rename(&track.path, &new_path) {
-                            let message = format!("Failed to rename file: {}", error);
-                            eprintln!("{}", message.red());
-                            if self.config.test_mode {
-                                panic!("{}", message);
+            let new_path_string = utils::path_to_string(&new_path);
+            let original_path_string = utils::path_to_string(&track.path);
+            if new_path_string != original_path_string {
+                if !new_path.is_file() {
+                    // Rename files if the flag was given or if tags were not changed
+                    if self.config.rename_files || !track.tags_updated {
+                        track.show(number + 1, self.total_tracks);
+                        println!("{}", "Rename file:".yellow().bold());
+                        utils::show_diff(&track.filename(), &new_file_name);
+                        self.num_to_rename += 1;
+                        if !self.config.print_only && (self.config.force || utils::confirm()) {
+                            if let Err(error) = fs::rename(&track.path, &new_path) {
+                                let message = format!("Failed to rename file: {}", error);
+                                eprintln!("{}", message.red());
+                                if self.config.test_mode {
+                                    panic!("{}", message);
+                                }
+                            } else if self.config.test_mode {
+                                fs::remove_file(new_path).context("Failed to remove renamed file")?;
                             }
-                        } else if self.config.test_mode {
-                            fs::remove_file(new_path).context("Failed to remove renamed file")?;
+                            self.num_renamed += 1;
                         }
-                        self.num_renamed += 1;
+                        utils::print_divider(&new_file_name);
                     }
+                } else if new_path != track.path {
+                    // A file with the new name already exists
+                    track.show(number + 1, self.total_tracks);
+                    println!("{}", "Duplicate:".red().bold());
+                    println!("Old: {}", original_path_string);
+                    println!("New: {}", new_path_string);
                     utils::print_divider(&new_file_name);
+                    self.num_duplicates += 1;
                 }
-            } else if new_path != track.path {
-                track.show(number + 1, self.total_tracks);
-                println!("{}", "Duplicate:".red().bold());
-                println!("Old: {}", track.path.display());
-                println!("New: {}", new_path.display());
-                utils::print_divider(&new_file_name);
-                self.num_duplicates += 1;
             }
 
             // TODO: handle duplicates and same track in different file format
