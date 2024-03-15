@@ -162,10 +162,12 @@ impl Renamer {
                 .iter()
                 .any(|excluded_file| excluded_file == track)
             {
-                track.show(number + 1, self.total_tracks);
-                let message = format!("Skipping track in exclude list: {}", track);
-                println!("{}", message.yellow());
-                utils::print_divider(&message);
+                if self.config.verbose {
+                    track.show(number + 1, self.total_tracks);
+                    let message = format!("Skipping track in exclude list: {}", track);
+                    println!("{}", message.yellow());
+                    utils::print_divider(&message);
+                }
                 continue;
             }
 
@@ -224,7 +226,13 @@ impl Renamer {
             let new_path_string = utils::path_to_string_relative(&new_path);
             let original_path_string = utils::path_to_string_relative(&track.path);
             if new_path_string != original_path_string {
-                if !new_path.is_file() {
+                let mut capitalization_change_only = false;
+                if new_path_string.to_lowercase() == original_path_string.to_lowercase() {
+                    // File path contains only capitalization changes:
+                    // Need to use a temp file to workaround case-insensitive file systems.
+                    capitalization_change_only = true;
+                }
+                if !new_path.is_file() || capitalization_change_only {
                     // Rename files if the flag was given or if tags were not changed
                     if self.config.rename_files || !track.tags_updated {
                         track.show(number + 1, self.total_tracks);
@@ -232,13 +240,14 @@ impl Renamer {
                         utils::show_diff(&track.filename(), &new_file_name);
                         self.num_to_rename += 1;
                         if !self.config.print_only && (self.config.force || utils::confirm()) {
-                            if let Err(error) = fs::rename(&track.path, &new_path) {
-                                let message = format!("Failed to rename file: {}", error);
-                                eprintln!("{}", message.red());
-                                if self.config.test_mode {
-                                    panic!("{}", message);
-                                }
-                            } else if self.config.test_mode {
+                            if capitalization_change_only {
+                                let temp_file = new_path.clone().with_extension(format!("{}.{}", track.format, "tmp"));
+                                utils::rename_track(&track.path, &temp_file, self.config.test_mode)?;
+                                utils::rename_track(&temp_file, &new_path, self.config.test_mode)?;
+                            } else {
+                                utils::rename_track(&track.path, &new_path, self.config.test_mode)?;
+                            }
+                            if self.config.test_mode && new_path.exists() {
                                 fs::remove_file(new_path).context("Failed to remove renamed file")?;
                             }
                             self.num_renamed += 1;
@@ -290,7 +299,7 @@ impl Renamer {
     /// Print number of changes made.
     fn print_stats(&self) {
         println!("{}", "Finished".green());
-        println!("Tags:       {} / {}", self.num_tags_fixed, self.num_tags);
+        println!("Fix tags:   {} / {}", self.num_tags_fixed, self.num_tags);
         println!("Renamed:    {} / {}", self.num_renamed, self.num_to_rename);
         if self.num_to_remove > 0 {
             println!("Deleted:    {} / {}", self.num_removed, self.num_to_remove);

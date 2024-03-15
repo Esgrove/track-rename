@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::{env, io};
+use std::{env, fs, io};
 
 use colored::Colorize;
 use difference::{Changeset, Difference};
@@ -146,7 +146,19 @@ pub fn write_log_for_failed_files(paths: &[String]) -> anyhow::Result<()> {
     let mut file = File::create("track-rename-failed.txt")?;
     let index_width: usize = paths.len().to_string().chars().count();
     for (number, path) in paths.iter().enumerate() {
-        writeln!(file, "{:<width$}: {}", number, path, width = index_width)?;
+        writeln!(file, "{:<width$}: {}", number + 1, path, width = index_width)?;
+    }
+    Ok(())
+}
+
+/// Rename track from given path to new path.
+pub fn rename_track(path: &Path, new_path: &Path, test_mode: bool) -> anyhow::Result<()> {
+    if let Err(error) = fs::rename(path, new_path) {
+        let message = format!("Failed to rename file: {}", error);
+        eprintln!("{}", message.red());
+        if test_mode {
+            panic!("{}", message);
+        }
     }
     Ok(())
 }
