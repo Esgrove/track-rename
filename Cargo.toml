@@ -2,7 +2,7 @@
 
 [package]
 name = "track-rename"
-version = "1.10.0"
+version = "1.10.1"
 edition = "2021"
 authors = ["Esgrove <esgrove@outlook.com>"]
 license = "MIT"
@@ -12,20 +12,20 @@ keywords = ["cli", "music", "audio", "rename"]
 categories = ["command-line-utilities"]
 
 [dependencies]
-anyhow = { version = "1.0.80", features = ["backtrace"] }
-clap = { version = "4.5.1", features = ["derive"] }
+anyhow = { version = "1.0.81", features = ["backtrace"] }
+clap = { version = "4.5.2", features = ["derive"] }
 colored = "2.1.0"
 difference = "2.0.0"
 dirs = "5.0.1"
 dunce = "1.0.4"
-id3 = { version = "1.13.0", default-features = false }
+id3 = { version = "1.13.1", default-features = false }
 lazy_static = "1.4.0"
 rand = "0.8.5"
 regex = "1.10.3"
 serde = { version = "1.0.197", features = ["derive"] }
-toml = "0.8.10"
+toml = "0.8.11"
 unicode-normalization = "0.1.23"
-walkdir = "2.4.0"
+walkdir = "2.5.0"
 
 [[bin]]
 name = "trackrename"
