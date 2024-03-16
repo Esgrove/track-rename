@@ -109,6 +109,11 @@ impl Track {
     /// Creates a new Track if conversion was successful.
     pub fn convert_mp3_to_aif(&self) -> anyhow::Result<Track> {
         let output_path = self.path.with_extension("aif");
+        let output_path_string = path_to_string_relative(&output_path);
+        output_path
+            .try_exists()
+            .context(format!("File already exists: {}", output_path_string))?;
+
         let output = Command::new("ffmpeg")
             .args([
                 "-v",
@@ -116,7 +121,7 @@ impl Track {
                 "-n", // never overwrite existing file
                 "-i",
                 path_to_string(&self.path).as_str(),
-                "-map_metadata", // keep metadata
+                "-map_metadata", // keep all metadata
                 "0",
                 "-write_id3v2",
                 "1",
@@ -133,11 +138,11 @@ impl Track {
             );
         }
 
-        let relative_path = path_to_string_relative(&output_path);
         output_path
             .try_exists()
-            .context(format!("Converted file does not exist: {}", relative_path))?;
-        println!("Conversion successful: {}", relative_path.green());
+            .context(format!("Converted file does not exist: {}", output_path_string))?;
+
+        println!("Conversion successful: {}", output_path_string.green());
 
         trash::delete(&self.path).context("Failed to move mp3 file to trash")?;
 

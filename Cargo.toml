@@ -2,7 +2,7 @@
 
 [package]
 name = "track-rename"
-version = "1.12.0"
+version = "1.12.1"
 edition = "2021"
 authors = ["Esgrove <esgrove@outlook.com>"]
 license = "MIT"
