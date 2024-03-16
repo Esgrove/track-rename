@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 use std::fmt;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::str::FromStr;
 
 use anyhow::Context;
@@ -9,6 +10,7 @@ use unicode_normalization::UnicodeNormalization;
 
 use crate::file_format::FileFormat;
 use crate::utils;
+use crate::utils::{path_to_string, path_to_string_relative};
 
 #[derive(Debug, Clone)]
 pub struct Track {
@@ -101,6 +103,43 @@ impl Track {
 
     pub fn path_with_new_name(&self, filename: &str) -> PathBuf {
         dunce::simplified(&self.root.join(filename)).to_path_buf()
+    }
+
+    pub fn convert_mp3_to_aif(&self) -> anyhow::Result<Track> {
+        let output_path = self.path.with_extension("aif");
+        let output = Command::new("ffmpeg")
+            .args([
+                "-n",
+                "-i",
+                path_to_string(&self.path).as_str(),
+                path_to_string(&output_path).as_str(),
+            ])
+            .output()?;
+
+        if !output.status.success() {
+            anyhow::bail!(
+                "{}",
+                format!("FFmpeg error: {}", String::from_utf8_lossy(&output.stderr)).red()
+            );
+        }
+
+        println!(
+            "Conversion successful: {}",
+            path_to_string_relative(&output_path).green()
+        );
+
+        let new_track = Track {
+            name: self.name.clone(),
+            extension: "aif".to_string(),
+            format: FileFormat::Aif,
+            root: self.root.clone(),
+            path: output_path,
+            tags_updated: self.tags_updated,
+            renamed: self.renamed,
+            printed: self.printed,
+        };
+
+        Ok(new_track)
     }
 
     /// Get filename from Path with special characters retained instead of decomposed.

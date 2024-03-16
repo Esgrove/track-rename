@@ -10,9 +10,10 @@ use unicode_normalization::UnicodeNormalization;
 use walkdir::WalkDir;
 
 use crate::cli_config::CliConfig;
+use crate::file_format::FileFormat;
 use crate::statistics::Statistics;
 use crate::track::Track;
-use crate::user_config::{get_user_config, UserConfig};
+use crate::user_config::UserConfig;
 use crate::{formatter, utils, RenamerArgs};
 
 /// Audio track tag and filename formatting.
@@ -30,10 +31,13 @@ pub struct Renamer {
 impl Renamer {
     /// Create Renamer from command line arguments.
     pub fn new(path: PathBuf, args: RenamerArgs) -> Renamer {
+        let user_config = UserConfig::get_user_config();
+        let mut config = CliConfig::from_args(args);
+        config.convert_failed = config.convert_failed || user_config.convert_failed;
         Renamer {
             root: path,
-            config: CliConfig::from_args(args),
-            user_config: get_user_config(),
+            config,
+            user_config,
             ..Default::default()
         }
     }
@@ -54,6 +58,11 @@ impl Renamer {
             println!("{}", self.config);
             println!("{}", self.user_config);
         }
+
+        if self.config.convert_failed && !utils::ffmpeg_available() {
+            anyhow::bail!("Convert failed specified but ffmpeg command was not found!")
+        }
+
         self.gather_files()?;
         self.process_files()?;
         Ok(())
@@ -159,7 +168,20 @@ impl Renamer {
                 continue;
             }
 
-            let mut tags = match utils::read_tags(track) {
+            let mut tag_result = utils::read_tags(track);
+            if tag_result.is_none() && self.config.convert_failed && track.format == FileFormat::Mp3 {
+                println!("Converting failed file...");
+                match track.convert_mp3_to_aif() {
+                    Ok(aif_track) => {
+                        *track = aif_track;
+                        tag_result = utils::read_tags(track);
+                    }
+                    Err(e) => {
+                        eprintln!("{}", e);
+                    }
+                }
+            }
+            let mut tags = match tag_result {
                 Some(tag) => tag,
                 None => {
                     self.stats.num_failed += 1;

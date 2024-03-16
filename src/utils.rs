@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::{env, fs, io};
 
 use anyhow::Context;
@@ -133,6 +134,11 @@ pub fn colorize_bool(value: bool) -> ColoredString {
     } else {
         "false".yellow()
     }
+}
+
+/// Check ffmpeg is found in PATH.
+pub fn ffmpeg_available() -> bool {
+    Command::new("ffmpeg").arg("-version").output().is_ok()
 }
 
 /// Convert filename to artist and title tags.

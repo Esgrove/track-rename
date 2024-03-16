@@ -16,8 +16,10 @@ pub struct UserConfig {
     pub convert_failed: bool,
 }
 
-pub fn get_user_config() -> UserConfig {
-    read_user_config().unwrap_or_default()
+impl UserConfig {
+    pub fn get_user_config() -> UserConfig {
+        read_user_config().unwrap_or_default()
+    }
 }
 
 fn read_user_config() -> Option<UserConfig> {
