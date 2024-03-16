@@ -12,13 +12,14 @@ use crate::file_format::FileFormat;
 use crate::utils;
 use crate::utils::{path_to_string, path_to_string_relative};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct Track {
     pub name: String,
     pub extension: String,
     pub format: FileFormat,
     pub root: PathBuf,
     pub path: PathBuf,
+    pub number: usize,
     pub tags_updated: bool,
     pub renamed: bool,
     pub printed: bool,
@@ -55,9 +56,7 @@ impl Track {
             format,
             root,
             path,
-            tags_updated: false,
-            renamed: false,
-            printed: false,
+            ..Default::default()
         })
     }
 
@@ -88,10 +87,26 @@ impl Track {
         None
     }
 
+    /// Create new Track from existing Track that has been renamed.
+    pub fn renamed_track(&self, path: PathBuf, name: String) -> Track {
+        Track {
+            name,
+            extension: self.format.to_string(),
+            format: self.format.clone(),
+            root: self.root.clone(),
+            path,
+            number: self.number,
+            tags_updated: self.tags_updated,
+            renamed: self.renamed,
+            printed: self.printed,
+        }
+    }
+
     /// Print track if it has not been already.
-    pub fn show(&mut self, number: usize, total_tracks: usize) {
+    pub fn show(&mut self, total_tracks: usize) {
         if !self.printed {
-            println!("{number}/{total_tracks}:");
+            let index_width: usize = total_tracks.to_string().chars().count();
+            println!("{:>width$}/{}:", self.number, total_tracks, width = index_width);
             self.printed = true
         }
     }
@@ -152,6 +167,7 @@ impl Track {
             format: FileFormat::Aif,
             root: self.root.clone(),
             path: output_path,
+            number: self.number,
             tags_updated: self.tags_updated,
             renamed: self.renamed,
             printed: self.printed,
