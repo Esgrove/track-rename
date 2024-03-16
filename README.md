@@ -5,6 +5,9 @@ Originally written in Python,
 and then re-written in Rust,
 which is now the primary version.
 
+Formats artist and title tags, and renames filenames to match tags.
+If tag data is missing, will try to extract artist and title from the filename.
+
 ## Rust version
 
 Only supports ID3 tags (mp3, aif, wav) currently.
@@ -15,6 +18,9 @@ Only supports ID3 tags (mp3, aif, wav) currently.
 ```
 
 The convert option requires [ffmpeg](https://ffmpeg.org/) to be available in path.
+
+See the [test data](./src/formatter_tests.rs) for formatting examples.
+The formatting rules and functions are specified in [src/formatter.rs](./src/formatter.rs).
 
 ### Usage
 
