@@ -137,7 +137,6 @@ impl Renamer {
             if self
                 .user_config
                 .exclude
-                .files
                 .iter()
                 .any(|excluded_file| excluded_file == track)
             {

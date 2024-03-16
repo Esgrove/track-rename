@@ -117,13 +117,12 @@ pub fn rename_track(path: &Path, new_path: &Path, test_mode: bool) -> anyhow::Re
 
 /// Write a txt log file for failed tracks to current working directory.
 pub fn write_log_for_failed_files(paths: &[String]) -> anyhow::Result<()> {
-    let filepath =
-        dunce::canonicalize("track-rename-failed.txt").context("Failed to get absolute path for output file")?;
-    println!("Logging failed files to: {}", filepath.display());
+    let filepath = Path::new("track-rename-failed.txt");
     let mut file = File::create(filepath).context("Failed to create output file")?;
     for path in paths.iter() {
         writeln!(file, "{}", path)?;
     }
+    println!("Logged failed files to: {}", dunce::canonicalize(filepath)?.display());
     Ok(())
 }
 

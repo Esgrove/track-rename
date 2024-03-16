@@ -5,19 +5,15 @@ use colored::Colorize;
 use dirs::home_dir;
 use serde::Deserialize;
 
+use crate::utils;
+
 #[derive(Debug, Default, Deserialize)]
 pub struct UserConfig {
     /// Filenames to ignore
-    pub exclude: FileExclusionList,
+    pub exclude: Vec<String>,
     #[serde(default)]
     /// Convert files that could not be read to AIFF
     pub convert_failed: bool,
-}
-
-#[derive(Debug, Default, Deserialize)]
-pub struct FileExclusionList {
-    /// List of filenames to ignore
-    pub files: Vec<String>,
 }
 
 pub fn get_user_config() -> UserConfig {
@@ -43,30 +39,17 @@ fn user_config_file_path() -> anyhow::Result<PathBuf> {
     }
 }
 
-impl fmt::Display for FileExclusionList {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let files_formatted: String = self
-            .files
-            .iter()
-            .map(|file| format!("    {}", file))
-            .collect::<Vec<String>>()
-            .join("\n");
-        write!(f, "Excluded Files:\n{}", files_formatted)
-    }
-}
-
 impl fmt::Display for UserConfig {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let excluded_files: String = self
+            .exclude
+            .iter()
+            .map(|file| format!("    {}", file.yellow()))
+            .collect::<Vec<String>>()
+            .join("\n");
+
         writeln!(f, "{}", "UserConfig:".bold())?;
-        writeln!(
-            f,
-            "Convert failed: {}",
-            if self.convert_failed {
-                "true".green()
-            } else {
-                "false".yellow()
-            }
-        )?;
-        writeln!(f, "{}", self.exclude)
+        writeln!(f, "  convert_failed: {}", utils::colorize_bool(self.convert_failed))?;
+        writeln!(f, "  exclude:\n{}", excluded_files)
     }
 }

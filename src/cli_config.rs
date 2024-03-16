@@ -58,7 +58,7 @@ impl fmt::Display for CliConfig {
         if let serde_json::Value::Object(map) = members {
             for (key, value) in map {
                 let bool_value = value.as_bool().expect("Expected a boolean value");
-                writeln!(f, "    {}: {}", key, utils::colorize_bool(bool_value))?;
+                writeln!(f, "  {}: {}", key, utils::colorize_bool(bool_value))?;
             }
         }
         Ok(())
