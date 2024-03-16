@@ -2,6 +2,7 @@ mod cli_config;
 mod file_format;
 mod formatter;
 mod renamer;
+mod statistics;
 mod track;
 mod user_config;
 mod utils;
@@ -22,6 +23,10 @@ use crate::renamer::Renamer;
 pub struct RenamerArgs {
     /// Optional input directory or audio file to format
     path: Option<String>,
+
+    /// Convert failed files to AIFF
+    #[arg(short, long)]
+    convert: bool,
 
     /// Enable debug prints
     #[arg(short, long)]

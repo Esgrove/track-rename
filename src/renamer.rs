@@ -5,30 +5,26 @@ use std::string::String;
 
 use anyhow::{Context, Result};
 use colored::Colorize;
-use id3::TagLike;
+use id3::{Tag, TagLike};
+use unicode_normalization::UnicodeNormalization;
 use walkdir::WalkDir;
 
 use crate::cli_config::CliConfig;
+use crate::statistics::Statistics;
 use crate::track::Track;
 use crate::user_config::{get_user_config, UserConfig};
 use crate::{formatter, utils, RenamerArgs};
 
 /// Audio track tag and filename formatting.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Renamer {
     root: PathBuf,
     config: CliConfig,
     user_config: UserConfig,
-    file_list: Vec<Track>,
+    tracks: Vec<Track>,
+    //duplicate_tracks: HashMap<String, Vec<Track>>,
     total_tracks: usize,
-    num_tags: usize,
-    num_tags_fixed: usize,
-    num_to_rename: usize,
-    num_renamed: usize,
-    num_to_remove: usize,
-    num_removed: usize,
-    num_duplicates: usize,
-    num_failed: usize,
+    stats: Statistics,
 }
 
 impl Renamer {
@@ -38,16 +34,7 @@ impl Renamer {
             root: path,
             config: CliConfig::from_args(args),
             user_config: get_user_config(),
-            file_list: Vec::new(),
-            total_tracks: 0,
-            num_tags: 0,
-            num_tags_fixed: 0,
-            num_to_rename: 0,
-            num_renamed: 0,
-            num_to_remove: 0,
-            num_removed: 0,
-            num_duplicates: 0,
-            num_failed: 0,
+            ..Default::default()
         }
     }
 
@@ -57,57 +44,46 @@ impl Renamer {
         Renamer {
             root: path,
             config,
-            user_config: UserConfig::default(),
-            file_list: Vec::new(),
-            total_tracks: 0,
-            num_tags: 0,
-            num_tags_fixed: 0,
-            num_to_rename: 0,
-            num_renamed: 0,
-            num_to_remove: 0,
-            num_removed: 0,
-            num_duplicates: 0,
-            num_failed: 0,
+            ..Default::default()
         }
     }
 
     /// Gather and process supported audio files.
     pub fn run(&mut self) -> Result<()> {
         if self.config.debug {
-            println!("{:?}", self.config);
-            println!("{:?}", self.user_config);
+            println!("{}", self.config);
+            println!("{}", self.user_config);
         }
         self.gather_files()?;
         self.process_files()?;
-        self.print_stats();
         Ok(())
     }
 
     /// Gather audio files recursively from the root path.
     pub fn gather_files(&mut self) -> Result<()> {
-        let mut file_list: Vec<Track> = Vec::new();
+        let mut track_list: Vec<Track> = Vec::new();
         if self.root.is_file() {
             if let Some(track) = Track::try_from_path(&self.root) {
-                file_list.push(track);
+                track_list.push(track);
             }
         } else {
             println!("Getting audio files from {}", format!("{}", self.root.display()).cyan());
-            file_list = self.get_tracks_from_root_directory();
+            track_list = self.get_tracks_from_root_directory();
         }
-        if file_list.is_empty() {
+        if track_list.is_empty() {
             anyhow::bail!("no supported audio files found");
         }
 
-        self.total_tracks = file_list.len();
+        self.total_tracks = track_list.len();
         if self.config.sort_files {
-            file_list.sort();
+            track_list.sort();
         }
 
-        self.file_list = file_list;
+        self.tracks = track_list;
         if self.config.verbose {
-            if self.file_list.len() < 100 {
-                let index_width: usize = self.file_list.len().to_string().chars().count();
-                for (number, track) in self.file_list.iter().enumerate() {
+            if self.tracks.len() < 100 {
+                let index_width: usize = self.tracks.len().to_string().chars().count();
+                for (number, track) in self.tracks.iter().enumerate() {
                     println!("{:>width$}: {}", number + 1, track, width = index_width);
                 }
             }
@@ -132,6 +108,8 @@ impl Renamer {
         file_list
     }
 
+    //pub fn detect_duplicates(&mut self) {}
+
     /// Format all tracks.
     pub fn process_files(&mut self) -> Result<()> {
         println!("{}", format!("Processing {} tracks...", self.total_tracks).bold());
@@ -140,7 +118,7 @@ impl Renamer {
         }
         let mut failed_files: Vec<String> = Vec::new();
         let mut current_path = self.root.clone();
-        for (number, track) in self.file_list.iter_mut().enumerate() {
+        for (number, track) in self.tracks.iter_mut().enumerate() {
             if !self.config.sort_files {
                 // Print current directory when iterating in directory order
                 if current_path != track.root {
@@ -185,18 +163,18 @@ impl Renamer {
             let mut tags = match utils::read_tags(track) {
                 Some(tag) => tag,
                 None => {
-                    self.num_failed += 1;
+                    self.stats.num_failed += 1;
                     if self.config.log_failures {
                         failed_files.push(utils::path_to_string(&track.path));
                     }
                     continue;
                 }
             };
-            let (artist, title, current_tags) = utils::parse_artist_and_title(track, &tags);
+            let (artist, title, current_tags) = Self::parse_artist_and_title(track, &tags);
             let (formatted_artist, formatted_title) = formatter::format_tags(&artist, &title);
             let formatted_tags = format!("{} - {}", formatted_artist, formatted_title);
             if current_tags != formatted_tags {
-                self.num_tags += 1;
+                self.stats.num_tags += 1;
                 track.show(number + 1, self.total_tracks);
                 println!("{}", "Fix tags:".blue().bold());
                 utils::show_diff(&current_tags, &formatted_tags);
@@ -207,7 +185,7 @@ impl Renamer {
                         eprintln!("{}", format!("Failed to write tags: {}", error).red());
                     }
                     track.tags_updated = true;
-                    self.num_tags_fixed += 1;
+                    self.stats.num_tags_fixed += 1;
                 }
                 utils::print_divider(&formatted_tags);
             }
@@ -244,7 +222,7 @@ impl Renamer {
                         track.show(number + 1, self.total_tracks);
                         println!("{}", "Rename file:".yellow().bold());
                         utils::show_diff(&track.filename(), &new_file_name);
-                        self.num_to_rename += 1;
+                        self.stats.num_to_rename += 1;
                         if !self.config.print_only && (self.config.force || utils::confirm()) {
                             if capitalization_change_only {
                                 let temp_file = new_path.with_extension(format!("{}.{}", track.format, "tmp"));
@@ -256,7 +234,7 @@ impl Renamer {
                             if self.config.test_mode && new_path.exists() {
                                 fs::remove_file(new_path).context("Failed to remove renamed file")?;
                             }
-                            self.num_renamed += 1;
+                            self.stats.num_renamed += 1;
                         }
                         utils::print_divider(&new_file_name);
                     }
@@ -267,15 +245,17 @@ impl Renamer {
                     println!("Old: {}", original_path_string);
                     println!("New: {}", new_path_string);
                     utils::print_divider(&new_file_name);
-                    self.num_duplicates += 1;
+                    self.stats.num_duplicates += 1;
                 }
             }
 
             // TODO: handle duplicates and same track in different file format
         }
 
+        println!("{}", "Finished".green());
+        println!("{}", self.stats);
+
         if self.config.log_failures && !failed_files.is_empty() {
-            println!("Logging failed filepaths");
             utils::write_log_for_failed_files(&failed_files)?;
         }
 
@@ -286,7 +266,7 @@ impl Renamer {
     fn print_extension_counts(&self) {
         let mut file_format_counts: HashMap<String, usize> = HashMap::new();
 
-        for track in &self.file_list {
+        for track in &self.tracks {
             *file_format_counts.entry(track.format.to_string()).or_insert(0) += 1;
         }
 
@@ -302,20 +282,44 @@ impl Renamer {
         }
     }
 
-    /// Print number of changes made.
-    fn print_stats(&self) {
-        println!("{}", "Finished".green());
-        println!("Fix tags:   {} / {}", self.num_tags_fixed, self.num_tags);
-        println!("Renamed:    {} / {}", self.num_renamed, self.num_to_rename);
-        if self.num_to_remove > 0 {
-            println!("Deleted:    {} / {}", self.num_removed, self.num_to_remove);
+    /// Try to read artist and title from tags.
+    /// Fallback to parsing them from filename if tags are empty.
+    fn parse_artist_and_title(track: &Track, tag: &Tag) -> (String, String, String) {
+        let mut artist = String::new();
+        let mut title = String::new();
+        let mut current_tags = " - ".to_string();
+
+        match (tag.artist(), tag.title()) {
+            (Some(a), Some(t)) => {
+                artist = a.nfc().collect::<String>();
+                title = t.nfc().collect::<String>();
+                current_tags = format!("{} - {}", artist, title);
+            }
+            (None, None) => {
+                eprintln!("{}", format!("Missing tags: {}", track.path.display()).yellow());
+                if let Some((a, t)) = utils::get_tags_from_filename(&track.name) {
+                    artist = a;
+                    title = t;
+                }
+            }
+            (None, Some(t)) => {
+                eprintln!("{}", format!("Missing artist tag: {}", track.path.display()).yellow());
+                if let Some((a, _)) = utils::get_tags_from_filename(&track.name) {
+                    artist = a;
+                }
+                title = t.nfc().collect::<String>();
+                current_tags = format!(" - {}", title);
+            }
+            (Some(a), None) => {
+                eprintln!("{}", format!("Missing title tag: {}", track.path.display()).yellow());
+                artist = a.nfc().collect::<String>();
+                if let Some((_, t)) = utils::get_tags_from_filename(&track.name) {
+                    title = t;
+                }
+                current_tags = format!("{} - ", artist);
+            }
         }
-        if self.num_duplicates > 0 {
-            println!("Duplicate:  {}", self.num_duplicates);
-        }
-        if self.num_failed > 0 {
-            println!("Failed:     {}", self.num_failed);
-        }
+        (artist, title, current_tags)
     }
 }
 

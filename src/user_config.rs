@@ -9,6 +9,9 @@ use serde::Deserialize;
 pub struct UserConfig {
     /// Filenames to ignore
     pub exclude: FileExclusionList,
+    #[serde(default)]
+    /// Convert files that could not be read to AIFF
+    pub convert_failed: bool,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -54,7 +57,8 @@ impl fmt::Display for FileExclusionList {
 
 impl fmt::Display for UserConfig {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
+        writeln!(f, "{}", "UserConfig:".bold())?;
+        writeln!(
             f,
             "Convert failed: {}",
             if self.convert_failed {
@@ -63,6 +67,6 @@ impl fmt::Display for UserConfig {
                 "false".yellow()
             }
         )?;
-        write!(f, "{}", self.exclude)
+        writeln!(f, "{}", self.exclude)
     }
 }

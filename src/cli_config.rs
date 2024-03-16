@@ -1,7 +1,12 @@
-use crate::RenamerArgs;
+use std::fmt;
+
+use colored::Colorize;
+use serde::{Deserialize, Serialize};
+
+use crate::{utils, RenamerArgs};
 
 /// Renamer CLI settings.
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 pub struct CliConfig {
     pub force: bool,
     pub rename_files: bool,
@@ -12,6 +17,7 @@ pub struct CliConfig {
     pub debug: bool,
     pub test_mode: bool,
     pub log_failures: bool,
+    pub convert_failed: bool,
 }
 
 impl CliConfig {
@@ -27,6 +33,7 @@ impl CliConfig {
             debug: args.debug,
             test_mode: args.test,
             log_failures: args.log,
+            convert_failed: args.convert,
         }
     }
 
@@ -36,13 +43,24 @@ impl CliConfig {
         CliConfig {
             force: true,
             rename_files: true,
-            sort_files: false,
-            print_only: false,
-            tags_only: false,
-            verbose: false,
-            debug: false,
             test_mode: true,
-            log_failures: false,
+            ..Default::default()
         }
+    }
+}
+
+impl fmt::Display for CliConfig {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Serialize the struct to a serde_json::Value in place of reflection
+        // to automatically handle each member variable.
+        writeln!(f, "{}", "CliConfig:".bold())?;
+        let members = serde_json::to_value(self).expect("Failed to serialize CliConfig");
+        if let serde_json::Value::Object(map) = members {
+            for (key, value) in map {
+                let bool_value = value.as_bool().expect("Expected a boolean value");
+                writeln!(f, "    {}: {}", key, utils::colorize_bool(bool_value))?;
+            }
+        }
+        Ok(())
     }
 }

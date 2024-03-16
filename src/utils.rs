@@ -3,9 +3,10 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::{env, fs, io};
 
-use colored::Colorize;
+use anyhow::Context;
+use colored::{ColoredString, Colorize};
 use difference::{Changeset, Difference};
-use id3::{Error, ErrorKind, Tag, TagLike};
+use id3::{Error, ErrorKind, Tag};
 use unicode_normalization::UnicodeNormalization;
 
 use crate::track::Track;
@@ -64,46 +65,6 @@ pub fn read_tags(track: &Track) -> Option<Tag> {
     }
 }
 
-/// Try to read artist and title from tags.
-/// Fallback to parsing them from filename if tags are empty.
-pub fn parse_artist_and_title(track: &Track, tag: &Tag) -> (String, String, String) {
-    let mut artist = String::new();
-    let mut title = String::new();
-    let mut current_tags = " - ".to_string();
-
-    match (tag.artist(), tag.title()) {
-        (Some(a), Some(t)) => {
-            artist = a.nfc().collect::<String>();
-            title = t.nfc().collect::<String>();
-            current_tags = format!("{} - {}", artist, title);
-        }
-        (None, None) => {
-            eprintln!("{}", format!("Missing tags: {}", track.path.display()).yellow());
-            if let Some((a, t)) = get_tags_from_filename(&track.name) {
-                artist = a;
-                title = t;
-            }
-        }
-        (None, Some(t)) => {
-            eprintln!("{}", format!("Missing artist tag: {}", track.path.display()).yellow());
-            if let Some((a, _)) = get_tags_from_filename(&track.name) {
-                artist = a;
-            }
-            title = t.nfc().collect::<String>();
-            current_tags = format!(" - {}", title);
-        }
-        (Some(a), None) => {
-            eprintln!("{}", format!("Missing title tag: {}", track.path.display()).yellow());
-            artist = a.nfc().collect::<String>();
-            if let Some((_, t)) = get_tags_from_filename(&track.name) {
-                title = t;
-            }
-            current_tags = format!("{} - ", artist);
-        }
-    }
-    (artist, title, current_tags)
-}
-
 /// Print a stacked diff of the changes.
 pub fn show_diff(old: &str, new: &str) {
     let changeset = Changeset::new(old, new, "");
@@ -156,16 +117,28 @@ pub fn rename_track(path: &Path, new_path: &Path, test_mode: bool) -> anyhow::Re
 
 /// Write a txt log file for failed tracks to current working directory.
 pub fn write_log_for_failed_files(paths: &[String]) -> anyhow::Result<()> {
-    let mut file = File::create("track-rename-failed.txt")?;
+    let filepath =
+        dunce::canonicalize("track-rename-failed.txt").context("Failed to get absolute path for output file")?;
+    println!("Logging failed files to: {}", filepath.display());
+    let mut file = File::create(filepath).context("Failed to create output file")?;
     for path in paths.iter() {
         writeln!(file, "{}", path)?;
     }
     Ok(())
 }
 
+/// Format bool value as a coloured string
+pub fn colorize_bool(value: bool) -> ColoredString {
+    if value {
+        "true".green()
+    } else {
+        "false".yellow()
+    }
+}
+
 /// Convert filename to artist and title tags.
 /// Expects filename to be in format 'artist - title'.
-fn get_tags_from_filename(filename: &str) -> Option<(String, String)> {
+pub fn get_tags_from_filename(filename: &str) -> Option<(String, String)> {
     if !filename.contains(" - ") {
         eprintln!(
             "{}",
