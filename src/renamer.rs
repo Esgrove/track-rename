@@ -106,8 +106,9 @@ impl Renamer {
         self.file_list = file_list;
         if self.config.verbose {
             if self.file_list.len() < 100 {
-                for track in &self.file_list {
-                    println!("{}", track);
+                let index_width: usize = self.file_list.len().to_string().chars().count();
+                for (number, track) in self.file_list.iter().enumerate() {
+                    println!("{:>width$}: {}", number + 1, track, width = index_width);
                 }
             }
             self.print_extension_counts();
