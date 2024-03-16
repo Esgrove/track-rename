@@ -263,7 +263,7 @@ impl Renamer {
                 } else if new_path != track.path {
                     // A file with the new name already exists
                     track.show(number + 1, self.total_tracks);
-                    println!("{}", "Duplicate:".red().bold());
+                    println!("{}", "Duplicate:".bright_red().bold());
                     println!("Old: {}", original_path_string);
                     println!("New: {}", new_path_string);
                     utils::print_divider(&new_file_name);
