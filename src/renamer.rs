@@ -223,8 +223,13 @@ impl Renamer {
             };
 
             let new_path = track.path_with_new_name(&new_file_name);
+
+            // Convert paths to strings for additional comparisons.
+            // macOS and Windows paths are case-insensitive by default,
+            // so `is_file()` will ignore differences in capitalization.
             let new_path_string = utils::path_to_string_relative(&new_path);
             let original_path_string = utils::path_to_string_relative(&track.path);
+
             if new_path_string != original_path_string {
                 let mut capitalization_change_only = false;
                 if new_path_string.to_lowercase() == original_path_string.to_lowercase() {
@@ -241,7 +246,7 @@ impl Renamer {
                         self.num_to_rename += 1;
                         if !self.config.print_only && (self.config.force || utils::confirm()) {
                             if capitalization_change_only {
-                                let temp_file = new_path.clone().with_extension(format!("{}.{}", track.format, "tmp"));
+                                let temp_file = new_path.with_extension(format!("{}.{}", track.format, "tmp"));
                                 utils::rename_track(&track.path, &temp_file, self.config.test_mode)?;
                                 utils::rename_track(&temp_file, &new_path, self.config.test_mode)?;
                             } else {

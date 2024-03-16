@@ -142,14 +142,6 @@ pub fn print_divider(text: &str) {
     println!("{}", "-".repeat(text.chars().count()));
 }
 
-pub fn write_log_for_failed_files(paths: &[String]) -> anyhow::Result<()> {
-    let mut file = File::create("track-rename-failed.txt")?;
-    for path in paths.iter() {
-        writeln!(file, "{}", path)?;
-    }
-    Ok(())
-}
-
 /// Rename track from given path to new path.
 pub fn rename_track(path: &Path, new_path: &Path, test_mode: bool) -> anyhow::Result<()> {
     if let Err(error) = fs::rename(path, new_path) {
@@ -158,6 +150,15 @@ pub fn rename_track(path: &Path, new_path: &Path, test_mode: bool) -> anyhow::Re
         if test_mode {
             panic!("{}", message);
         }
+    }
+    Ok(())
+}
+
+/// Write a txt log file for failed tracks to current working directory.
+pub fn write_log_for_failed_files(paths: &[String]) -> anyhow::Result<()> {
+    let mut file = File::create("track-rename-failed.txt")?;
+    for path in paths.iter() {
+        writeln!(file, "{}", path)?;
     }
     Ok(())
 }
