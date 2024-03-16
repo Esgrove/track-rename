@@ -292,6 +292,10 @@ impl Renamer {
         }
 
         println!("{}", "Finished".green());
+        println!("{}", self.stats);
+        if self.config.log_failures && !failed_files.is_empty() {
+            utils::write_log_for_failed_files(&failed_files)?;
+        }
 
         self.duplicate_tracks = processed_files
             .into_iter()
@@ -310,12 +314,6 @@ impl Renamer {
             for track in tracks {
                 println!("  {}", track);
             }
-        }
-
-        println!("{}", self.stats);
-
-        if self.config.log_failures && !failed_files.is_empty() {
-            utils::write_log_for_failed_files(&failed_files)?;
         }
 
         Ok(())
