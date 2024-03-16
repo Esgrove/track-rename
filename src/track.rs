@@ -112,7 +112,7 @@ impl Track {
         let output_path_string = path_to_string_relative(&output_path);
         output_path
             .try_exists()
-            .context(format!("File already exists: {}", output_path_string))?;
+            .context(format!("File already exists: {}", output_path_string).red())?;
 
         let output = Command::new("ffmpeg")
             .args([
@@ -140,11 +140,11 @@ impl Track {
 
         output_path
             .try_exists()
-            .context(format!("Converted file does not exist: {}", output_path_string))?;
+            .context(format!("Converted file does not exist: {}", output_path_string).red())?;
 
-        println!("Conversion successful: {}", output_path_string.green());
+        println!("Conversion successful: {}", output_path_string.cyan());
 
-        trash::delete(&self.path).context("Failed to move mp3 file to trash")?;
+        trash::delete(&self.path).context("Failed to move mp3 file to trash".red())?;
 
         let new_track = Track {
             name: self.name.clone(),
