@@ -192,7 +192,7 @@ impl Renamer {
                     continue;
                 }
             };
-            let (artist, title, current_tags) = utils::parse_artist_and_title(&track, &mut tags);
+            let (artist, title, current_tags) = utils::parse_artist_and_title(track, &tags);
             let (formatted_artist, formatted_title) = formatter::format_tags(&artist, &title);
             let formatted_tags = format!("{} - {}", formatted_artist, formatted_title);
             if current_tags != formatted_tags {

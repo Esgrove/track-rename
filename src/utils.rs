@@ -66,7 +66,7 @@ pub fn read_tags(track: &Track) -> Option<Tag> {
 
 /// Try to read artist and title from tags.
 /// Fallback to parsing them from filename if tags are empty.
-pub fn parse_artist_and_title(track: &&mut Track, tag: &mut Tag) -> (String, String, String) {
+pub fn parse_artist_and_title(track: &Track, tag: &Tag) -> (String, String, String) {
     let mut artist = String::new();
     let mut title = String::new();
     let mut current_tags = " - ".to_string();
