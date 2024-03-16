@@ -2,7 +2,7 @@
 
 # Convert files that can't be read to AIFF.
 # The typical issue is unsupported (old) ID3 tag version format,
-# which will be upgraded by converting the file.
+# which will be fixed by converting the file.
 convert_failed = false
 
 # List of filenames to ignore.

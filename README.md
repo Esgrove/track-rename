@@ -2,7 +2,55 @@
 
 CLI tool for formatting and renaming audio files.
 Originally written in Python,
-and then created a Rust version as well.
+and then re-written in Rust,
+which is now the primary version.
+
+## Rust version
+
+Only supports ID3 tags (mp3, aif, wav) currently.
+
+```shell
+./build.sh
+./install.sh
+```
+
+The convert option requires [ffmpeg](https://ffmpeg.org/) to be available in path.
+
+### Usage
+
+```console
+Usage: trackrename [OPTIONS] [PATH]
+
+Arguments:
+  [PATH]  Optional input directory or audio file to format
+
+Options:
+  -c, --convert    Convert failed files to AIFF
+  -d, --debug      Enable debug prints
+  -f, --force      Do not ask for confirmation
+  -l, --log        Log files that can't be read
+  -p, --print      Only print changes without modifying files
+  -r, --rename     Rename all audio files
+  -s, --sort       Sort audio files by name
+  -t, --tags-only  Only fix tags without renaming files
+      --test       Run in test mode
+  -v, --verbose    Verbose output
+  -h, --help       Print help
+  -V, --version    Print version
+```
+
+### User config
+
+An optional user config can be put under `~/.config/track-rename.toml`.
+It supports specifying track names to exclude, which will be skipped during the processing.
+These can include a file extension or not, and should _not_ contain a path, just the filename.
+See the [track-rename.toml](./track-rename.toml) template for more details and supported options.
+
+### Run tests
+
+```shell
+cargo test
+```
 
 ## Python version
 
@@ -21,7 +69,7 @@ poetry install
 
 ### Usage
 
-Run with poetry script or directly:
+Run with Poetry script or directly:
 
 ```shell
 poetry run rename --help
@@ -50,55 +98,4 @@ See the [test data](./tests/test_data.py) for formatting examples.
 
 ```shell
 poetry run pytest -v --cov=rename tests/
-```
-
-## Rust version
-
-Only supports ID3 tags (mp3, aiff, wav) currently.
-
-```shell
-./build.sh
-./install.sh
-```
-
-### Usage
-
-```console
-Usage: track-rename [OPTIONS] [PATH]
-
-Arguments:
-  [PATH]  Optional input directory or audio file to format
-
-Options:
-  -d, --debug      Enable debug prints
-  -f, --force      Do not ask for confirmation
-  -p, --print      Only print changes
-  -r, --rename     Rename all audio files
-  -s, --sort       Sort audio files by name
-  -t, --tags-only  Only fix tags without renaming
-      --test       Run in test mode
-  -v, --verbose    Verbose output
-  -h, --help       Print help
-  -V, --version    Print version
-```
-
-### User config
-
-Optional user config can be put under `~/.config/track-rename.toml`.
-Supports specifying track names to exclude, which will be skipped during the processing.
-These can include a file extension or not, and should _not_ contain a path, just the filename.
-
-```toml
-[exclude]
-files = [
-    "artist - name without extension",
-    "track.mp3",
-    "another to exclude.aif",
-]
-```
-
-### Run tests
-
-```shell
-cargo test
 ```
