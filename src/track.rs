@@ -1,8 +1,8 @@
 use std::cmp::Ordering;
+use std::fmt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str::FromStr;
-use std::{fmt, fs};
 
 use anyhow::Context;
 use colored::Colorize;
@@ -139,7 +139,7 @@ impl Track {
             .context(format!("Converted file does not exist: {}", relative_path))?;
         println!("Conversion successful: {}", relative_path.green());
 
-        fs::remove_file(&self.path).context("Failed to remove mp3 file")?;
+        trash::delete(&self.path).context("Failed to move mp3 file to trash")?;
 
         let new_track = Track {
             name: self.name.clone(),
