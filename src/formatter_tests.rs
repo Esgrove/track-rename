@@ -273,6 +273,12 @@ static FORMATTING_TEST_DATA: &[FormattingTestData] = &[
         title: "Poison (95 EQ)",
         correct_title: "Poison (95 EQ)",
     },
+    FormattingTestData {
+        artist: "Erica Banks",
+        correct_artist: "Erica Banks",
+        title: "Real Rap B**** (Poppin It) (Clean Intro)",
+        correct_title: "Real Rap B**** (Poppin It) (Clean Intro)",
+    },
 ];
 
 static NESTED_PARENTHESES_TEST_DATA: &[FormattingTestData] = &[
@@ -458,6 +464,12 @@ static FILE_FORMATTING_TEST_DATA: &[FormattingTestData] = &[
         correct_artist: "Mary J Blige",
         title: "Love No Limit (Flipout Acoustic Mix W/Drums)",
         correct_title: "Love No Limit (Flipout Acoustic Mix W-Drums)",
+    },
+    FormattingTestData {
+        artist: "Erica Banks",
+        correct_artist: "Erica Banks",
+        title: "Real Rap B**** (Poppin It) (Clean Intro)",
+        correct_title: "Real Rap B---- (Poppin It) (Clean Intro)",
     },
 ];
 

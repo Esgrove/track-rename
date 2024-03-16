@@ -4,7 +4,7 @@ use lazy_static::lazy_static;
 use regex::{Captures, Regex};
 
 lazy_static! {
-    static ref COMMON_SUBSTITUTES: [(&'static str, &'static str); 27] = [
+    static ref COMMON_SUBSTITUTES: [(&'static str, &'static str); 21] = [
         ("\0", "/"),
         ("`", "'"),
         ("´", "'"),
@@ -20,12 +20,6 @@ lazy_static! {
         ("( ", "("),
         ("...", " "),
         ("..", " "),
-        (" ***", ""),
-        (" **", ""),
-        (" *", ""),
-        ("*** ", ""),
-        ("** ", ""),
-        ("* ", ""),
         (" feat. - ", " feat. "),
         (" feat.-", " feat. "),
         ("o¨", "ö"),
