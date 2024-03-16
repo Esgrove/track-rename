@@ -170,9 +170,10 @@ impl Renamer {
 
             let mut tag_result = utils::read_tags(track);
             if tag_result.is_none() && self.config.convert_failed && track.format == FileFormat::Mp3 {
-                println!("Converting failed file...");
+                println!("{}", "Converting failed file...".cyan());
                 match track.convert_mp3_to_aif() {
                     Ok(aif_track) => {
+                        self.stats.num_converted += 1;
                         *track = aif_track;
                         tag_result = utils::read_tags(track);
                     }

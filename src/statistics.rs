@@ -12,6 +12,7 @@ pub struct Statistics {
     pub num_removed: usize,
     pub num_duplicates: usize,
     pub num_failed: usize,
+    pub num_converted: usize,
 }
 
 impl fmt::Display for Statistics {
@@ -19,6 +20,9 @@ impl fmt::Display for Statistics {
         writeln!(f, "{}", "Statistics:".bold())?;
         writeln!(f, "Fix tags:   {} / {}", self.num_tags_fixed, self.num_tags)?;
         writeln!(f, "Renamed:    {} / {}", self.num_renamed, self.num_to_rename)?;
+        if self.num_converted > 0 {
+            writeln!(f, "Converted:  {}", self.num_converted)?;
+        }
         if self.num_to_remove > 0 {
             writeln!(f, "Deleted:    {} / {}", self.num_removed, self.num_to_remove)?;
         }
