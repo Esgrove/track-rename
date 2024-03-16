@@ -27,7 +27,6 @@ pub struct Track {
 }
 
 impl Track {
-    #![allow(dead_code)]
     /// New Track from given path.
     pub fn new(path: PathBuf) -> anyhow::Result<Track> {
         let extension = path
