@@ -1,8 +1,8 @@
 use std::cmp::Ordering;
-use std::fmt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str::FromStr;
+use std::{fmt, fs};
 
 use anyhow::Context;
 use colored::Colorize;
@@ -105,13 +105,23 @@ impl Track {
         dunce::simplified(&self.root.join(filename)).to_path_buf()
     }
 
+    /// Convert mp3 file to aif using ffmpeg.
+    /// Creates a new Track if conversion was successful.
     pub fn convert_mp3_to_aif(&self) -> anyhow::Result<Track> {
         let output_path = self.path.with_extension("aif");
         let output = Command::new("ffmpeg")
             .args([
-                "-n",
+                "-v",
+                "error",
+                "-n", // never overwrite existing file
                 "-i",
                 path_to_string(&self.path).as_str(),
+                "-map_metadata", // keep metadata
+                "0",
+                "-write_id3v2",
+                "1",
+                "-id3v2_version",
+                "4",
                 path_to_string(&output_path).as_str(),
             ])
             .output()?;
@@ -123,10 +133,13 @@ impl Track {
             );
         }
 
-        println!(
-            "Conversion successful: {}",
-            path_to_string_relative(&output_path).green()
-        );
+        let relative_path = path_to_string_relative(&output_path);
+        output_path
+            .try_exists()
+            .context(format!("Converted file does not exist: {}", relative_path))?;
+        println!("Conversion successful: {}", relative_path.green());
+
+        fs::remove_file(&self.path).context("Failed to remove mp3 file")?;
 
         let new_track = Track {
             name: self.name.clone(),
