@@ -7,6 +7,7 @@ use serde::Deserialize;
 
 use crate::utils;
 
+/// User config options from a config file.
 #[derive(Debug, Default, Deserialize)]
 pub struct UserConfig {
     /// Filenames to ignore
@@ -22,16 +23,15 @@ impl UserConfig {
     }
 }
 
+/// Read and parse user config if it exists.
 fn read_user_config() -> Option<UserConfig> {
-    if let Ok(path) = user_config_file_path() {
-        if let Ok(config_string) = fs::read_to_string(path) {
-            let config: UserConfig = toml::from_str(&config_string).ok()?;
-            return Some(config);
-        }
-    }
-    None
+    user_config_file_path()
+        .ok()
+        .and_then(|path| fs::read_to_string(path).ok())
+        .and_then(|config_string| toml::from_str(&config_string).ok())
 }
 
+/// Get user config file if it exists.
 fn user_config_file_path() -> anyhow::Result<PathBuf> {
     let home_dir = home_dir().context("Failed to find home directory")?;
     let config_path = home_dir.join(".config/track-rename.toml");

@@ -108,9 +108,10 @@ pub fn print_divider(text: &str) {
 pub fn rename_track(path: &Path, new_path: &Path, test_mode: bool) -> anyhow::Result<()> {
     if let Err(error) = fs::rename(path, new_path) {
         let message = format!("Failed to rename file: {}", error);
-        eprintln!("{}", message.red());
         if test_mode {
             panic!("{}", message);
+        } else {
+            eprintln!("{}", message.red());
         }
     }
     Ok(())

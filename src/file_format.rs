@@ -26,11 +26,14 @@ impl FromStr for FileFormat {
 
 impl Display for FileFormat {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let str = match self {
-            FileFormat::Mp3 => "mp3".to_string(),
-            FileFormat::Aif => "aif".to_string(),
-        };
-        write!(f, "{}", str)
+        write!(
+            f,
+            "{}",
+            match self {
+                FileFormat::Mp3 => "mp3",
+                FileFormat::Aif => "aif",
+            }
+        )
     }
 }
 

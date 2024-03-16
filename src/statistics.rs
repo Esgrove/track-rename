@@ -2,6 +2,7 @@ use std::fmt;
 
 use colored::Colorize;
 
+/// Store renaming statistics.
 #[derive(Debug, Default)]
 pub struct Statistics {
     pub num_tags: usize,

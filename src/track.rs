@@ -12,6 +12,7 @@ use crate::file_format::FileFormat;
 use crate::utils;
 use crate::utils::{path_to_string, path_to_string_relative};
 
+/// Represents one audio file.
 #[derive(Debug, Default, Clone)]
 pub struct Track {
     pub name: String,
@@ -87,6 +88,16 @@ impl Track {
         None
     }
 
+    /// Get the original file name including the file extension.
+    pub fn filename(&self) -> String {
+        format!("{}.{}", self.name, self.extension)
+    }
+
+    /// Return full path with new filename.
+    pub fn path_with_new_name(&self, filename: &str) -> PathBuf {
+        dunce::simplified(&self.root.join(filename)).to_path_buf()
+    }
+
     /// Create new Track from existing Track that has been renamed.
     pub fn renamed_track(&self, path: PathBuf, name: String) -> Track {
         Track {
@@ -111,17 +122,8 @@ impl Track {
         }
     }
 
-    /// Get the original file name.
-    pub fn filename(&self) -> String {
-        format!("{}.{}", self.name, self.extension)
-    }
-
-    pub fn path_with_new_name(&self, filename: &str) -> PathBuf {
-        dunce::simplified(&self.root.join(filename)).to_path_buf()
-    }
-
     /// Convert mp3 file to aif using ffmpeg.
-    /// Creates a new Track if conversion was successful.
+    /// Returns an updated Track if conversion was successful.
     pub fn convert_mp3_to_aif(&self) -> anyhow::Result<Track> {
         let output_path = self.path.with_extension("aif");
         let output_path_string = path_to_string_relative(&output_path);
