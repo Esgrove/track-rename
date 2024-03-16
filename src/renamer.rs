@@ -23,7 +23,7 @@ pub struct Renamer {
     config: CliConfig,
     user_config: UserConfig,
     tracks: Vec<Track>,
-    duplicate_tracks: HashMap<String, Vec<Track>>,
+    duplicate_tracks: Vec<(String, Vec<Track>)>,
     total_tracks: usize,
     stats: Statistics,
 }
@@ -291,11 +291,14 @@ impl Renamer {
             processed_files.entry(new_name).or_default().push(track.clone());
         }
 
+        println!("{}", "Finished".green());
+
         self.duplicate_tracks = processed_files
             .into_iter()
             .filter(|(_, tracks)| tracks.len() > 1)
             .collect();
 
+        self.duplicate_tracks.sort();
         println!(
             "{}",
             format!("Duplicates ({}):", self.duplicate_tracks.len())
@@ -303,13 +306,12 @@ impl Renamer {
                 .bold()
         );
         for (name, tracks) in self.duplicate_tracks.iter() {
-            println!("{}:", name);
+            println!("{}", name.yellow());
             for track in tracks {
                 println!("  {}", track);
             }
         }
 
-        println!("{}", "Finished".green());
         println!("{}", self.stats);
 
         if self.config.log_failures && !failed_files.is_empty() {
