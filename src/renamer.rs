@@ -305,6 +305,7 @@ impl Renamer {
         }
 
         Self::print_all_duplicates(processed_files);
+
         Ok(())
     }
 
@@ -374,6 +375,10 @@ impl Renamer {
             .into_iter()
             .filter(|(_, tracks)| tracks.len() > 1)
             .collect();
+
+        if duplicate_tracks.is_empty() {
+            return;
+        }
 
         duplicate_tracks.sort();
 
