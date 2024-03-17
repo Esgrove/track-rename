@@ -291,6 +291,12 @@ static FORMATTING_TEST_DATA: &[FormattingTestData] = &[
         title: "The Word Is Love (Silk's Original Mix Of Life)",
         correct_title: "The Word Is Love (Silk's Original Mix Of Life)",
     },
+    FormattingTestData {
+        artist: "Dr. Dre feat. The Lady Of Rage & The Dogg Pound",
+        correct_artist: "Dr. Dre feat. The Lady Of Rage & The Dogg Pound",
+        title: "Puffin' On Blunts And Drankin' Tanqueray (12 Version) (Dirty)",
+        correct_title: "Puffin' On Blunts And Drankin' Tanqueray (12'' Version) (Dirty)",
+    },
 ];
 
 static NESTED_PARENTHESES_TEST_DATA: &[FormattingTestData] = &[
