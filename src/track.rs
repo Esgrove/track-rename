@@ -22,8 +22,7 @@ pub struct Track {
     pub path: PathBuf,
     pub number: usize,
     pub tags_updated: bool,
-    pub renamed: bool,
-    pub printed: bool,
+    printed: bool,
 }
 
 impl Track {
@@ -107,7 +106,6 @@ impl Track {
             path,
             number: self.number,
             tags_updated: self.tags_updated,
-            renamed: self.renamed,
             printed: self.printed,
         }
     }
@@ -170,7 +168,6 @@ impl Track {
             path: output_path,
             number: self.number,
             tags_updated: self.tags_updated,
-            renamed: self.renamed,
             printed: self.printed,
         };
 

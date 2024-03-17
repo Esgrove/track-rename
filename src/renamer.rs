@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use std::string::String;
+use std::time::Instant;
 
 use anyhow::{Context, Result};
 use colored::Colorize;
@@ -23,7 +24,6 @@ pub struct Renamer {
     config: CliConfig,
     user_config: UserConfig,
     tracks: Vec<Track>,
-    duplicate_tracks: Vec<(String, Vec<Track>)>,
     total_tracks: usize,
     stats: Statistics,
 }
@@ -64,12 +64,13 @@ impl Renamer {
         }
 
         self.gather_files()?;
-        self.process_files()?;
+        self.process_tracks()?;
         Ok(())
     }
 
     /// Gather audio files recursively from the root path.
     pub fn gather_files(&mut self) -> Result<()> {
+        let start_instant = Instant::now();
         let track_list: Vec<Track> = if self.root.is_file() {
             if let Some(mut track) = Track::try_from_path(&self.root) {
                 track.number = 1;
@@ -97,7 +98,10 @@ impl Renamer {
             }
             self.print_extension_counts();
         }
-
+        if self.config.debug {
+            let duration = start_instant.elapsed();
+            println!("Time taken: {:.3}s", duration.as_secs_f64());
+        }
         Ok(())
     }
 
@@ -128,14 +132,13 @@ impl Renamer {
         track_list
     }
 
-    //pub fn detect_duplicates(&mut self) {}
-
-    /// Format all tracks.
-    pub fn process_files(&mut self) -> Result<()> {
+    // Format tags and rename files if needed.
+    pub fn process_tracks(&mut self) -> Result<()> {
         println!("{}", format!("Processing {} tracks...", self.total_tracks).bold());
         if self.config.print_only {
             println!("{}", "Running in print-only mode".yellow().bold())
         }
+        let start_instant = Instant::now();
         let mut failed_files: Vec<String> = Vec::new();
         let mut processed_files: HashMap<String, Vec<Track>> = HashMap::new();
         let mut current_path = self.root.clone();
@@ -226,96 +229,82 @@ impl Renamer {
                 utils::print_divider(&formatted_tags);
             }
 
-            let new_name = if file_artist.is_empty() {
+            let formatted_name = if file_artist.is_empty() {
                 file_title
             } else {
                 format!("{} - {}", file_artist, file_title)
             };
 
             if self.config.tags_only {
-                processed_files.entry(new_name).or_default().push(track.clone());
+                processed_files.entry(formatted_name).or_default().push(track.clone());
                 continue;
             }
 
-            let new_file_name = format!("{}.{}", new_name, track.format);
-            let new_path = track.path_with_new_name(&new_file_name);
+            let formatted_file_name = format!("{}.{}", formatted_name, track.format);
+            let formatted_path = track.path_with_new_name(&formatted_file_name);
 
             // Convert paths to strings for additional comparisons.
             // macOS and Windows paths are case-insensitive by default,
             // so `is_file()` will ignore differences in capitalization.
-            let new_path_string = utils::path_to_string_relative(&new_path);
+            let formatted_path_string = utils::path_to_string_relative(&formatted_path);
             let original_path_string = utils::path_to_string_relative(&track.path);
 
-            if new_path_string != original_path_string {
+            if formatted_path_string != original_path_string {
                 let mut capitalization_change_only = false;
-                if new_path_string.to_lowercase() == original_path_string.to_lowercase() {
+                if formatted_path_string.to_lowercase() == original_path_string.to_lowercase() {
                     // File path contains only capitalization changes:
                     // Need to use a temp file to workaround case-insensitive file systems.
                     capitalization_change_only = true;
                 }
-                if !new_path.is_file() || capitalization_change_only {
+                if !formatted_path.is_file() || capitalization_change_only {
                     // Rename files if the flag was given or if tags were not changed
                     if self.config.rename_files || !track.tags_updated {
                         track.show(self.total_tracks);
                         println!("{}", "Rename file:".yellow().bold());
-                        utils::show_diff(&track.filename(), &new_file_name);
+                        utils::show_diff(&track.filename(), &formatted_file_name);
                         self.stats.num_to_rename += 1;
                         if !self.config.print_only && (self.config.force || utils::confirm()) {
                             if capitalization_change_only {
-                                let temp_file = new_path.with_extension(format!("{}.{}", track.format, "tmp"));
+                                let temp_file = formatted_path.with_extension(format!("{}.{}", track.format, "tmp"));
                                 utils::rename_track(&track.path, &temp_file, self.config.test_mode)?;
-                                utils::rename_track(&temp_file, &new_path, self.config.test_mode)?;
+                                utils::rename_track(&temp_file, &formatted_path, self.config.test_mode)?;
                             } else {
-                                utils::rename_track(&track.path, &new_path, self.config.test_mode)?;
+                                utils::rename_track(&track.path, &formatted_path, self.config.test_mode)?;
                             }
-                            if self.config.test_mode && new_path.exists() {
-                                fs::remove_file(new_path).context("Failed to remove renamed file")?;
+                            if self.config.test_mode && formatted_path.exists() {
+                                fs::remove_file(formatted_path).context("Failed to remove renamed file")?;
                             } else {
-                                *track = track.renamed_track(new_path, new_name.clone());
+                                *track = track.renamed_track(formatted_path, formatted_name.clone());
                             }
                             self.stats.num_renamed += 1;
                         }
-                        utils::print_divider(&new_file_name);
+                        utils::print_divider(&formatted_file_name);
                     }
-                } else if new_path != track.path {
+                } else if formatted_path != track.path {
                     // A file with the new name already exists
                     track.show(self.total_tracks);
                     println!("{}", "Duplicate:".bright_red().bold());
                     println!("Rename:   {}", original_path_string);
-                    println!("Existing: {}", new_path_string);
-                    utils::print_divider(&new_file_name);
+                    println!("Existing: {}", formatted_path_string);
+                    utils::print_divider(&formatted_file_name);
                     self.stats.num_duplicates += 1;
                 }
             }
 
-            processed_files.entry(new_name).or_default().push(track.clone());
+            processed_files.entry(formatted_name).or_default().push(track.clone());
         }
 
         println!("{}", "Finished".green());
+        if self.config.debug {
+            let duration = start_instant.elapsed();
+            println!("Time taken: {:.3}s", duration.as_secs_f64());
+        }
         println!("{}", self.stats);
         if self.config.log_failures && !failed_files.is_empty() {
             utils::write_log_for_failed_files(&failed_files)?;
         }
 
-        self.duplicate_tracks = processed_files
-            .into_iter()
-            .filter(|(_, tracks)| tracks.len() > 1)
-            .collect();
-
-        self.duplicate_tracks.sort();
-        println!(
-            "{}",
-            format!("Duplicates ({}):", self.duplicate_tracks.len())
-                .magenta()
-                .bold()
-        );
-        for (name, tracks) in self.duplicate_tracks.iter() {
-            println!("{}", name.yellow());
-            for track in tracks {
-                println!("  {}", track);
-            }
-        }
-
+        Self::print_all_duplicates(processed_files);
         Ok(())
     }
 
@@ -377,6 +366,27 @@ impl Renamer {
             }
         }
         (artist, title, current_tags)
+    }
+
+    /// Print all paths for duplicate tracks with the same name.
+    fn print_all_duplicates(processed_files: HashMap<String, Vec<Track>>) {
+        let mut duplicate_tracks: Vec<(String, Vec<Track>)> = processed_files
+            .into_iter()
+            .filter(|(_, tracks)| tracks.len() > 1)
+            .collect();
+
+        duplicate_tracks.sort();
+
+        println!(
+            "{}",
+            format!("Duplicates ({}):", duplicate_tracks.len()).magenta().bold()
+        );
+        for (name, tracks) in duplicate_tracks.iter() {
+            println!("{}", name.yellow());
+            for track in tracks {
+                println!("  {}", track);
+            }
+        }
     }
 }
 
@@ -492,14 +502,14 @@ mod tests {
         let temp_dir_path = env::temp_dir().join(temp_dir);
         fs::create_dir_all(&temp_dir_path).expect("Failed to create temp subdir");
 
-        let new_file_name = format!(
+        let test_file_name = format!(
             "{} ({}).{}",
             file_stem.to_string_lossy(),
             random_string,
             extension.to_string_lossy()
         );
 
-        let temp_file_path = temp_dir_path.join(new_file_name);
+        let temp_file_path = temp_dir_path.join(test_file_name);
         Some(temp_file_path)
     }
 }
