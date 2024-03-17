@@ -281,8 +281,8 @@ impl Renamer {
                     // A file with the new name already exists
                     track.show(self.total_tracks);
                     println!("{}", "Duplicate:".bright_red().bold());
-                    println!("Old: {}", original_path_string);
-                    println!("New: {}", new_path_string);
+                    println!("Rename:   {}", original_path_string);
+                    println!("Existing: {}", new_path_string);
                     utils::print_divider(&new_file_name);
                     self.stats.num_duplicates += 1;
                 }
