@@ -107,7 +107,7 @@ lazy_static! {
         (Regex::new(r"\bfeat\.([A-Za-z0-9])").unwrap(), "feat. $1"),
         (Regex::new(r"(?i)\b(dirty!)\b").unwrap(), "(Dirty)"),
         // Removes "Original Mix" with case-insensitivity
-        (Regex::new(r"(?i)\b(original mix)\b").unwrap(), ""),
+        (Regex::new(r"(?i)\b\(original mix\)\b").unwrap(), ""),
         // Removes "DJCity" with case-insensitivity
         (Regex::new(r"(?i)\bdjcity\b").unwrap(), ""),
         (Regex::new(r"(?i)\bintro - clean\b").unwrap(), "Clean Intro"),

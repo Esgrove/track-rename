@@ -279,6 +279,18 @@ static FORMATTING_TEST_DATA: &[FormattingTestData] = &[
         title: "Real Rap B**** (Poppin It) (Clean Intro)",
         correct_title: "Real Rap B**** (Poppin It) (Clean Intro)",
     },
+    FormattingTestData {
+        artist: "Frankie Cutlass",
+        correct_artist: "Frankie Cutlass",
+        title: "Original Mix 1994",
+        correct_title: "Original Mix 1994",
+    },
+    FormattingTestData {
+        artist: "Steve 'Silk' Hurley feat. Sharon Pass",
+        correct_artist: "Steve 'Silk' Hurley feat. Sharon Pass",
+        title: "The Word Is Love (Silk's Original Mix Of Life)",
+        correct_title: "The Word Is Love (Silk's Original Mix Of Life)",
+    },
 ];
 
 static NESTED_PARENTHESES_TEST_DATA: &[FormattingTestData] = &[
