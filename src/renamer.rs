@@ -453,7 +453,8 @@ mod tests {
         });
     }
 
-    /// Generic test function that takes a function or closure with one PathBuf as input argument
+    /// Generic test function that takes a function or closure with one PathBuf as input argument.
+    /// It will create temporary test files and run the test function with them.
     fn run_test_on_files<F: Fn(PathBuf)>(test_dir: &Path, test_func: F) {
         for entry in fs::read_dir(test_dir).expect("Failed to read test directory") {
             let entry = entry.expect("Failed to read entry");
