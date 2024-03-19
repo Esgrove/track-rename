@@ -371,6 +371,8 @@ impl Renamer {
 
     /// Print all paths for duplicate tracks with the same name.
     fn print_all_duplicates(processed_files: HashMap<String, Vec<Track>>) {
+        // Get all tracks with multiple paths for the same name.
+        // Convert to vector so names can be sorted.
         let mut duplicate_tracks: Vec<(String, Vec<Track>)> = processed_files
             .into_iter()
             .filter(|(_, tracks)| tracks.len() > 1)
