@@ -24,7 +24,7 @@ pub struct RenamerArgs {
     /// Optional input directory or audio file to format
     path: Option<String>,
 
-    /// Convert failed files to AIFF
+    /// Convert failed files to AIFF using ffmpeg
     #[arg(short, long)]
     convert: bool,
 
