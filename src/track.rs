@@ -26,7 +26,7 @@ pub struct Track {
 }
 
 impl Track {
-    /// New Track from given path.
+    /// New Track from the given path.
     pub fn new(path: PathBuf) -> anyhow::Result<Track> {
         let extension = path
             .extension()

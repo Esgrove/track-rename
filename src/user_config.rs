@@ -18,26 +18,28 @@ pub struct UserConfig {
 }
 
 impl UserConfig {
+    /// Try to read user config from file if it exists.
+    /// Otherwise, fall back to default config.
     pub fn get_user_config() -> UserConfig {
-        read_user_config().unwrap_or_default()
+        Self::read_user_config().unwrap_or_default()
     }
-}
 
-/// Read and parse user config if it exists.
-fn read_user_config() -> Option<UserConfig> {
-    user_config_file_path()
-        .ok()
-        .and_then(|path| fs::read_to_string(path).ok())
-        .and_then(|config_string| toml::from_str(&config_string).ok())
-}
+    /// Read and parse user config if it exists.
+    fn read_user_config() -> Option<UserConfig> {
+        Self::user_config_file_path()
+            .ok()
+            .and_then(|path| fs::read_to_string(path).ok())
+            .and_then(|config_string| toml::from_str(&config_string).ok())
+    }
 
-/// Get user config file if it exists.
-fn user_config_file_path() -> anyhow::Result<PathBuf> {
-    let home_dir = home_dir().context("Failed to find home directory")?;
-    let config_path = home_dir.join(".config/track-rename.toml");
-    match config_path.exists() {
-        true => Ok(config_path),
-        false => Err(anyhow!("Config file not found: {}", config_path.display())),
+    /// Get user config file if it exists.
+    fn user_config_file_path() -> anyhow::Result<PathBuf> {
+        let home_dir = home_dir().context("Failed to find home directory")?;
+        let config_path = home_dir.join(".config/track-rename.toml");
+        match config_path.exists() {
+            true => Ok(config_path),
+            false => Err(anyhow!("Config file not found: {}", config_path.display())),
+        }
     }
 }
 
