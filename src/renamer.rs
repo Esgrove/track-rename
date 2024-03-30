@@ -137,7 +137,7 @@ impl Renamer {
         println!("{}", format!("Processing {} tracks...", self.total_tracks).bold());
         let dryrun_header = if self.config.print_only {
             println!("{}", "Running in print-only mode".yellow().bold());
-            " (Dryrun)".to_string()
+            " (dryrun)".to_string()
         } else {
             String::new()
         };
