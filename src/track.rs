@@ -12,6 +12,9 @@ use crate::file_format::FileFormat;
 use crate::utils;
 use crate::utils::{path_to_string, path_to_string_relative};
 
+// Other audio file extensions that should trigger a warning message,
+const OTHER_FILE_EXTENSIONS: [&str; 3] = ["wav", "flac", "m4a"];
+
 /// Represents one audio file.
 #[derive(Debug, Default, Clone)]
 pub struct Track {
@@ -48,7 +51,6 @@ impl Track {
         let root = path.parent().context("Failed to get file root")?.to_owned();
         // Rebuild full path with desired unicode handling
         let path = dunce::simplified(root.join(format!("{}.{}", name, extension)).as_path()).to_path_buf();
-
         Ok(Track {
             name,
             extension,
@@ -74,13 +76,19 @@ impl Track {
                     );
                 }
             },
+            // Not a supported file format
             Err(_) => {
-                if extension == "wav" {
+                if OTHER_FILE_EXTENSIONS.contains(&extension.to_lowercase().as_str()) {
                     println!(
                         "{}",
-                        format!("Wav should be converted to aif: {}", path.display()).yellow()
+                        format!(
+                            "{} file should be converted to a supported format: {}",
+                            extension.to_uppercase(),
+                            path.display()
+                        )
+                        .bright_yellow()
                     );
-                }
+                };
             }
         }
         None
