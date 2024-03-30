@@ -142,7 +142,7 @@ impl Renamer {
             String::new()
         };
         let fix_tags_header = format!("Fix tags{dryrun_header}:").blue().bold();
-        let rename_file_header = format!("Rename file{dryrun_header}:").yellow().bold();
+        let rename_file_header = format!("Rename file{dryrun_header}:").cyan().bold();
         let start_instant = Instant::now();
         let mut failed_files: Vec<String> = Vec::new();
         let mut processed_files: HashMap<String, Vec<Track>> = HashMap::new();
