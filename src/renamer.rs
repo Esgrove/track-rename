@@ -135,9 +135,14 @@ impl Renamer {
     // Format tags and rename files if needed.
     pub fn process_tracks(&mut self) -> Result<()> {
         println!("{}", format!("Processing {} tracks...", self.total_tracks).bold());
-        if self.config.print_only {
-            println!("{}", "Running in print-only mode".yellow().bold())
-        }
+        let dryrun_header = if self.config.print_only {
+            println!("{}", "Running in print-only mode".yellow().bold());
+            " (Dryrun)".to_string()
+        } else {
+            String::new()
+        };
+        let fix_tags_header = format!("Fix tags{dryrun_header}:").blue().bold();
+        let rename_file_header = format!("Rename file{dryrun_header}:").yellow().bold();
         let start_instant = Instant::now();
         let mut failed_files: Vec<String> = Vec::new();
         let mut processed_files: HashMap<String, Vec<Track>> = HashMap::new();
@@ -185,7 +190,7 @@ impl Renamer {
 
             let mut tag_result = utils::read_tags(track);
             if tag_result.is_none() && self.config.convert_failed && track.format == FileFormat::Mp3 {
-                println!("Converting mp3 file...");
+                println!("Converting MP3 to AIF...");
                 match track.convert_mp3_to_aif() {
                     Ok(aif_track) => {
                         self.stats.num_converted += 1;
@@ -215,7 +220,7 @@ impl Renamer {
             if current_tags != formatted_tags {
                 self.stats.num_tags += 1;
                 track.show(self.total_tracks);
-                println!("{}", "Fix tags:".blue().bold());
+                println!("{}", fix_tags_header);
                 utils::show_diff(&current_tags, &formatted_tags);
                 if !self.config.print_only && (self.config.force || utils::confirm()) {
                     tags.set_artist(formatted_artist);
@@ -260,7 +265,7 @@ impl Renamer {
                     // Rename files if the flag was given or if tags were not changed
                     if self.config.rename_files || !track.tags_updated {
                         track.show(self.total_tracks);
-                        println!("{}", "Rename file:".yellow().bold());
+                        println!("{}", rename_file_header);
                         utils::show_diff(&track.filename(), &formatted_file_name);
                         self.stats.num_to_rename += 1;
                         if !self.config.print_only && (self.config.force || utils::confirm()) {
