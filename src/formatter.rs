@@ -72,7 +72,7 @@ lazy_static! {
         // Collapses multiple spaces into a single space
         (Regex::new(r"\s+").unwrap(), " "),
     ];
-    static ref REGEX_NAME_SUBSTITUTES: [(Regex, &'static str); 40] = [
+    static ref REGEX_NAME_SUBSTITUTES: [(Regex, &'static str); 41] = [
         // Matches "12 Inch" or "12Inch" with optional space, case-insensitive
         (Regex::new(r"(?i)\b12\s?inch\b").unwrap(), "12''"),
         // Matches "12in" or "12 in" with optional space, case-insensitive
@@ -105,6 +105,8 @@ lazy_static! {
         (Regex::new(r"(?i)\bCant\b").unwrap(), "Can't"),
         // Fix spelling for "Won't"
         (Regex::new(r"(?i)\Wont\b").unwrap(), "Won't"),
+        // Fix spelling for "Don't"
+        (Regex::new(r"(?i)\Dont\b").unwrap(), "Don't"),
         // Fix capitalization for "DJ"
         (Regex::new(r"(?i)\bDj\b").unwrap(), "DJ"),
         // Ensure one whitespace after "feat."
