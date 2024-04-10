@@ -104,9 +104,9 @@ lazy_static! {
         // Fix spelling for "Can't"
         (Regex::new(r"(?i)\bCant\b").unwrap(), "Can't"),
         // Fix spelling for "Won't"
-        (Regex::new(r"(?i)\Wont\b").unwrap(), "Won't"),
+        (Regex::new(r"(?i)\bWont\b").unwrap(), "Won't"),
         // Fix spelling for "Don't"
-        (Regex::new(r"(?i)\Dont\b").unwrap(), "Don't"),
+        (Regex::new(r"(?i)\bDont\b").unwrap(), "Don't"),
         // Fix capitalization for "DJ"
         (Regex::new(r"(?i)\bDj\b").unwrap(), "DJ"),
         // Ensure one whitespace after "feat."
