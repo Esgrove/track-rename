@@ -9,10 +9,10 @@ use colored::Colorize;
 use unicode_normalization::UnicodeNormalization;
 
 use crate::file_format::FileFormat;
-use crate::formatter;
 use crate::tags::Tags;
 use crate::utils;
 use crate::utils::{path_to_string, path_to_string_relative};
+use crate::{formatter, genre};
 
 // Other audio file extensions that should trigger a warning message,
 const OTHER_FILE_EXTENSIONS: [&str; 3] = ["wav", "flac", "m4a"];
@@ -123,7 +123,7 @@ impl Track {
             formatter::format_tags_for_artist_and_title(&tags.current_artist, &tags.current_title);
 
         let formatted_album = formatter::format_album(&tags.current_album, &self.directory);
-        let formatted_genre = formatter::format_genre(&tags.current_genre);
+        let formatted_genre = genre::format_genre(&tags.current_genre);
 
         tags.formatted_artist = formatted_artist;
         tags.formatted_title = formatted_title;

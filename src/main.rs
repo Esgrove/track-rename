@@ -1,6 +1,7 @@
 mod cli_config;
 mod file_format;
 mod formatter;
+mod genre;
 mod renamer;
 mod statistics;
 mod tags;
