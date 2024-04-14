@@ -260,7 +260,7 @@ impl Renamer {
                     if self.config.rename_files || !track.tags_updated {
                         track.show(self.total_tracks);
                         println!("{}", rename_file_header);
-                        utils::show_diff(&track.filename(), &formatted_file_name);
+                        utils::print_stacked_diff(&track.filename(), &formatted_file_name);
                         self.stats.num_to_rename += 1;
                         if !self.config.print_only && (self.config.force || utils::confirm()) {
                             if capitalization_change_only {

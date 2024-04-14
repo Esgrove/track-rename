@@ -66,8 +66,8 @@ pub fn read_tags(track: &Track) -> Option<Tag> {
     }
 }
 
-/// Print a stacked diff of the changes.
-pub fn show_diff(old: &str, new: &str) {
+/// Create a colored diff for given strings
+pub fn color_diff(old: &str, new: &str) -> (String, String) {
     let changeset = Changeset::new(old, new, "");
     let mut old_diff = String::new();
     let mut new_diff = String::new();
@@ -94,7 +94,18 @@ pub fn show_diff(old: &str, new: &str) {
             }
         }
     }
+    (old_diff, new_diff)
+}
 
+/// Print a single line diff of the changes.
+pub fn print_diff(old: &str, new: &str) {
+    let (old_diff, new_diff) = color_diff(old, new);
+    println!("{} -> {}", old_diff, new_diff);
+}
+
+/// Print a stacked diff of the changes.
+pub fn print_stacked_diff(old: &str, new: &str) {
+    let (old_diff, new_diff) = color_diff(old, new);
     println!("{}", old_diff);
     println!("{}", new_diff);
 }

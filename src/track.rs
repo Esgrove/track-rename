@@ -122,16 +122,13 @@ impl Track {
         let (formatted_artist, formatted_title) =
             formatter::format_tags_for_artist_and_title(&tags.current_artist, &tags.current_title);
 
+        let formatted_album = formatter::format_album(&tags.current_album, &self.directory);
+        let formatted_genre = formatter::format_genre(&tags.current_genre);
+
         tags.formatted_artist = formatted_artist;
         tags.formatted_title = formatted_title;
-
-        if tags.current_album.is_empty() && self.directory.to_lowercase().starts_with("djcity") {
-            tags.formatted_album = "DJCity.com".to_string();
-        }
-
-        if tags.current_genre.to_lowercase().eq("other") || tags.current_genre.chars().count() < 3 {
-            tags.formatted_genre = String::new();
-        }
+        tags.formatted_album = formatted_album;
+        tags.formatted_genre = formatted_genre;
 
         self.tags = tags;
     }
