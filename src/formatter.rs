@@ -25,7 +25,7 @@ lazy_static! {
         ("o¨", "ö"),
         ("e¨", "ë"),
         (" ,", ","),
-        ("\u{FFFD}", ""),
+        ("\u{FFFD}", " "),
     ];
     static ref TITLE_SUBSTITUTES: [(&'static str, &'static str); 15] = [
         ("(Original Mix/", "("),
