@@ -191,3 +191,6 @@ target/
 /track-rename
 /track-renamer
 *.exe
+
+# Logs
+*.txt

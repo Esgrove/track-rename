@@ -147,6 +147,7 @@ impl Renamer {
         let start_instant = Instant::now();
         let mut failed_files: Vec<String> = Vec::new();
         let mut processed_files: HashMap<String, Vec<Track>> = HashMap::new();
+        let mut genres: HashMap<String, usize> = HashMap::new();
         let mut current_path = self.root.clone();
         for track in self.tracks.iter_mut() {
             if !self.config.sort_files {
@@ -234,6 +235,10 @@ impl Renamer {
                 utils::print_divider(&track.tags.formatted_name());
             }
 
+            if !track.tags.formatted_genre.is_empty() {
+                *genres.entry(track.tags.formatted_genre.clone()).or_insert(0) += 1;
+            }
+
             if self.config.tags_only {
                 processed_files.entry(formatted_name).or_default().push(track.clone());
                 continue;
@@ -301,6 +306,23 @@ impl Renamer {
         println!("{}", self.stats);
         if self.config.log_failures && !failed_files.is_empty() {
             utils::write_log_for_failed_files(&failed_files)?;
+        }
+
+        if self.config.verbose {
+            println!("Genres ({}):", genres.len());
+            let mut genre_list: Vec<(String, usize)> = genres.into_iter().collect();
+            genre_list.sort_by(|a, b| b.1.cmp(&a.1));
+            let max_lenght = genre_list
+                .iter()
+                .take(20)
+                .map(|g| g.0.chars().count())
+                .max()
+                .unwrap_or(60);
+            for (genre, count) in genre_list.iter().take(20) {
+                println!("{genre:<width$}   {count}", width = max_lenght);
+            }
+            genre_list.sort();
+            utils::write_genre_log(&genre_list)?;
         }
 
         Self::print_all_duplicates(processed_files);
