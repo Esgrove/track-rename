@@ -178,12 +178,16 @@ pub fn get_tags_from_filename(filename: &str) -> Option<(String, String)> {
 
     let parts: Vec<&str> = filename.splitn(2, " - ").collect();
     if parts.len() == 2 {
-        let artist = parts[0].nfc().collect::<String>();
-        let title = parts[1].nfc().collect::<String>();
+        let artist = normalize_str(parts[0]);
+        let title = normalize_str(parts[1]);
         Some((artist, title))
     } else {
         None
     }
+}
+
+pub fn normalize_str(input: &str) -> String {
+    input.nfc().collect::<String>()
 }
 
 #[cfg(test)]

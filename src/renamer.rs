@@ -7,7 +7,6 @@ use std::time::Instant;
 use anyhow::{Context, Result};
 use colored::Colorize;
 use id3::{Tag, TagLike};
-use unicode_normalization::UnicodeNormalization;
 use walkdir::WalkDir;
 
 use crate::cli_config::CliConfig;
@@ -358,8 +357,8 @@ impl Renamer {
 
         match (tag.artist(), tag.title()) {
             (Some(a), Some(t)) => {
-                artist = a.nfc().collect::<String>();
-                title = t.nfc().collect::<String>();
+                artist = utils::normalize_str(a);
+                title = utils::normalize_str(t);
             }
             (None, None) => {
                 eprintln!("{}", format!("Missing tags: {}", track.path.display()).yellow());
@@ -373,18 +372,18 @@ impl Renamer {
                 if let Some((a, _)) = utils::get_tags_from_filename(&track.name) {
                     artist = a;
                 }
-                title = t.nfc().collect::<String>();
+                title = utils::normalize_str(t);
             }
             (Some(a), None) => {
                 eprintln!("{}", format!("Missing title tag: {}", track.path.display()).yellow());
-                artist = a.nfc().collect::<String>();
+                artist = utils::normalize_str(a);
                 if let Some((_, t)) = utils::get_tags_from_filename(&track.name) {
                     title = t;
                 }
             }
         }
-        let album = tag.album().unwrap_or_default().to_string();
-        let genre = tag.genre_parsed().unwrap_or_default().to_string();
+        let album = utils::normalize_str(tag.album().unwrap_or_default());
+        let genre = utils::normalize_str(tag.genre_parsed().unwrap_or_default().as_ref());
         Tags::new(artist, title, album, genre)
     }
 
