@@ -171,7 +171,7 @@ lazy_static! {
 }
 
 /// Return formatted artist and title string.
-pub fn format_tags(artist: &str, title: &str) -> (String, String) {
+pub fn format_tags_for_artist_and_title(artist: &str, title: &str) -> (String, String) {
     let mut formatted_artist = artist.to_string();
     let mut formatted_title = title.to_string();
 

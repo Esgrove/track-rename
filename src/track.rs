@@ -9,6 +9,8 @@ use colored::Colorize;
 use unicode_normalization::UnicodeNormalization;
 
 use crate::file_format::FileFormat;
+use crate::formatter;
+use crate::tags::Tags;
 use crate::utils;
 use crate::utils::{path_to_string, path_to_string_relative};
 
@@ -18,13 +20,24 @@ const OTHER_FILE_EXTENSIONS: [&str; 3] = ["wav", "flac", "m4a"];
 /// Represents one audio file.
 #[derive(Debug, Default, Clone)]
 pub struct Track {
+    /// Filename of the existing file
     pub name: String,
+    /// File extension string for the existing file
     pub extension: String,
+    /// Parent directory name
+    pub directory: String,
+    /// File format enum
     pub format: FileFormat,
+    /// Path to parent directory
     pub root: PathBuf,
+    /// Full filepath for the existing file
     pub path: PathBuf,
+    /// The index of this track
     pub number: usize,
+    pub tags: Tags,
+    /// True if updated tag data has been saved to file
     pub tags_updated: bool,
+    /// True if track info has been displayed in the terminal
     printed: bool,
 }
 
@@ -49,11 +62,17 @@ impl Track {
     pub fn new_with_extension(path: PathBuf, extension: String, format: FileFormat) -> anyhow::Result<Track> {
         let name = Self::get_nfc_filename_from_path(&path)?;
         let root = path.parent().context("Failed to get file root")?.to_owned();
+        let directory = root
+            .file_name()
+            .context("Failed to get parent directory name")?
+            .to_string_lossy()
+            .to_string();
         // Rebuild full path with desired unicode handling
         let path = dunce::simplified(root.join(format!("{}.{}", name, extension)).as_path()).to_path_buf();
         Ok(Track {
             name,
             extension,
+            directory,
             format,
             root,
             path,
@@ -99,6 +118,41 @@ impl Track {
         format!("{}.{}", self.name, self.extension)
     }
 
+    pub fn format_tags(&mut self, mut tags: Tags) {
+        let (formatted_artist, formatted_title) =
+            formatter::format_tags_for_artist_and_title(&tags.current_artist, &tags.current_title);
+
+        tags.formatted_artist = formatted_artist;
+        tags.formatted_title = formatted_title;
+
+        if tags.current_album.is_empty() && self.directory.to_lowercase().starts_with("djcity") {
+            tags.formatted_album = "DJCity.com".to_string();
+        }
+
+        if tags.current_genre.to_lowercase().eq("other") || tags.current_genre.chars().count() < 3 {
+            tags.formatted_genre = String::new();
+        }
+
+        self.tags = tags;
+    }
+
+    /// Return formatted file name without file extension
+    pub fn formatted_name(&self) -> String {
+        let (file_artist, file_title) =
+            formatter::format_filename(&self.tags.formatted_artist, &self.tags.formatted_title);
+
+        if file_artist.is_empty() {
+            file_title
+        } else {
+            format!("{} - {}", file_artist, file_title)
+        }
+    }
+
+    /// Return formatted file name with file extension
+    pub fn formatted_filename(&self) -> String {
+        format!("{}.{}", self.formatted_name(), self.format)
+    }
+
     /// Return full path with new filename.
     pub fn path_with_new_name(&self, filename: &str) -> PathBuf {
         dunce::simplified(&self.root.join(filename)).to_path_buf()
@@ -109,10 +163,12 @@ impl Track {
         Track {
             name,
             extension: self.format.to_string(),
+            directory: self.directory.to_string(),
             format: self.format.clone(),
             root: self.root.clone(),
             path,
             number: self.number,
+            tags: self.tags.clone(),
             tags_updated: self.tags_updated,
             printed: self.printed,
         }
@@ -171,10 +227,12 @@ impl Track {
         let new_track = Track {
             name: self.name.clone(),
             extension: "aif".to_string(),
+            directory: self.directory.to_string(),
             format: FileFormat::Aif,
             root: self.root.clone(),
             path: output_path,
             number: self.number,
+            tags: Tags::default(),
             tags_updated: self.tags_updated,
             printed: self.printed,
         };

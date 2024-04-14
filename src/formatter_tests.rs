@@ -493,7 +493,7 @@ static FILE_FORMATTING_TEST_DATA: &[FormattingTestData] = &[
 
 fn run_tag_formatting_tests(test_data: &[FormattingTestData]) {
     for data in test_data {
-        let (formatted_artist, formatted_title) = formatter::format_tags(data.artist, data.title);
+        let (formatted_artist, formatted_title) = formatter::format_tags_for_artist_and_title(data.artist, data.title);
         assert_eq!(formatted_artist, data.correct_artist);
         assert_eq!(formatted_title, data.correct_title);
     }

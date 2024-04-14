@@ -13,9 +13,10 @@ use walkdir::WalkDir;
 use crate::cli_config::CliConfig;
 use crate::file_format::FileFormat;
 use crate::statistics::Statistics;
+use crate::tags::Tags;
 use crate::track::Track;
 use crate::user_config::UserConfig;
-use crate::{formatter, utils, RenamerArgs};
+use crate::{utils, RenamerArgs};
 
 /// Audio track tag and filename formatting.
 #[derive(Debug, Default)]
@@ -202,8 +203,8 @@ impl Renamer {
                     }
                 }
             }
-            let mut tags = match tag_result {
-                Some(tag) => tag,
+            let mut tag_data = match tag_result {
+                Some(tags) => tags,
                 None => {
                     self.stats.num_failed += 1;
                     if self.config.log_failures {
@@ -213,39 +214,32 @@ impl Renamer {
                 }
             };
 
-            let (artist, title, current_tags) = Self::parse_artist_and_title(track, &tags);
-            let (formatted_artist, formatted_title) = formatter::format_tags(&artist, &title);
-            let formatted_tags = format!("{} - {}", formatted_artist, formatted_title);
-            let (file_artist, file_title) = formatter::format_filename(&formatted_artist, &formatted_title);
-            if current_tags != formatted_tags {
+            let tags = Self::parse_tag_data(track, &tag_data);
+            track.format_tags(tags);
+            let formatted_name = track.formatted_name();
+            if track.tags.changed() {
                 self.stats.num_tags += 1;
                 track.show(self.total_tracks);
                 println!("{}", fix_tags_header);
-                utils::show_diff(&current_tags, &formatted_tags);
+                track.tags.print_diff();
                 if !self.config.print_only && (self.config.force || utils::confirm()) {
-                    tags.set_artist(formatted_artist);
-                    tags.set_title(formatted_title);
-                    if let Err(error) = tags.write_to_path(&track.path, id3::Version::Id3v24) {
+                    tag_data.set_artist(track.tags.formatted_artist.clone());
+                    tag_data.set_title(track.tags.formatted_title.clone());
+                    if let Err(error) = tag_data.write_to_path(&track.path, id3::Version::Id3v24) {
                         eprintln!("{}", format!("Failed to write tags: {}", error).red());
                     }
                     track.tags_updated = true;
                     self.stats.num_tags_fixed += 1;
                 }
-                utils::print_divider(&formatted_tags);
+                utils::print_divider(&track.tags.formatted_name());
             }
-
-            let formatted_name = if file_artist.is_empty() {
-                file_title
-            } else {
-                format!("{} - {}", file_artist, file_title)
-            };
 
             if self.config.tags_only {
                 processed_files.entry(formatted_name).or_default().push(track.clone());
                 continue;
             }
 
-            let formatted_file_name = format!("{}.{}", formatted_name, track.format);
+            let formatted_file_name = track.formatted_filename();
             let formatted_path = track.path_with_new_name(&formatted_file_name);
 
             // Convert paths to strings for additional comparisons.
@@ -334,18 +328,16 @@ impl Renamer {
         }
     }
 
-    /// Try to read artist and title from tags.
+    /// Try to read tags such as artist and title from tags.
     /// Fallback to parsing them from filename if tags are empty.
-    fn parse_artist_and_title(track: &Track, tag: &Tag) -> (String, String, String) {
+    fn parse_tag_data(track: &Track, tag: &Tag) -> Tags {
         let mut artist = String::new();
         let mut title = String::new();
-        let mut current_tags = " - ".to_string();
 
         match (tag.artist(), tag.title()) {
             (Some(a), Some(t)) => {
                 artist = a.nfc().collect::<String>();
                 title = t.nfc().collect::<String>();
-                current_tags = format!("{} - {}", artist, title);
             }
             (None, None) => {
                 eprintln!("{}", format!("Missing tags: {}", track.path.display()).yellow());
@@ -360,7 +352,6 @@ impl Renamer {
                     artist = a;
                 }
                 title = t.nfc().collect::<String>();
-                current_tags = format!(" - {}", title);
             }
             (Some(a), None) => {
                 eprintln!("{}", format!("Missing title tag: {}", track.path.display()).yellow());
@@ -368,10 +359,11 @@ impl Renamer {
                 if let Some((_, t)) = utils::get_tags_from_filename(&track.name) {
                     title = t;
                 }
-                current_tags = format!("{} - ", artist);
             }
         }
-        (artist, title, current_tags)
+        let album = tag.album().unwrap_or_default().to_string();
+        let genre = tag.genre_parsed().unwrap_or_default().to_string();
+        Tags::new(artist, title, album, genre)
     }
 
     /// Print all paths for duplicate tracks with the same name.

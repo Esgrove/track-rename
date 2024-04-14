@@ -3,6 +3,7 @@ mod file_format;
 mod formatter;
 mod renamer;
 mod statistics;
+mod tags;
 mod track;
 mod user_config;
 mod utils;
