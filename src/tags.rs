@@ -41,18 +41,18 @@ impl Tags {
             || self.current_genre != self.formatted_genre
     }
 
-    pub fn print_diff(&self) {
+    pub fn show_diff(&self) {
         let current = self.current_name();
-        let formated = self.formatted_name();
-        if current != formated {
-            utils::print_stacked_diff(&current, &formated);
+        let formatted = self.formatted_name();
+        if current != formatted {
+            utils::print_stacked_diff(&current, &formatted);
         }
         if self.current_album != self.formatted_album {
-            print!("{}: ", "album".bold());
+            print!("{}: ", "Album".bold());
             utils::print_diff(&self.current_album, &self.formatted_album)
         }
         if self.current_genre != self.formatted_genre {
-            print!("{}: ", "genre".bold());
+            print!("{}: ", "Genre".bold());
             utils::print_diff(&self.current_genre, &self.formatted_genre)
         }
     }

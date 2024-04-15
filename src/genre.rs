@@ -38,6 +38,7 @@ lazy_static! {
     static ref RE_HOUSE: Regex = Regex::new(r"^[^,]* House$").unwrap();
 }
 
+/// Format genre string
 pub fn format_genre(genre: &str) -> String {
     let mut formatted_genre = genre.trim().to_string();
     if formatted_genre.chars().count() < 3 {
@@ -61,6 +62,8 @@ pub fn format_genre(genre: &str) -> String {
     formatted_genre
 }
 
+/// Reorder house genres to start with "House".
+/// For example, "Tech House" -> "House Tech".
 fn reorder_house_genres(genre: &mut String) {
     if RE_HOUSE.is_match(genre) {
         let parts: Vec<&str> = genre.split(' ').collect();

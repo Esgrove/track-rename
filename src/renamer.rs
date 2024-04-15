@@ -221,7 +221,7 @@ impl Renamer {
                 self.stats.num_tags += 1;
                 track.show(self.total_tracks);
                 println!("{}", fix_tags_header);
-                track.tags.print_diff();
+                track.tags.show_diff();
                 if !self.config.print_only && (self.config.force || utils::confirm()) {
                     tag_data.set_artist(track.tags.formatted_artist.clone());
                     tag_data.set_title(track.tags.formatted_title.clone());
