@@ -4,42 +4,7 @@ use lazy_static::lazy_static;
 use regex::Regex;
 
 lazy_static! {
-    static ref COMMON_SUBSTITUTES: [(&'static str, &'static str); 7] = [
-        ("\0", "/"),
-        ("`", "'"),
-        ("´", "'"),
-        (" ,", ","),
-        ("\\", "/"),
-        ("/", " / "),
-        ("\u{FFFD}", " "),
-    ];
-
-    static ref REGEX_SUBSTITUTES: [(Regex, &'static str); 3] = [
-        // Replace various opening bracket types with "("
-        (Regex::new(r"[\[{]+").unwrap(), "("),
-        // Replace various closing bracket types with ")"
-        (Regex::new(r"[\]}]+").unwrap(), ")"),
-        // Collapse multiple spaces into a single space
-        (Regex::new(r"\s{2,}").unwrap(), " "),
-    ];
-
-    /// Map various genres to the correct version
-    static ref REGEX_MAPPINGS: [(Regex, &'static str); 10] = [
-        (Regex::new(r"(?i)\br\s*[&'n]*\s*b\b").unwrap(), "R&B"),
-        (Regex::new(r"(?i)\bother\b").unwrap(), ""),
-        (Regex::new(r"(?i)\bAccapella\b").unwrap(), "Acapella"),
-        (Regex::new(r"(?i)\bHip Hop\b").unwrap(), "Hip-Hop"),
-        (Regex::new(r"(?i)\bHip-Hop 90s\b").unwrap(), "Hip-Hop 90's"),
-        (Regex::new(r"(?i)\bHip-Hop 80s\b").unwrap(), "Hip-Hop 80's"),
-        (Regex::new(r"(?i)\bHip-Hop 90$").unwrap(), "Hip-Hop 90's"),
-        (Regex::new(r"(?i)\bHip-Hop 80$").unwrap(), "Hip-Hop 80's"),
-        (Regex::new(r"(?i)\b90's Hip-Hop").unwrap(), "Hip-Hop 90's"),
-        (Regex::new(r"(?i)\b80's Hip-Hop").unwrap(), "Hip-Hop 80's"),
-    ];
-
-    static ref RE_HOUSE: Regex = Regex::new(r"^[^,]* House$").unwrap();
-
-    static ref GENRE_MAPPINGS: HashMap<&'static str, &'static str> = {
+    pub static ref GENRE_MAPPINGS: HashMap<&'static str, &'static str> = {
         HashMap::from([
             ("DISCO", "Disco"),
             ("DISCO 1", "Disco"),
@@ -340,6 +305,41 @@ lazy_static! {
             ("ROCK MASHUP", "Rock"),
         ])
     };
+
+    static ref COMMON_SUBSTITUTES: [(&'static str, &'static str); 7] = [
+        ("\0", "/"),
+        ("`", "'"),
+        ("´", "'"),
+        (" ,", ","),
+        ("\\", "/"),
+        ("/", " / "),
+        ("\u{FFFD}", " "),
+    ];
+
+    static ref REGEX_SUBSTITUTES: [(Regex, &'static str); 3] = [
+        // Replace various opening bracket types with "("
+        (Regex::new(r"[\[{]+").unwrap(), "("),
+        // Replace various closing bracket types with ")"
+        (Regex::new(r"[\]}]+").unwrap(), ")"),
+        // Collapse multiple spaces into a single space
+        (Regex::new(r"\s{2,}").unwrap(), " "),
+    ];
+
+    /// Map various genres to the correct version
+    static ref REGEX_MAPPINGS: [(Regex, &'static str); 10] = [
+        (Regex::new(r"(?i)\br\s*[&'n]*\s*b\b").unwrap(), "R&B"),
+        (Regex::new(r"(?i)\bother\b").unwrap(), ""),
+        (Regex::new(r"(?i)\bAccapella\b").unwrap(), "Acapella"),
+        (Regex::new(r"(?i)\bHip Hop\b").unwrap(), "Hip-Hop"),
+        (Regex::new(r"(?i)\bHip-Hop 90s\b").unwrap(), "Hip-Hop 90's"),
+        (Regex::new(r"(?i)\bHip-Hop 80s\b").unwrap(), "Hip-Hop 80's"),
+        (Regex::new(r"(?i)\bHip-Hop 90$").unwrap(), "Hip-Hop 90's"),
+        (Regex::new(r"(?i)\bHip-Hop 80$").unwrap(), "Hip-Hop 80's"),
+        (Regex::new(r"(?i)\b90's Hip-Hop").unwrap(), "Hip-Hop 90's"),
+        (Regex::new(r"(?i)\b80's Hip-Hop").unwrap(), "Hip-Hop 80's"),
+    ];
+
+    static ref RE_HOUSE: Regex = Regex::new(r"^[^,]* House$").unwrap();
 }
 
 /// Format genre string

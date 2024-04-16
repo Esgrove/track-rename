@@ -190,6 +190,33 @@ pub fn normalize_str(input: &str) -> String {
     input.nfc().collect::<String>()
 }
 
+/// Check if the given path contains the sub path.
+pub fn contains_subpath(main_path: &Path, subpath: &Path) -> bool {
+    let main_components: Vec<_> = main_path.components().collect();
+    let sub_components: Vec<_> = subpath.components().collect();
+
+    if sub_components.len() > main_components.len() {
+        return false;
+    }
+
+    // Find the start index of the first subpath component in the main path
+    if let Some(first_sub_component) = sub_components.first() {
+        for (index, main_component) in main_components.iter().enumerate() {
+            if main_component == first_sub_component {
+                // Check all the subcomponents match starting from this index
+                if main_components[index..]
+                    .iter()
+                    .zip(sub_components.iter())
+                    .all(|(main, sub)| main == sub)
+                {
+                    return true;
+                }
+            }
+        }
+    }
+    false
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

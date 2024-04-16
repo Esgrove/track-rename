@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::PathBuf;
 use std::string::String;
@@ -7,15 +7,21 @@ use std::time::Instant;
 use anyhow::{Context, Result};
 use colored::Colorize;
 use id3::{Tag, TagLike};
+use lazy_static::lazy_static;
 use walkdir::WalkDir;
 
 use crate::cli_config::CliConfig;
 use crate::file_format::FileFormat;
+use crate::genre::GENRE_MAPPINGS;
 use crate::statistics::Statistics;
 use crate::tags::Tags;
 use crate::track::Track;
 use crate::user_config::UserConfig;
 use crate::{utils, RenamerArgs};
+
+lazy_static! {
+    pub static ref DJ_MUSIC_PATH: PathBuf = ["Dropbox", "DJ MUSIC"].iter().collect();
+}
 
 /// Audio track tag and filename formatting.
 #[derive(Debug, Default)]
@@ -148,6 +154,7 @@ impl Renamer {
         let mut processed_files: HashMap<String, Vec<Track>> = HashMap::new();
         let mut genres: HashMap<String, usize> = HashMap::new();
         let mut current_path = self.root.clone();
+        let mut missing_genre_mappings: HashSet<String> = HashSet::new();
         for track in self.tracks.iter_mut() {
             if !self.config.sort_files {
                 // Print current directory when iterating in directory order
@@ -161,6 +168,17 @@ impl Renamer {
                         }
                     );
                 }
+            }
+
+            if utils::contains_subpath(&track.root, DJ_MUSIC_PATH.as_path())
+                && !GENRE_MAPPINGS.contains_key(track.directory.as_str())
+                && !missing_genre_mappings.contains(track.directory.as_str())
+            {
+                eprintln!(
+                    "{}",
+                    format!("DJ music folder missing genre mappings: {}", track.directory).red()
+                );
+                missing_genre_mappings.insert(track.directory.clone());
             }
 
             // Skip filenames in user configs exclude list

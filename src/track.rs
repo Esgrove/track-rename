@@ -9,6 +9,8 @@ use colored::Colorize;
 use unicode_normalization::UnicodeNormalization;
 
 use crate::file_format::FileFormat;
+use crate::genre::GENRE_MAPPINGS;
+use crate::renamer::DJ_MUSIC_PATH;
 use crate::tags::Tags;
 use crate::utils;
 use crate::utils::{path_to_string, path_to_string_relative};
@@ -67,6 +69,7 @@ impl Track {
             .context("Failed to get parent directory name")?
             .to_string_lossy()
             .to_string();
+
         // Rebuild full path with desired unicode handling
         let path = dunce::simplified(root.join(format!("{}.{}", name, extension)).as_path()).to_path_buf();
         Ok(Track {
@@ -122,8 +125,18 @@ impl Track {
         let (formatted_artist, formatted_title) =
             formatter::format_tags_for_artist_and_title(&tags.current_artist, &tags.current_title);
 
-        let formatted_album = formatter::format_album(&tags.current_album, &self.directory);
-        let formatted_genre = genre::format_genre(&tags.current_genre);
+        let mut formatted_album = formatter::format_album(&tags.current_album);
+        let mut formatted_genre = genre::format_genre(&tags.current_genre);
+
+        if formatted_album.is_empty() && self.directory.to_lowercase().starts_with("djcity") {
+            formatted_album = "DJCity.com".to_string();
+        }
+
+        if formatted_genre.is_empty()
+            && (self.root.ends_with(DJ_MUSIC_PATH.as_path()) || GENRE_MAPPINGS.contains_key(self.directory.as_str()))
+        {
+            formatted_genre = GENRE_MAPPINGS.get(self.directory.as_str()).unwrap_or(&"").to_string();
+        }
 
         tags.formatted_artist = formatted_artist;
         tags.formatted_title = formatted_title;

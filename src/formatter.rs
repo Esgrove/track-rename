@@ -251,15 +251,11 @@ pub fn format_filename(artist: &str, title: &str) -> (String, String) {
     (formatted_artist.trim().to_string(), formatted_title.trim().to_string())
 }
 
-pub fn format_album(album: &str, directory: &str) -> String {
+pub fn format_album(album: &str) -> String {
     let mut formatted_album = album.trim().to_string();
 
     for (regex, replacement) in REGEX_SUBSTITUTES.iter() {
         formatted_album = regex.replace_all(&formatted_album, *replacement).to_string();
-    }
-
-    if formatted_album.is_empty() && directory.to_lowercase().starts_with("djcity") {
-        formatted_album = "DJCity.com".to_string();
     }
 
     formatted_album
