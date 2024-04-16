@@ -8,6 +8,7 @@ use anyhow::{Context, Result};
 use colored::Colorize;
 use id3::{Tag, TagLike};
 use lazy_static::lazy_static;
+use rayon::prelude::*;
 use walkdir::WalkDir;
 
 use crate::cli_config::CliConfig;
@@ -119,18 +120,20 @@ impl Renamer {
                 format!("{}", self.root.display()).cyan()
             );
         }
-        let mut track_list: Vec<Track> = Vec::new();
-        for entry in WalkDir::new(&self.root)
+        let mut track_list: Vec<Track> = WalkDir::new(&self.root)
             .into_iter()
             .filter_map(|e| e.ok())
             .filter(|e| e.path().is_file())
-        {
-            if let Some(track) = Track::try_from_path(entry.path()) {
-                track_list.push(track);
-            }
-        }
+            .par_bridge()
+            .filter_map(|entry| Track::try_from_path(entry.path()))
+            .collect();
+
         if self.config.sort_files {
-            track_list.sort();
+            // Sort by filename, ignoring parent dir
+            track_list.par_sort_unstable();
+        } else {
+            // Sort by full path so directories are in sorted order
+            track_list.par_sort_unstable_by(|a, b| a.path.cmp(&b.path));
         }
         for (number, track) in track_list.iter_mut().enumerate() {
             track.number = number + 1;
