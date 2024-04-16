@@ -44,15 +44,13 @@ lazy_static! {
         ("/Beat Junkie ", " - Beat Junkie "),
         ("(Clean- ", "(Clean "),
     ];
-    static ref REGEX_SUBSTITUTES: [(Regex, &'static str); 13] = [
+    static ref REGEX_SUBSTITUTES: [(Regex, &'static str); 12] = [
         // Replace various opening bracket types with "("
         (Regex::new(r"[\[{]+").unwrap(), "("),
         // Replace various closing bracket types with ")"
         (Regex::new(r"[\]}]+").unwrap(), ")"),
         // Collapse multiple exclamation marks into one
         (Regex::new(r"!{2,}").unwrap(), "!"),
-        // Collapse multiple spaces into a single space
-        (Regex::new(r"\s{2,}").unwrap(), " "),
         // Collapse multiple periods into a single period
         (Regex::new(r"\.{2,}").unwrap(), "."),
         // Remove empty parentheses
@@ -168,6 +166,11 @@ lazy_static! {
 
     // Matches variations on "and" in feat artist names
     static ref RE_FEAT_AND: Regex = Regex::new(r"(?i),?\s+and\s+").unwrap();
+
+    // Collapse multiple spaces into a single space
+    static ref RE_MULTIPLE_SPACES: Regex = Regex::new(r"\s{2,}").unwrap();
+
+    static ref RE_WWW: Regex = Regex::new(r"(?i)^www\.").unwrap();
 }
 
 /// Return formatted artist and title string.
@@ -253,12 +256,13 @@ pub fn format_filename(artist: &str, title: &str) -> (String, String) {
 
 pub fn format_album(album: &str) -> String {
     let mut formatted_album = album.trim().to_string();
-
-    for (regex, replacement) in REGEX_SUBSTITUTES.iter() {
-        formatted_album = regex.replace_all(&formatted_album, *replacement).to_string();
-    }
-
+    formatted_album = RE_WWW.replace(&formatted_album, "").to_string();
+    fix_whitespace(&mut formatted_album);
     formatted_album
+}
+
+pub fn fix_whitespace(text: &mut String) {
+    *text = RE_MULTIPLE_SPACES.replace_all(text, " ").to_string().trim().to_string();
 }
 
 /// Check parenthesis counts match and insert missing.

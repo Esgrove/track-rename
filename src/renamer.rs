@@ -176,7 +176,7 @@ impl Renamer {
             {
                 eprintln!(
                     "{}",
-                    format!("DJ music folder missing genre mappings: {}", track.directory).red()
+                    format!("WARNING: DJ music folder missing genre mapping: {}", track.directory).yellow()
                 );
                 missing_genre_mappings.insert(track.directory.clone());
             }
