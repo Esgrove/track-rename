@@ -188,7 +188,12 @@ impl Track {
     pub fn show(&mut self, total_tracks: usize) {
         if !self.printed {
             let index_width: usize = total_tracks.to_string().chars().count();
-            println!("{:>width$}/{}:", self.number, total_tracks, width = index_width);
+            println!(
+                "{:>width$}/{total_tracks}: {}",
+                self.number,
+                self.filename(),
+                width = index_width
+            );
             self.printed = true
         }
     }
