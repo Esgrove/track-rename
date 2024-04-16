@@ -326,7 +326,7 @@ lazy_static! {
     ];
 
     /// Map various genres to the correct version
-    static ref REGEX_MAPPINGS: [(Regex, &'static str); 10] = [
+    static ref REGEX_MAPPINGS: [(Regex, &'static str); 11] = [
         (Regex::new(r"(?i)\br\s*[&'n]*\s*b\b").unwrap(), "R&B"),
         (Regex::new(r"(?i)\bother\b").unwrap(), ""),
         (Regex::new(r"(?i)\bAccapella\b").unwrap(), "Acapella"),
@@ -337,6 +337,7 @@ lazy_static! {
         (Regex::new(r"(?i)\bHip-Hop 80$").unwrap(), "Hip-Hop 80's"),
         (Regex::new(r"(?i)\b90's Hip-Hop").unwrap(), "Hip-Hop 90's"),
         (Regex::new(r"(?i)\b80's Hip-Hop").unwrap(), "Hip-Hop 80's"),
+        (Regex::new(r"(?i)\bHip-Hop / Rap").unwrap(), "Hip-Hop / Rap"),
     ];
 
     static ref RE_HOUSE: Regex = Regex::new(r"^[^,]* House$").unwrap();
