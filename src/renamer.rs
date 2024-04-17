@@ -224,7 +224,7 @@ impl Renamer {
                     }
                 }
             }
-            let mut tag_data = match tag_result {
+            let mut file_tags = match tag_result {
                 Some(tags) => tags,
                 None => {
                     self.stats.num_failed += 1;
@@ -235,7 +235,7 @@ impl Renamer {
                 }
             };
 
-            let tags = Self::parse_tag_data(track, &tag_data);
+            let tags: Tags = Self::parse_tag_data(track, &file_tags);
             track.format_tags(tags);
             let formatted_name = track.formatted_name();
             if track.tags.changed() {
@@ -244,9 +244,11 @@ impl Renamer {
                 println!("{}", fix_tags_header);
                 track.tags.show_diff();
                 if !self.config.print_only && (self.config.force || utils::confirm()) {
-                    tag_data.set_artist(track.tags.formatted_artist.clone());
-                    tag_data.set_title(track.tags.formatted_title.clone());
-                    if let Err(error) = tag_data.write_to_path(&track.path, id3::Version::Id3v24) {
+                    file_tags.set_artist(track.tags.formatted_artist.clone());
+                    file_tags.set_title(track.tags.formatted_title.clone());
+                    file_tags.set_album(track.tags.formatted_album.clone());
+                    file_tags.set_genre(track.tags.formatted_genre.clone());
+                    if let Err(error) = file_tags.write_to_path(&track.path, id3::Version::Id3v24) {
                         eprintln!("{}", format!("Failed to write tags: {}", error).red());
                     }
                     track.tags_updated = true;
