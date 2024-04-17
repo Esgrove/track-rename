@@ -280,7 +280,7 @@ impl Renamer {
                             "\n{}",
                             format!("Failed to write tags for: {}\n{}", track.path.display(), error).red()
                         );
-                    } else {
+                    } else if track.tags.changed() {
                         track.tags_updated = true;
                         self.stats.num_tags_fixed += 1;
                     }
