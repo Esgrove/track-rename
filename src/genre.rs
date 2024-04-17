@@ -172,7 +172,7 @@ lazy_static! {
             ("HOUSE ACID", "House Acid"),
             ("HOUSE AFRO", "House Afro"),
             ("HOUSE AFRO 1", "House Afro"),
-            ("HOUSE AFRO AMAPIANO", ""),
+            ("HOUSE AFRO AMAPIANO", "Amapiano"),
             ("HOUSE AFRO BEATS", "Afrobeats"),
             ("HOUSE AFRO JAM", "House Afro"),
             ("HOUSE AFRO LATIN", "House Latin"),
