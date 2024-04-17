@@ -3,6 +3,8 @@ use std::collections::HashMap;
 use lazy_static::lazy_static;
 use regex::Regex;
 
+use crate::formatter::fix_whitespace;
+
 lazy_static! {
     pub static ref GENRE_MAPPINGS: HashMap<&'static str, &'static str> = {
         HashMap::from([
@@ -326,7 +328,7 @@ lazy_static! {
     ];
 
     /// Map various genres to the correct version
-    static ref REGEX_MAPPINGS: [(Regex, &'static str); 11] = [
+    static ref REGEX_MAPPINGS: [(Regex, &'static str); 13] = [
         (Regex::new(r"(?i)\br\s*[&'n]*\s*b\b").unwrap(), "R&B"),
         (Regex::new(r"(?i)\bother\b").unwrap(), ""),
         (Regex::new(r"(?i)\bAccapella\b").unwrap(), "Acapella"),
@@ -337,7 +339,9 @@ lazy_static! {
         (Regex::new(r"(?i)\bHip-Hop 80$").unwrap(), "Hip-Hop 80's"),
         (Regex::new(r"(?i)\b90's Hip-Hop").unwrap(), "Hip-Hop 90's"),
         (Regex::new(r"(?i)\b80's Hip-Hop").unwrap(), "Hip-Hop 80's"),
-        (Regex::new(r"(?i)\bHip-Hop / Rap").unwrap(), "Hip-Hop / Rap"),
+        (Regex::new(r"(?i)\bHip-Hop / Rap").unwrap(), "Hip-Hop"),
+        (Regex::new(r"(?i)\bNu Disco / Disco").unwrap(), "Disco Nu"),
+        (Regex::new(r"(?i)\bFunk / Soul").unwrap(), "Soul"),
     ];
 
     static ref RE_HOUSE: Regex = Regex::new(r"^[^,]* House$").unwrap();
@@ -362,7 +366,10 @@ pub fn format_genre(genre: &str) -> String {
         formatted_genre = regex.replace_all(&formatted_genre, *replacement).to_string();
     }
 
+    formatted_genre = formatted_genre.replace("Original Samples / ", "");
+
     reorder_house_genres(&mut formatted_genre);
+    fix_whitespace(&mut formatted_genre);
 
     formatted_genre
 }
