@@ -266,17 +266,22 @@ impl Renamer {
                     track.tags.show_diff();
                 }
                 if !self.config.print_only && (self.config.force || utils::confirm()) {
-                    file_tags.set_artist(track.tags.formatted_artist.clone());
-                    file_tags.set_title(track.tags.formatted_title.clone());
-                    file_tags.set_album(track.tags.formatted_album.clone());
                     // Remove genre first to try to get rid of old ID3v1 genre IDs
                     file_tags.remove_genre();
-                    file_tags.set_genre(track.tags.formatted_genre.clone());
                     file_tags.remove_disc();
                     file_tags.remove_total_discs();
                     file_tags.remove_track();
                     file_tags.remove_total_tracks();
-
+                    if let Err(error) = file_tags.write_to_path(&track.path, id3::Version::Id3v24) {
+                        eprintln!(
+                            "\n{}",
+                            format!("Failed to remove tags for: {}\n{}", track.path.display(), error).red()
+                        );
+                    }
+                    file_tags.set_artist(track.tags.formatted_artist.clone());
+                    file_tags.set_title(track.tags.formatted_title.clone());
+                    file_tags.set_album(track.tags.formatted_album.clone());
+                    file_tags.set_genre(track.tags.formatted_genre.clone());
                     if let Err(error) = file_tags.write_to_path(&track.path, id3::Version::Id3v24) {
                         eprintln!(
                             "\n{}",
