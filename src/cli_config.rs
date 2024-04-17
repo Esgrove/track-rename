@@ -18,6 +18,7 @@ pub struct CliConfig {
     pub test_mode: bool,
     pub log_failures: bool,
     pub convert_failed: bool,
+    pub write_all_tags: bool,
 }
 
 impl CliConfig {
@@ -34,6 +35,7 @@ impl CliConfig {
             test_mode: args.test,
             log_failures: args.log,
             convert_failed: args.convert,
+            write_all_tags: args.all_tags,
         }
     }
 

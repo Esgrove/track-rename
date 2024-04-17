@@ -256,11 +256,14 @@ impl Renamer {
             let tags: Tags = Self::parse_tag_data(track, &file_tags);
             track.format_tags(tags);
             let formatted_name = track.formatted_name();
-            if track.tags.changed() {
-                self.stats.num_tags += 1;
-                track.show(self.total_tracks, max_index_width);
-                println!("{}", fix_tags_header);
-                track.tags.show_diff();
+            if track.tags.changed() || self.config.write_all_tags {
+                if track.tags.changed() {
+                    track.show(self.total_tracks, max_index_width);
+                    self.stats.num_tags += 1;
+                    println!("{}", fix_tags_header);
+                    track.tags.show_diff();
+                }
+
                 if !self.config.print_only && (self.config.force || utils::confirm()) {
                     file_tags.set_artist(track.tags.formatted_artist.clone());
                     file_tags.set_title(track.tags.formatted_title.clone());
@@ -270,15 +273,18 @@ impl Renamer {
                     file_tags.remove_total_discs();
                     file_tags.remove_track();
                     file_tags.remove_total_tracks();
+
                     if let Err(error) = file_tags.write_to_path(&track.path, id3::Version::Id3v24) {
                         eprintln!("{}", format!("Failed to write tags: {}", error).red());
+                    } else if track.tags.changed() {
+                        track.tags_updated = true;
+                        self.stats.num_tags_fixed += 1;
                     }
-                    track.tags_updated = true;
-                    self.stats.num_tags_fixed += 1;
                 }
                 utils::print_divider(&track.tags.formatted_name());
             }
 
+            // Store unique genre count
             if !track.tags.formatted_genre.is_empty() {
                 *genres.entry(track.tags.formatted_genre.clone()).or_insert(0) += 1;
             }

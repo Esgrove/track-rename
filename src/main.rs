@@ -26,6 +26,10 @@ pub struct RenamerArgs {
     /// Optional input directory or audio file to format
     path: Option<String>,
 
+    /// Resave tags for all files with ID3v2.4
+    #[arg(short, long)]
+    all_tags: bool,
+
     /// Convert failed files to AIFF using ffmpeg
     #[arg(short, long)]
     convert: bool,
