@@ -266,6 +266,10 @@ impl Renamer {
                     file_tags.set_title(track.tags.formatted_title.clone());
                     file_tags.set_album(track.tags.formatted_album.clone());
                     file_tags.set_genre(track.tags.formatted_genre.clone());
+                    file_tags.remove_disc();
+                    file_tags.remove_total_discs();
+                    file_tags.remove_track();
+                    file_tags.remove_total_tracks();
                     if let Err(error) = file_tags.write_to_path(&track.path, id3::Version::Id3v24) {
                         eprintln!("{}", format!("Failed to write tags: {}", error).red());
                     }
