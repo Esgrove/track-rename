@@ -272,6 +272,8 @@ impl Renamer {
                     file_tags.remove_total_discs();
                     file_tags.remove_track();
                     file_tags.remove_total_tracks();
+                    file_tags.remove_all_lyrics();
+                    file_tags.remove_all_synchronised_lyrics();
                     if let Err(error) = file_tags.write_to_path(&track.path, id3::Version::Id3v24) {
                         eprintln!(
                             "\n{}",
