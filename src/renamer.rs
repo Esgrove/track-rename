@@ -159,7 +159,7 @@ impl Renamer {
         let mut processed_files: HashMap<String, Vec<Track>> = HashMap::new();
         let mut genres: HashMap<String, usize> = HashMap::new();
         let mut current_path = self.root.clone();
-        let mut missing_genre_mappings: HashSet<String> = HashSet::new();
+        let mut checked_genre_mappings: HashSet<String> = HashSet::new();
         for track in self.tracks.iter_mut() {
             if !self.config.sort_files {
                 // Print current directory when iterating in directory order
@@ -175,15 +175,22 @@ impl Renamer {
                 }
             }
 
-            if utils::contains_subpath(&track.root, DJ_MUSIC_PATH.as_path())
-                && !GENRE_MAPPINGS.contains_key(track.directory.as_str())
-                && !missing_genre_mappings.contains(track.directory.as_str())
+            // If this is a DJ MUSIC subdirectory, check genre mappings
+            if !checked_genre_mappings.contains(track.directory.as_str())
+                && utils::contains_subpath(&track.root, DJ_MUSIC_PATH.as_path())
             {
-                eprintln!(
-                    "{}",
-                    format!("WARNING: DJ music folder missing genre mapping: {}", track.directory).yellow()
-                );
-                missing_genre_mappings.insert(track.directory.clone());
+                if !GENRE_MAPPINGS.contains_key(track.directory.as_str()) {
+                    eprintln!(
+                        "{}",
+                        format!("WARNING: DJ music folder missing genre mapping: {}", track.directory).yellow()
+                    );
+                } else if GENRE_MAPPINGS.get(track.directory.as_str()).unwrap_or(&"").is_empty() {
+                    eprintln!(
+                        "{}",
+                        format!("WARNING: Empty genre mapping for: {}", track.directory).yellow()
+                    );
+                }
+                checked_genre_mappings.insert(track.directory.clone());
             }
 
             // Print running index
