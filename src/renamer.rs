@@ -181,12 +181,12 @@ impl Renamer {
             {
                 if !GENRE_MAPPINGS.contains_key(track.directory.as_str()) {
                     eprintln!(
-                        "{}",
+                        "\n{}",
                         format!("WARNING: DJ music folder missing genre mapping: {}", track.directory).yellow()
                     );
                 } else if GENRE_MAPPINGS.get(track.directory.as_str()).unwrap_or(&"").is_empty() {
                     eprintln!(
-                        "{}",
+                        "\n{}",
                         format!("WARNING: Empty genre mapping for: {}", track.directory).yellow()
                     );
                 }
