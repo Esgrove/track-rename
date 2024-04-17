@@ -154,23 +154,25 @@ impl Renamer {
         let fix_tags_header = format!("Fix tags{dryrun_header}:").blue().bold();
         let rename_file_header = format!("Rename file{dryrun_header}:").cyan().bold();
         let max_index_width: usize = self.total_tracks.to_string().chars().count();
-        let start_instant = Instant::now();
+
         let mut failed_files: Vec<String> = Vec::new();
         let mut processed_files: HashMap<String, Vec<Track>> = HashMap::new();
         let mut genres: HashMap<String, usize> = HashMap::new();
-        let mut current_path = self.root.clone();
         let mut checked_genre_mappings: HashSet<String> = HashSet::new();
+        let mut current_path = self.root.clone();
+
+        let start_instant = Instant::now();
         for track in self.tracks.iter_mut() {
             if !self.config.sort_files {
                 // Print current directory when iterating in directory order
                 if current_path != track.root {
-                    println!(
-                        "\n{}",
-                        match current_path.strip_prefix(&self.root) {
-                            Ok(relative_path) => format!("{}", relative_path.display()).magenta(),
-                            Err(_) => format!("{}", current_path.display()).magenta(),
-                        }
-                    );
+                    let path = match current_path.strip_prefix(&self.root) {
+                        Ok(relative_path) => format!("{}", relative_path.display()),
+                        Err(_) => format!("{}", current_path.display()),
+                    };
+                    if !path.is_empty() {
+                        println!("\n{}", path.magenta());
+                    }
                     current_path = track.root.clone();
                 }
             }

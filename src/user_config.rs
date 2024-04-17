@@ -49,11 +49,15 @@ impl fmt::Display for UserConfig {
             .exclude
             .iter()
             .map(|file| format!("    {}", file.yellow()))
-            .collect::<Vec<String>>()
+            .collect::<Vec<_>>()
             .join("\n");
 
         writeln!(f, "{}", "UserConfig:".bold())?;
         writeln!(f, "  convert_failed: {}", utils::colorize_bool(self.convert_failed))?;
-        writeln!(f, "  exclude:\n{}", excluded_files)
+        if excluded_files.is_empty() {
+            writeln!(f, "  exclude: []")
+        } else {
+            writeln!(f, "  exclude:\n{}", excluded_files)
+        }
     }
 }
