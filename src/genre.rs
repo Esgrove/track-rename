@@ -318,11 +318,15 @@ lazy_static! {
         ("\u{FFFD}", " "),
     ];
 
-    static ref REGEX_SUBSTITUTES: [(Regex, &'static str); 3] = [
+    static ref REGEX_SUBSTITUTES: [(Regex, &'static str); 5] = [
         // Replace various opening bracket types with "("
         (Regex::new(r"[\[{]+").unwrap(), "("),
         // Replace various closing bracket types with ")"
         (Regex::new(r"[\]}]+").unwrap(), ")"),
+        // Collapse multiple consecutive opening parentheses into one
+        (Regex::new(r"\(\s*\){2,}").unwrap(), "("),
+        // Collapse multiple consecutive closing parentheses into one
+        (Regex::new(r"\)\s*\){2,}").unwrap(), ")"),
         // Collapse multiple spaces into a single space
         (Regex::new(r"\s{2,}").unwrap(), " "),
     ];
