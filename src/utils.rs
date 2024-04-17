@@ -56,11 +56,11 @@ pub fn read_tags(track: &Track) -> Option<Tag> {
         Err(Error {
             kind: ErrorKind::NoTag, ..
         }) => {
-            println!("{}", format!("No tags: {}", track).yellow());
+            println!("\n{}", format!("No tags: {}", track).yellow());
             Some(Tag::new())
         }
         Err(error) => {
-            eprintln!("{}", format!("Failed to read tags for: {}\n{}", track, error).red());
+            eprintln!("\n{}", format!("Failed to read tags for: {}\n{}", track, error).red());
             None
         }
     }

@@ -402,21 +402,21 @@ impl Renamer {
                 title = utils::normalize_str(t);
             }
             (None, None) => {
-                eprintln!("{}", format!("Missing tags: {}", track.path.display()).yellow());
+                eprintln!("\n{}", format!("Missing tags: {}", track.path.display()).yellow());
                 if let Some((a, t)) = utils::get_tags_from_filename(&track.name) {
                     artist = a;
                     title = t;
                 }
             }
             (None, Some(t)) => {
-                eprintln!("{}", format!("Missing artist tag: {}", track.path.display()).yellow());
+                eprintln!("\n{}", format!("Missing artist tag: {}", track.path.display()).yellow());
                 if let Some((a, _)) = utils::get_tags_from_filename(&track.name) {
                     artist = a;
                 }
                 title = utils::normalize_str(t);
             }
             (Some(a), None) => {
-                eprintln!("{}", format!("Missing title tag: {}", track.path.display()).yellow());
+                eprintln!("\n{}", format!("Missing title tag: {}", track.path.display()).yellow());
                 artist = utils::normalize_str(a);
                 if let Some((_, t)) = utils::get_tags_from_filename(&track.name) {
                     title = t;
