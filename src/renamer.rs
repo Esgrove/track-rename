@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::fs;
+use std::io::{self, Write};
 use std::path::PathBuf;
 use std::string::String;
 use std::time::Instant;
@@ -152,6 +153,7 @@ impl Renamer {
         };
         let fix_tags_header = format!("Fix tags{dryrun_header}:").blue().bold();
         let rename_file_header = format!("Rename file{dryrun_header}:").cyan().bold();
+        let max_index_width: usize = self.total_tracks.to_string().chars().count();
         let start_instant = Instant::now();
         let mut failed_files: Vec<String> = Vec::new();
         let mut processed_files: HashMap<String, Vec<Track>> = HashMap::new();
@@ -162,14 +164,14 @@ impl Renamer {
             if !self.config.sort_files {
                 // Print current directory when iterating in directory order
                 if current_path != track.root {
-                    current_path = track.root.clone();
                     println!(
-                        "{}",
+                        "\n{}",
                         match current_path.strip_prefix(&self.root) {
                             Ok(relative_path) => format!("{}", relative_path.display()).magenta(),
                             Err(_) => format!("{}", current_path.display()).magenta(),
                         }
                     );
+                    current_path = track.root.clone();
                 }
             }
 
@@ -184,6 +186,15 @@ impl Renamer {
                 missing_genre_mappings.insert(track.directory.clone());
             }
 
+            // Print running index
+            print!(
+                "\r{:>width$}/{}",
+                track.number,
+                self.total_tracks,
+                width = max_index_width
+            );
+            io::stdout().flush().unwrap();
+
             // Skip filenames in user configs exclude list
             if self
                 .user_config
@@ -192,7 +203,7 @@ impl Renamer {
                 .any(|excluded_file| excluded_file == track)
             {
                 if self.config.verbose {
-                    track.show(self.total_tracks);
+                    track.show(self.total_tracks, max_index_width);
                     let message = format!("Skipping track in exclude list: {}", track);
                     println!("{}", message.yellow());
                     utils::print_divider(&message);
@@ -203,7 +214,7 @@ impl Renamer {
             // File might have been deleted between gathering files and now,
             // for example when handling duplicates.
             if !track.path.exists() {
-                track.show(self.total_tracks);
+                track.show(self.total_tracks, max_index_width);
                 let message = format!("Track no longer exists: {}", track);
                 eprintln!("{}", message.red());
                 utils::print_divider(&message);
@@ -240,7 +251,7 @@ impl Renamer {
             let formatted_name = track.formatted_name();
             if track.tags.changed() {
                 self.stats.num_tags += 1;
-                track.show(self.total_tracks);
+                track.show(self.total_tracks, max_index_width);
                 println!("{}", fix_tags_header);
                 track.tags.show_diff();
                 if !self.config.print_only && (self.config.force || utils::confirm()) {
@@ -285,7 +296,7 @@ impl Renamer {
                 if !formatted_path.is_file() || capitalization_change_only {
                     // Rename files if the flag was given or if tags were not changed
                     if self.config.rename_files || !track.tags_updated {
-                        track.show(self.total_tracks);
+                        track.show(self.total_tracks, max_index_width);
                         println!("{}", rename_file_header);
                         utils::print_stacked_diff(&track.filename(), &formatted_file_name);
                         self.stats.num_to_rename += 1;
@@ -308,7 +319,7 @@ impl Renamer {
                     }
                 } else if formatted_path != track.path {
                     // A file with the new name already exists
-                    track.show(self.total_tracks);
+                    track.show(self.total_tracks, max_index_width);
                     println!("{}", "Duplicate:".bright_red().bold());
                     println!("Rename:   {}", original_path_string);
                     println!("Existing: {}", formatted_path_string);
@@ -320,7 +331,7 @@ impl Renamer {
             processed_files.entry(formatted_name).or_default().push(track.clone());
         }
 
-        println!("{}", "Finished".green());
+        println!("{}", "\nFinished".green());
         if self.config.debug {
             let duration = start_instant.elapsed();
             println!("Time taken: {:.3}s", duration.as_secs_f64());
