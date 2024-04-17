@@ -265,7 +265,6 @@ impl Renamer {
                     println!("{}", fix_tags_header);
                     track.tags.show_diff();
                 }
-
                 if !self.config.print_only && (self.config.force || utils::confirm()) {
                     file_tags.set_artist(track.tags.formatted_artist.clone());
                     file_tags.set_title(track.tags.formatted_title.clone());
@@ -277,13 +276,18 @@ impl Renamer {
                     file_tags.remove_total_tracks();
 
                     if let Err(error) = file_tags.write_to_path(&track.path, id3::Version::Id3v24) {
-                        eprintln!("{}", format!("Failed to write tags: {}", error).red());
-                    } else if track.tags.changed() {
+                        eprintln!(
+                            "\n{}",
+                            format!("Failed to write tags for: {}\n{}", track.path.display(), error).red()
+                        );
+                    } else {
                         track.tags_updated = true;
                         self.stats.num_tags_fixed += 1;
                     }
                 }
-                utils::print_divider(&track.tags.formatted_name());
+                if track.tags.changed() {
+                    utils::print_divider(&track.tags.formatted_name());
+                }
             }
 
             // Store unique genre count
