@@ -269,6 +269,8 @@ impl Renamer {
                     file_tags.set_artist(track.tags.formatted_artist.clone());
                     file_tags.set_title(track.tags.formatted_title.clone());
                     file_tags.set_album(track.tags.formatted_album.clone());
+                    // Remove genre first to try to get rid of old ID3v1 genre IDs
+                    file_tags.remove_genre();
                     file_tags.set_genre(track.tags.formatted_genre.clone());
                     file_tags.remove_disc();
                     file_tags.remove_total_discs();
