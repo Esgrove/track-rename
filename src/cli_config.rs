@@ -32,7 +32,7 @@ impl CliConfig {
             tags_only: args.tags_only,
             verbose: args.verbose,
             debug: args.debug,
-            test_mode: args.test,
+            test_mode: false,
             log_failures: args.log,
             convert_failed: args.convert,
             write_all_tags: args.all_tags,
@@ -40,7 +40,7 @@ impl CliConfig {
     }
 
     #[cfg(test)]
-    /// Used in tests.
+    /// Used in test cases.
     pub fn new_for_tests() -> Self {
         CliConfig {
             force: true,

@@ -62,10 +62,6 @@ pub struct RenamerArgs {
     #[arg(short, long)]
     tags_only: bool,
 
-    /// Run in test mode
-    #[arg(long)]
-    test: bool,
-
     /// Verbose output
     #[arg(short, long)]
     verbose: bool,

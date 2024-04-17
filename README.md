@@ -31,7 +31,8 @@ Arguments:
   [PATH]  Optional input directory or audio file to format
 
 Options:
-  -c, --convert    Convert failed files to AIFF
+  -a, --all-tags   Resave tags for all files with ID3v2.4
+  -c, --convert    Convert failed files to AIFF using ffmpeg
   -d, --debug      Enable debug prints
   -f, --force      Do not ask for confirmation
   -l, --log        Log files that can't be read
@@ -39,7 +40,6 @@ Options:
   -r, --rename     Rename all audio files
   -s, --sort       Sort audio files by name
   -t, --tags-only  Only fix tags without renaming files
-      --test       Run in test mode
   -v, --verbose    Verbose output
   -h, --help       Print help
   -V, --version    Print version
