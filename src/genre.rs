@@ -332,32 +332,41 @@ lazy_static! {
     ];
 
     /// Map various genres to the correct version
-    static ref REGEX_MAPPINGS: [(Regex, &'static str); 25] = [
+    static ref REGEX_MAPPINGS: [(Regex, &'static str); 34] = [
         (Regex::new(r"(?i)\br\s*[&'n]*\s*b\b").unwrap(), "R&B"),
         (Regex::new(r"(?i)\bother\b").unwrap(), ""),
         (Regex::new(r"(?i)\bAccapella\b").unwrap(), "Acapella"),
         (Regex::new(r"(?i)\bHip Hop\b").unwrap(), "Hip-Hop"),
+        (Regex::new(r"(?i)\bHip / Hop\b").unwrap(), "Hip-Hop"),
         (Regex::new(r"(?i)\bHip-Hop 90s\b").unwrap(), "Hip-Hop 90's"),
         (Regex::new(r"(?i)\bHip-Hop 80s\b").unwrap(), "Hip-Hop 80's"),
         (Regex::new(r"(?i)\bHip-Hop 90$").unwrap(), "Hip-Hop 90's"),
         (Regex::new(r"(?i)\bHip-Hop 80$").unwrap(), "Hip-Hop 80's"),
-        (Regex::new(r"(?i)\b90's Hip-Hop").unwrap(), "Hip-Hop 90's"),
-        (Regex::new(r"(?i)\b80's Hip-Hop").unwrap(), "Hip-Hop 80's"),
-        (Regex::new(r"(?i)\bHip-Hop / Rap").unwrap(), "Hip-Hop"),
-        (Regex::new(r"(?i)\bRap & Hip-Hop").unwrap(), "Hip-Hop"),
+        (Regex::new(r"(?i)\b90's Hip-Hop\b").unwrap(), "Hip-Hop 90's"),
+        (Regex::new(r"(?i)\b80's Hip-Hop\b").unwrap(), "Hip-Hop 80's"),
+        (Regex::new(r"(?i)\bHip-Hop / Rap\b").unwrap(), "Hip-Hop"),
+        (Regex::new(r"(?i)\bRap & Hip-Hop\b").unwrap(), "Hip-Hop"),
         (Regex::new(r"(?i)^Rap$").unwrap(), "Hip-Hop"),
-        (Regex::new(r"(?i)\bNu Disco / Disco").unwrap(), "Disco Nu"),
-        (Regex::new(r"(?i)\bFunk / Soul").unwrap(), "Soul"),
-        (Regex::new(r"(?i)\bSoul / Funk").unwrap(), "Soul"),
-        (Regex::new(r"(?i)\bAfro beats").unwrap(), "Afrobeats"),
-        (Regex::new(r"(?i)\bblend").unwrap(), "Mashup"),
-        (Regex::new(r"(?i)\bDrum 'n' Bass").unwrap(), "Drum & Bass"),
-        (Regex::new(r"(?i)\bD'n'B").unwrap(), "Drum & Bass"),
-        (Regex::new(r"(?i)\bD&B").unwrap(), "Drum & Bass"),
-        (Regex::new(r"(?i)\bDisco, Funk").unwrap(), "Disco"),
-        (Regex::new(r"(?i)\bFunk / Boogie").unwrap(), "Funk Boogie"),
+        (Regex::new(r"(?i)\bNu Disco / Disco\b").unwrap(), "Disco Nu"),
+        (Regex::new(r"(?i)\bFunk / Soul\b").unwrap(), "Soul"),
+        (Regex::new(r"(?i)\bSoul / Funk\b").unwrap(), "Soul"),
+        (Regex::new(r"(?i)\bAfro beats\b").unwrap(), "Afrobeats"),
+        (Regex::new(r"(?i)\bblend\b").unwrap(), "Mashup"),
+        (Regex::new(r"(?i)\bDrum 'n' Bass\b").unwrap(), "Drum & Bass"),
+        (Regex::new(r"(?i)\bD'n'B\b").unwrap(), "Drum & Bass"),
+        (Regex::new(r"(?i)\bD&B\b").unwrap(), "Drum & Bass"),
+        (Regex::new(r"(?i)\bDisco, Funk\b").unwrap(), "Disco"),
+        (Regex::new(r"(?i)\bDisco Funk\b").unwrap(), "Disco"),
+        (Regex::new(r"(?i)\bFunk / Boogie\b").unwrap(), "Funk Boogie"),
         (Regex::new(r"(?i)^West Coast$").unwrap(), "Hip-Hop West Coast"),
         (Regex::new(r"(?i)^West Coast, Hip-Hop$").unwrap(), "Hip-Hop West Coast"),
+        (Regex::new(r"(?i)^Dance, Electro Pop$").unwrap(), "Dance"),
+        (Regex::new(r"(?i)^90s X Golden Era$").unwrap(), "Hip-Hop 90's"),
+        (Regex::new(r"(?i)\bB-more\b").unwrap(), "Baltimore Club"),
+        (Regex::new(r"(?i)\bBmore\b").unwrap(), "Baltimore Club"),
+        (Regex::new(r"(?i)\bBreaks, Funk\b").unwrap(), "Funk Breaks"),
+        (Regex::new(r"(?i)\bClassic House\b").unwrap(), "House Old School"),
+        (Regex::new(r"(?i)\bHouse Classic\b").unwrap(), "House Old School"),
     ];
 
     static ref RE_HOUSE: Regex = Regex::new(r"^[^,]* House$").unwrap();
@@ -414,7 +423,8 @@ mod tests {
 
     #[test]
     fn test_formatting() {
-        assert_eq!(format_genre("Hip\\Hop"), "Hip / Hop");
+        assert_eq!(format_genre("Hip\\Hop"), "Hip-Hop");
+        assert_eq!(format_genre("Hip/Hop"), "Hip-Hop");
         assert_eq!(format_genre("Hip  Hop"), "Hip-Hop");
         assert_eq!(format_genre("Jazz\u{FFFD}Blues"), "Jazz Blues");
         assert_eq!(format_genre("Hi"), "");
