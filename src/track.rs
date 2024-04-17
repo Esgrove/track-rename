@@ -131,6 +131,9 @@ impl Track {
         if formatted_album.is_empty() && self.directory.to_lowercase().starts_with("djcity") {
             formatted_album = "DJCity.com".to_string();
         }
+        if formatted_album.is_empty() && self.directory.to_lowercase().starts_with("trayze") {
+            formatted_album = "djtrayze.com".to_string();
+        }
 
         if formatted_genre.is_empty()
             && (self.root.ends_with(DJ_MUSIC_PATH.as_path()) || GENRE_MAPPINGS.contains_key(self.directory.as_str()))
