@@ -360,7 +360,7 @@ lazy_static! {
         (Regex::new(r"(?i)\bFunk / Boogie\b").unwrap(), "Funk Boogie"),
         (Regex::new(r"(?i)\bHouse / Funk\b").unwrap(), "House"),
         (Regex::new(r"(?i)\bHousemusic\b").unwrap(), "House"),
-        (Regex::new(r"(?i)\bHouse, Deep House\b").unwrap(), "House Deep"),
+        (Regex::new(r"(?i)^House, Deep House\b").unwrap(), "House Deep"),
         (Regex::new(r"(?i)^West Coast$").unwrap(), "Hip-Hop West Coast"),
         (Regex::new(r"(?i)^West Coast, Hip-Hop$").unwrap(), "Hip-Hop West Coast"),
         (Regex::new(r"(?i)^Dance, Electro Pop$").unwrap(), "Dance"),
