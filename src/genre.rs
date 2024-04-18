@@ -332,7 +332,7 @@ lazy_static! {
     ];
 
     /// Map various genres to the correct version
-    static ref REGEX_MAPPINGS: [(Regex, &'static str); 34] = [
+    static ref REGEX_MAPPINGS: [(Regex, &'static str); 40] = [
         (Regex::new(r"(?i)\br\s*[&'n]*\s*b\b").unwrap(), "R&B"),
         (Regex::new(r"(?i)\bother\b").unwrap(), ""),
         (Regex::new(r"(?i)\bAccapella\b").unwrap(), "Acapella"),
@@ -358,6 +358,9 @@ lazy_static! {
         (Regex::new(r"(?i)\bDisco, Funk\b").unwrap(), "Disco"),
         (Regex::new(r"(?i)\bDisco Funk\b").unwrap(), "Disco"),
         (Regex::new(r"(?i)\bFunk / Boogie\b").unwrap(), "Funk Boogie"),
+        (Regex::new(r"(?i)\bHouse / Funk\b").unwrap(), "House"),
+        (Regex::new(r"(?i)\bHousemusic\b").unwrap(), "House"),
+        (Regex::new(r"(?i)\bHouse, Deep House\b").unwrap(), "House Deep"),
         (Regex::new(r"(?i)^West Coast$").unwrap(), "Hip-Hop West Coast"),
         (Regex::new(r"(?i)^West Coast, Hip-Hop$").unwrap(), "Hip-Hop West Coast"),
         (Regex::new(r"(?i)^Dance, Electro Pop$").unwrap(), "Dance"),
@@ -367,6 +370,9 @@ lazy_static! {
         (Regex::new(r"(?i)\bBreaks, Funk\b").unwrap(), "Funk Breaks"),
         (Regex::new(r"(?i)\bClassic House\b").unwrap(), "House Old School"),
         (Regex::new(r"(?i)\bHouse Classic\b").unwrap(), "House Old School"),
+        (Regex::new(r"(?i)^Italo$").unwrap(), "Disco Italo"),
+        (Regex::new(r"(?i)\b80s\b").unwrap(), "80's"),
+        (Regex::new(r"(?i)\b90s\b").unwrap(), "90's"),
     ];
 
     static ref RE_HOUSE: Regex = Regex::new(r"^[^,]* House$").unwrap();
@@ -391,8 +397,7 @@ pub fn format_genre(genre: &str) -> String {
         formatted_genre = regex.replace_all(&formatted_genre, *replacement).to_string();
     }
 
-    formatted_genre = formatted_genre.replace("Original Samples / ", "");
-    formatted_genre = formatted_genre.replace(" / ", ", ");
+    formatted_genre = formatted_genre.replace("Original Samples / ", "").replace(" / ", ", ");
 
     reorder_house_genres(&mut formatted_genre);
     fix_whitespace(&mut formatted_genre);
