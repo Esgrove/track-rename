@@ -181,12 +181,6 @@ pub fn format_tags_for_artist_and_title(artist: &str, title: &str) -> (String, S
     let mut formatted_artist = artist.to_string();
     let mut formatted_title = title.to_string();
 
-    // Remove duplicate artist name from title
-    let artist_with_dash = format!("{formatted_artist} - ");
-    if formatted_title.starts_with(&artist_with_dash) {
-        formatted_title = formatted_title.replacen(&artist_with_dash, "", 1);
-    }
-
     // Remove an extra file extension from the end
     let extensions = [".mp3", ".flac", ".aif", ".aiff", ".m4a"];
     for ext in &extensions {
@@ -215,6 +209,12 @@ pub fn format_tags_for_artist_and_title(artist: &str, title: &str) -> (String, S
     for (regex, replacement) in REGEX_SUBSTITUTES.iter() {
         formatted_artist = regex.replace_all(&formatted_artist, *replacement).to_string();
         formatted_title = regex.replace_all(&formatted_title, *replacement).to_string();
+    }
+
+    // Remove duplicate artist name from title
+    let artist_with_dash = format!("{formatted_artist} - ");
+    if formatted_title.starts_with(&artist_with_dash) {
+        formatted_title = formatted_title.replacen(&artist_with_dash, "", 1);
     }
 
     use_parenthesis_for_mix(&mut formatted_title);
