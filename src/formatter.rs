@@ -217,6 +217,9 @@ pub fn format_tags_for_artist_and_title(artist: &str, title: &str) -> (String, S
         formatted_title = formatted_title.replacen(&artist_with_dash, "", 1);
     }
 
+    // Artist name should not start with a dot since this will make it a hidden file
+    formatted_artist = formatted_artist.trim_start_matches('.').to_string();
+
     use_parenthesis_for_mix(&mut formatted_title);
     move_feat_from_title_to_artist(&mut formatted_artist, &mut formatted_title);
     replace_dash_in_parentheses(&mut formatted_title);
