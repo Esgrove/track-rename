@@ -166,14 +166,11 @@ impl Renamer {
             if !self.config.sort_files {
                 // Print current directory when iterating in directory order
                 if current_path != track.root {
-                    let path = match current_path.strip_prefix(&self.root) {
-                        Ok(relative_path) => format!("{}", relative_path.display()),
-                        Err(_) => format!("{}", current_path.display()),
-                    };
+                    current_path = track.root.clone();
+                    let path = utils::path_to_string_relative(&current_path);
                     if !path.is_empty() {
                         println!("\n{}", path.magenta());
                     }
-                    current_path = track.root.clone();
                 }
             }
 
