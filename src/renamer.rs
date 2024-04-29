@@ -302,7 +302,10 @@ impl Renamer {
             }
 
             if self.config.tags_only {
-                processed_files.entry(formatted_name).or_default().push(track.clone());
+                processed_files
+                    .entry(formatted_name.to_lowercase())
+                    .or_default()
+                    .push(track.clone());
                 continue;
             }
 
@@ -357,7 +360,10 @@ impl Renamer {
                 }
             }
 
-            processed_files.entry(formatted_name).or_default().push(track.clone());
+            processed_files
+                .entry(formatted_name.to_lowercase())
+                .or_default()
+                .push(track.clone());
         }
 
         println!("{}", "\nFinished".green());
@@ -469,8 +475,8 @@ impl Renamer {
             "{}",
             format!("Duplicates ({}):", duplicate_tracks.len()).magenta().bold()
         );
-        for (name, tracks) in duplicate_tracks.iter() {
-            println!("{}", name.yellow());
+        for (_, tracks) in duplicate_tracks.iter() {
+            println!("{}", tracks[0].name.yellow());
             for track in tracks {
                 println!("  {}", track);
             }
