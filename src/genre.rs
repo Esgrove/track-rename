@@ -296,7 +296,7 @@ lazy_static! {
             ("POP CLASSICAL", "Classical"),
             ("POP EDITS", "Pop"),
             ("POP INSTRUMENTAL", "Pop"),
-            ("POP ISKELMÄ", "Pop Iskelmä"),
+            ("POP SUOMI", "Pop Suomi"),
             ("POP MAINSTREAM", "Pop"),
             ("POP MAINSTREAM INSTRUMENTAL", "Pop"),
             ("POP MASHUP", "Pop"),
