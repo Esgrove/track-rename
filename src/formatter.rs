@@ -244,6 +244,13 @@ pub fn format_tags_for_artist_and_title(artist: &str, title: &str) -> (String, S
         formatted_title = formatted_title.replace(pattern, replacement);
     }
 
+    if formatted_title == formatted_title.to_uppercase() {
+        formatted_title = titlecase::titlecase(&formatted_title);
+        if formatted_artist == formatted_artist.to_uppercase() {
+            formatted_artist = titlecase::titlecase(&formatted_artist);
+        }
+    }
+
     (formatted_artist.trim().to_string(), formatted_title.trim().to_string())
 }
 
