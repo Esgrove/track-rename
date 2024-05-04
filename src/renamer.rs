@@ -166,7 +166,7 @@ impl Renamer {
             if !self.config.sort_files {
                 // Print current directory when iterating in directory order
                 if current_path != track.root {
-                    current_path = track.root.clone();
+                    current_path.clone_from(&track.root);
                     let path = utils::path_to_string_relative(&current_path);
                     if !path.is_empty() {
                         println!("\n{}", path.magenta());
