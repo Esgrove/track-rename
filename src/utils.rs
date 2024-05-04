@@ -171,9 +171,13 @@ pub fn get_tags_from_filename(filename: &str) -> Option<(String, String)> {
     if !filename.contains(" - ") {
         eprintln!(
             "{}",
-            format!("Can't parse tag data from malformed filename: {filename}").red()
+            format!("Can't parse full tag data from malformed filename: {filename}").yellow()
         );
-        return None;
+        return if filename.is_empty() {
+            None
+        } else {
+            Some((String::new(), filename.to_string()))
+        };
     }
 
     let parts: Vec<&str> = filename.splitn(2, " - ").collect();
@@ -232,8 +236,11 @@ mod tests {
 
     #[test]
     fn test_get_tags_from_filename_no_delimiter() {
-        let filename = "ArtistTitle";
-        assert_eq!(get_tags_from_filename(filename), None);
+        let filename = "Songtitle (Remix)";
+        assert_eq!(
+            get_tags_from_filename(filename),
+            Some(("".into(), "Songtitle (Remix)".into()))
+        );
     }
 
     #[test]
