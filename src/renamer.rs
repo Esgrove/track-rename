@@ -396,7 +396,7 @@ impl Renamer {
             utils::write_log_for_failed_files(&failed_files)?;
         }
 
-        if self.config.verbose {
+        if self.config.genre_statistics {
             println!("Genres ({}):", genres.len());
             let mut genre_list: Vec<(String, usize)> = genres.into_iter().collect();
             genre_list.sort_by(|a, b| b.1.cmp(&a.1));

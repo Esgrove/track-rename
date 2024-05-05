@@ -34,6 +34,10 @@ pub struct RenamerArgs {
     #[arg(short, long)]
     convert: bool,
 
+    /// Collect and save genre statistics
+    #[arg(short, long)]
+    genre: bool,
+
     /// Enable debug prints
     #[arg(short, long)]
     debug: bool,
