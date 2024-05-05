@@ -252,9 +252,29 @@ impl Renamer {
                 }
             };
 
+            if self.config.debug {
+                println!("\nTags:");
+                println!("  Version: {}", file_tags.version());
+                for text in file_tags.frames().filter_map(|frame| frame.content().text()) {
+                    println!("  {}", text);
+                }
+                if file_tags.comments().count() > 0 {
+                    println!("  Comments: {}", file_tags.comments().count());
+                    for comment in file_tags.comments() {
+                        println!("  {:#?}", comment);
+                    }
+                }
+            }
+
             let tags: Tags = Self::parse_tag_data(track, &file_tags);
             track.format_tags(tags);
             let formatted_name = track.formatted_name();
+            if formatted_name.is_empty() {
+                eprintln!(
+                    "\n{}",
+                    format!("Formatted name should never be empty: {}", track.path.display()).red()
+                );
+            }
             if track.tags.changed() || self.config.write_all_tags {
                 if track.tags.changed() {
                     track.show(self.total_tracks, max_index_width);
