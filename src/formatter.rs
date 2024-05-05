@@ -174,6 +174,8 @@ lazy_static! {
     static ref RE_MULTIPLE_SPACES: Regex = Regex::new(r"\s{2,}").unwrap();
 
     static ref RE_WWW: Regex = Regex::new(r"(?i)^www\.").unwrap();
+
+    static ref RE_CHARS_AND_DOTS: Regex = Regex::new(r"(?i)^([a-z]\.)+([a-z])?$").unwrap();
 }
 
 /// Return formatted artist and title string.
@@ -244,9 +246,11 @@ pub fn format_tags_for_artist_and_title(artist: &str, title: &str) -> (String, S
         formatted_title = formatted_title.replace(pattern, replacement);
     }
 
-    if formatted_title == formatted_title.to_uppercase() {
+    if formatted_title == formatted_title.to_uppercase()
+        && (formatted_title.chars().count() > 6 || !RE_CHARS_AND_DOTS.is_match(&formatted_title))
+    {
         formatted_title = titlecase::titlecase(&formatted_title);
-        if formatted_artist == formatted_artist.to_uppercase() {
+        if formatted_artist == formatted_artist.to_uppercase() && formatted_artist.chars().count() > 6 {
             formatted_artist = titlecase::titlecase(&formatted_artist);
         }
     }
