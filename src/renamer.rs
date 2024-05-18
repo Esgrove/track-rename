@@ -8,6 +8,7 @@ use std::time::Instant;
 use anyhow::{Context, Result};
 use colored::Colorize;
 use id3::TagLike;
+use itertools::Itertools;
 use rayon::prelude::*;
 use walkdir::WalkDir;
 
@@ -150,6 +151,7 @@ impl Renamer {
         let mut failed_files: Vec<String> = Vec::new();
         let mut processed_files: HashMap<String, Vec<Track>> = HashMap::new();
         let mut genres: HashMap<String, usize> = HashMap::new();
+        let mut tag_versions: HashMap<String, usize> = HashMap::new();
         let mut checked_genre_mappings: HashSet<String> = HashSet::new();
         let mut current_path = self.root.clone();
 
@@ -243,6 +245,9 @@ impl Renamer {
                     continue;
                 }
             };
+
+            // Store id3 tag version count
+            *tag_versions.entry(file_tags.version().to_string()).or_insert(0) += 1;
 
             if self.config.debug && self.config.verbose {
                 utils::print_tag_data(&file_tags);
@@ -377,18 +382,27 @@ impl Renamer {
             utils::write_log_for_failed_files(&failed_files)?;
         }
 
+        if self.config.verbose {
+            println!("{}", "Tag versions:".cyan().bold());
+            tag_versions
+                .into_iter()
+                .sorted_unstable_by(|a, b| b.1.cmp(&a.1))
+                .map(|(tag, count)| format!("{tag}   {count}"))
+                .for_each(|string| println!("{}", string));
+        }
+
         if self.config.genre_statistics {
-            println!("Genres ({}):", genres.len());
+            println!("{}", format!("Genres ({}):", genres.len()).cyan().bold());
             let mut genre_list: Vec<(String, usize)> = genres.into_iter().collect();
             genre_list.sort_unstable_by(|a, b| b.1.cmp(&a.1));
-            let max_lenght = genre_list
+            let max_length = genre_list
                 .iter()
                 .take(20)
                 .map(|g| g.0.chars().count())
                 .max()
                 .unwrap_or(60);
             for (genre, count) in genre_list.iter().take(20) {
-                println!("{genre:<width$}   {count}", width = max_lenght);
+                println!("{genre:<width$}   {count}", width = max_length);
             }
             genre_list.sort_unstable();
             utils::write_genre_log(&genre_list)?;
