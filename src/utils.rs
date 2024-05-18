@@ -8,6 +8,7 @@ use anyhow::Context;
 use colored::{ColoredString, Colorize};
 use difference::{Changeset, Difference};
 use id3::{Error, ErrorKind, Tag};
+use itertools::Itertools;
 use unicode_normalization::UnicodeNormalization;
 
 use crate::track::Track;
@@ -165,6 +166,15 @@ pub fn print_stacked_diff(old: &str, new: &str) {
 /// Print a divider line that matches the length of the reference text.
 pub fn print_divider(text: &str) {
     println!("{}", "-".repeat(text.chars().count()));
+}
+
+pub fn print_tag_data(file_tags: &Tag) {
+    println!("\n{}", format!("Tags ({}):", file_tags.version()).cyan().bold());
+    file_tags
+        .frames()
+        .map(|frame| format!("  {}: {}", frame.id(), frame.content()))
+        .sorted_unstable()
+        .for_each(|string| println!("  {}", string));
 }
 
 /// Try to read tags from file.

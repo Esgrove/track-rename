@@ -245,21 +245,7 @@ impl Renamer {
             };
 
             if self.config.debug && self.config.verbose {
-                println!("\nTags:");
-                println!("  Version: {}", file_tags.version());
-                for frame in file_tags.frames() {
-                    if let Some(text) = frame.content().text() {
-                        println!("{}: {}", frame.name(), text);
-                    } else {
-                        println!("{}: {}", frame.name(), frame.content());
-                    }
-                }
-                if file_tags.comments().count() > 0 {
-                    println!("  Comments: {}", file_tags.comments().count());
-                    for comment in file_tags.comments() {
-                        println!("  {:#?}", comment);
-                    }
-                }
+                utils::print_tag_data(&file_tags);
             }
 
             track.format_tags(&file_tags);
