@@ -1,16 +1,7 @@
 mod cli_config;
-mod file_format;
-mod formatter;
-mod genre;
 mod renamer;
 mod statistics;
-mod tags;
-mod track;
 mod user_config;
-mod utils;
-
-#[cfg(test)]
-mod formatter_tests;
 
 use std::env;
 use std::path::PathBuf;

@@ -20,7 +20,7 @@ Only supports ID3 tags (mp3, aif, wav) currently.
 The convert option requires [ffmpeg](https://ffmpeg.org/) to be available in path.
 
 See the [test data](./src/formatter_tests.rs) for formatting examples.
-The formatting rules and functions are specified in [src/formatter.rs](./src/formatter.rs).
+The formatting rules and functions are specified in [src/formatter.rs](./src/formatting).
 
 ### Usage
 

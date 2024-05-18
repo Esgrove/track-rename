@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use lazy_static::lazy_static;
 use regex::Regex;
 
-use crate::formatter::fix_whitespace;
+use crate::formatting::fix_whitespace;
 
 lazy_static! {
     // Map folder names to default genre for that folder

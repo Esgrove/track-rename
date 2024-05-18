@@ -8,22 +8,19 @@ use std::time::Instant;
 use anyhow::{Context, Result};
 use colored::Colorize;
 use id3::TagLike;
-use lazy_static::lazy_static;
 use rayon::prelude::*;
 use walkdir::WalkDir;
 
 use crate::cli_config::CliConfig;
-use crate::file_format::FileFormat;
-use crate::genre::GENRE_MAPPINGS;
 use crate::statistics::Statistics;
-use crate::tags::Tags;
-use crate::track::Track;
 use crate::user_config::UserConfig;
-use crate::{utils, RenamerArgs};
+use crate::RenamerArgs;
 
-lazy_static! {
-    pub static ref DJ_MUSIC_PATH: PathBuf = ["Dropbox", "DJ MUSIC"].iter().collect();
-}
+use track_rename::file_format::FileFormat;
+use track_rename::genre::GENRE_MAPPINGS;
+use track_rename::tags::Tags;
+use track_rename::track::{Track, DJ_MUSIC_PATH};
+use track_rename::utils;
 
 /// Audio track tag and filename formatting.
 #[derive(Debug, Default)]

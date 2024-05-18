@@ -5,7 +5,7 @@ use colored::Colorize;
 use dirs::home_dir;
 use serde::Deserialize;
 
-use crate::utils;
+use track_rename::utils;
 
 /// User config options from a config file.
 #[derive(Debug, Default, Deserialize)]

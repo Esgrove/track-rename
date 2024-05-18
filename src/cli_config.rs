@@ -3,7 +3,8 @@ use std::fmt;
 use colored::Colorize;
 use serde::{Deserialize, Serialize};
 
-use crate::{utils, RenamerArgs};
+use crate::RenamerArgs;
+use track_rename::utils;
 
 /// Renamer CLI settings.
 #[derive(Default, Debug, Serialize, Deserialize)]

@@ -6,18 +6,22 @@ use std::str::FromStr;
 
 use anyhow::Context;
 use colored::Colorize;
+use lazy_static::lazy_static;
 use unicode_normalization::UnicodeNormalization;
 
 use crate::file_format::FileFormat;
 use crate::genre::GENRE_MAPPINGS;
-use crate::renamer::DJ_MUSIC_PATH;
 use crate::tags::Tags;
 use crate::utils;
 use crate::utils::{path_to_string, path_to_string_relative};
-use crate::{formatter, genre};
+use crate::{formatting, genre};
 
 // Other audio file extensions that should trigger a warning message,
 const OTHER_FILE_EXTENSIONS: [&str; 3] = ["wav", "flac", "m4a"];
+
+lazy_static! {
+    pub static ref DJ_MUSIC_PATH: PathBuf = ["Dropbox", "DJ MUSIC"].iter().collect();
+}
 
 /// Represents one audio file.
 #[derive(Debug, Default, Clone)]
@@ -123,9 +127,9 @@ impl Track {
 
     pub fn format_tags(&mut self, mut tags: Tags) {
         let (formatted_artist, formatted_title) =
-            formatter::format_tags_for_artist_and_title(&tags.current_artist, &tags.current_title);
+            formatting::format_tags_for_artist_and_title(&tags.current_artist, &tags.current_title);
 
-        let mut formatted_album = formatter::format_album(&tags.current_album);
+        let mut formatted_album = formatting::format_album(&tags.current_album);
         let mut formatted_genre = genre::format_genre(&tags.current_genre);
 
         if formatted_album.is_empty() && self.directory.to_lowercase().starts_with("djcity") {
@@ -152,7 +156,7 @@ impl Track {
     /// Return formatted file name without file extension
     pub fn formatted_name(&self) -> String {
         let (file_artist, file_title) =
-            formatter::format_filename(&self.tags.formatted_artist, &self.tags.formatted_title);
+            formatting::format_filename(&self.tags.formatted_artist, &self.tags.formatted_title);
 
         if file_artist.is_empty() {
             file_title
