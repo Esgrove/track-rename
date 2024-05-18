@@ -384,10 +384,17 @@ impl Renamer {
 
         if self.config.verbose {
             println!("{}", "Tag versions:".cyan().bold());
+            let total: usize = tag_versions.values().sum();
             tag_versions
                 .into_iter()
                 .sorted_unstable_by(|a, b| b.1.cmp(&a.1))
-                .map(|(tag, count)| format!("{tag}   {count}"))
+                .map(|(tag, count)| {
+                    format!(
+                        "{tag}   {count:>width$} ({:.1}%)",
+                        count as f64 / total as f64 * 100.0,
+                        width = total.to_string().chars().count()
+                    )
+                })
                 .for_each(|string| println!("{}", string));
         }
 
