@@ -312,6 +312,12 @@ static NESTED_PARENTHESES_TEST_DATA: &[FormattingTestData] = &[
         title: "Live For The Night (Simo 128 (70) (Trayze Rmx) Transition) (Quick)",
         correct_title: "Live For The Night (Simo 128) (70) (Trayze Rmx Transition) (Quick)",
     },
+    FormattingTestData {
+        artist: "Krewella",
+        correct_artist: "Krewella",
+        title: "Live For The Night ((Trayze Remix) Transition (Quick))",
+        correct_title: "Live For The Night (Trayze Remix Transition) (Quick)",
+    },
 ];
 
 static PARENTHESES_TEST_DATA: &[FormattingTestData] = &[
@@ -340,8 +346,8 @@ static PARENTHESES_TEST_DATA: &[FormattingTestData] = &[
         correct_title: "You Make Me Feel (Mighty Real) (Clean)",
     },
     FormattingTestData {
-        artist: "abcdefg",
-        correct_artist: "abcdefg",
+        artist: "Artist",
+        correct_artist: "Artist",
         title: "(You Make Me Feel) Mighty Real",
         correct_title: "(You Make Me Feel) Mighty Real",
     },
@@ -365,6 +371,12 @@ static REMIX_FORMATTING_TEST_DATA: &[FormattingTestData] = &[
         correct_artist: "Lizzo",
         title: "About Damn Time - Purple Disco Machine (Dirty Intro)",
         correct_title: "About Damn Time (Purple Disco Machine) (Dirty Intro)",
+    },
+    FormattingTestData {
+        artist: "Lizzo",
+        correct_artist: "Lizzo",
+        title: "About Damn Time (Remix) - Purple Disco Machine (Dirty Intro)",
+        correct_title: "About Damn Time (Remix) (Purple Disco Machine) (Dirty Intro)",
     },
 ];
 
