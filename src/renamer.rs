@@ -17,7 +17,6 @@ use crate::RenamerArgs;
 
 use track_rename::file_format::FileFormat;
 use track_rename::genre::GENRE_MAPPINGS;
-use track_rename::tags::Tags;
 use track_rename::track::{Track, DJ_MUSIC_PATH};
 use track_rename::utils;
 
@@ -259,8 +258,7 @@ impl Renamer {
                 }
             }
 
-            let tags = Tags::parse_tag_data(track, &file_tags);
-            track.format_tags(tags);
+            track.format_tags(&file_tags);
             let formatted_name = track.formatted_name();
             if formatted_name.is_empty() {
                 eprintln!(

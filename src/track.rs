@@ -6,6 +6,7 @@ use std::str::FromStr;
 
 use anyhow::Context;
 use colored::Colorize;
+use id3::Tag;
 use lazy_static::lazy_static;
 use unicode_normalization::UnicodeNormalization;
 
@@ -125,7 +126,8 @@ impl Track {
         format!("{}.{}", self.name, self.extension)
     }
 
-    pub fn format_tags(&mut self, mut tags: Tags) {
+    pub fn format_tags(&mut self, file_tags: &Tag) {
+        let mut tags = Tags::parse_tag_data(self, file_tags);
         let (formatted_artist, formatted_title) =
             formatting::format_tags_for_artist_and_title(&tags.current_artist, &tags.current_title);
 
