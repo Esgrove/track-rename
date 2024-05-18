@@ -121,11 +121,12 @@ impl Renamer {
                 format!("{}", self.root.display()).cyan()
             );
         }
+
         let mut track_list: Vec<Track> = WalkDir::new(&self.root)
             .into_iter()
+            .par_bridge()
             .filter_map(|e| e.ok())
             .filter(|e| e.path().is_file())
-            .par_bridge()
             .filter_map(|entry| Track::try_from_path(entry.path()))
             .collect();
 
@@ -136,9 +137,11 @@ impl Renamer {
             // Sort by full path so directories are in sorted order
             track_list.par_sort_unstable_by(|a, b| a.path.cmp(&b.path));
         }
-        for (number, track) in track_list.iter_mut().enumerate() {
+
+        track_list.par_iter_mut().enumerate().for_each(|(number, track)| {
             track.number = number + 1;
-        }
+        });
+
         track_list
     }
 
