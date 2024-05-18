@@ -399,7 +399,7 @@ impl Renamer {
         if self.config.genre_statistics {
             println!("Genres ({}):", genres.len());
             let mut genre_list: Vec<(String, usize)> = genres.into_iter().collect();
-            genre_list.sort_by(|a, b| b.1.cmp(&a.1));
+            genre_list.sort_unstable_by(|a, b| b.1.cmp(&a.1));
             let max_lenght = genre_list
                 .iter()
                 .take(20)
@@ -409,7 +409,7 @@ impl Renamer {
             for (genre, count) in genre_list.iter().take(20) {
                 println!("{genre:<width$}   {count}", width = max_lenght);
             }
-            genre_list.sort();
+            genre_list.sort_unstable();
             utils::write_genre_log(&genre_list)?;
         }
 
@@ -430,7 +430,7 @@ impl Renamer {
         let mut counts: Vec<(&String, &usize)> = file_format_counts.iter().collect();
 
         // Sort the Vec in decreasing order
-        counts.sort_by(|a, b| b.1.cmp(a.1));
+        counts.sort_unstable_by(|a, b| b.1.cmp(a.1));
 
         println!("{}", "File format counts:".bold());
         for (format, count) in counts {
@@ -451,7 +451,7 @@ impl Renamer {
             return;
         }
 
-        duplicate_tracks.sort();
+        duplicate_tracks.sort_unstable();
 
         println!(
             "{}",
