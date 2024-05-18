@@ -6,6 +6,7 @@ use regex::Regex;
 use crate::formatter::fix_whitespace;
 
 lazy_static! {
+    // Map folder names to default genre for that folder
     pub static ref GENRE_MAPPINGS: HashMap<&'static str, &'static str> = {
         HashMap::from([
             ("DISCO", "Disco"),
