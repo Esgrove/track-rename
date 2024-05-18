@@ -408,6 +408,7 @@ impl Renamer {
                 .map(|g| g.0.chars().count())
                 .max()
                 .unwrap_or(60);
+
             for (genre, count) in genre_list.iter().take(20) {
                 println!("{genre:<width$}   {count}", width = max_length);
             }
@@ -422,22 +423,14 @@ impl Renamer {
 
     /// Count and print the total number of each file extension in the file list.
     fn print_extension_counts(&self) {
-        let mut file_format_counts: HashMap<String, usize> = HashMap::new();
-
-        for track in &self.tracks {
-            *file_format_counts.entry(track.format.to_string()).or_insert(0) += 1;
-        }
-
-        // Collect the HashMap into a Vec for sorting
-        let mut counts: Vec<(&String, &usize)> = file_format_counts.iter().collect();
-
-        // Sort the Vec in decreasing order
-        counts.sort_unstable_by(|a, b| b.1.cmp(a.1));
-
         println!("{}", "File format counts:".bold());
-        for (format, count) in counts {
-            println!("{}: {}", format, count);
-        }
+        self.tracks
+            .iter()
+            .map(|track| track.format.to_string())
+            .counts()
+            .into_iter()
+            .sorted_unstable_by(|a, b| b.1.cmp(&a.1))
+            .for_each(|(format, count)| println!("{format}: {count}"))
     }
 
     /// Print all paths for duplicate tracks with the same name.
