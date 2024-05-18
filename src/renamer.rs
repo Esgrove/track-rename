@@ -11,9 +11,8 @@ use id3::TagLike;
 use rayon::prelude::*;
 use walkdir::WalkDir;
 
-use crate::cli_config::CliConfig;
+use crate::config::Config;
 use crate::statistics::Statistics;
-use crate::user_config::UserConfig;
 use crate::RenamerArgs;
 
 use track_rename::file_format::FileFormat;
@@ -26,8 +25,7 @@ use track_rename::utils;
 #[derive(Debug, Default)]
 pub struct Renamer {
     root: PathBuf,
-    config: CliConfig,
-    user_config: UserConfig,
+    config: Config,
     tracks: Vec<Track>,
     total_tracks: usize,
     stats: Statistics,
@@ -36,20 +34,16 @@ pub struct Renamer {
 impl Renamer {
     /// Create Renamer from command line arguments.
     pub fn new(path: PathBuf, args: RenamerArgs) -> Renamer {
-        let user_config = UserConfig::get_user_config();
-        let mut config = CliConfig::from_args(args);
-        config.convert_failed = config.convert_failed || user_config.convert_failed;
         Renamer {
             root: path,
-            config,
-            user_config,
+            config: Config::from_args(args),
             ..Default::default()
         }
     }
 
     #[cfg(test)]
     /// Create Renamer with config directly. Used in tests.
-    pub fn new_with_config(path: PathBuf, config: CliConfig) -> Renamer {
+    pub fn new_with_config(path: PathBuf, config: Config) -> Renamer {
         Renamer {
             root: path,
             config,
@@ -61,7 +55,6 @@ impl Renamer {
     pub fn run(&mut self) -> Result<()> {
         if self.config.debug {
             println!("{}", self.config);
-            println!("{}", self.user_config);
         }
 
         if self.config.convert_failed && !utils::ffmpeg_available() {
@@ -203,8 +196,8 @@ impl Renamer {
 
             // Skip filenames in user configs exclude list
             if self
-                .user_config
-                .exclude
+                .config
+                .excluded_tracks
                 .iter()
                 .any(|excluded_file| excluded_file == track)
             {
@@ -518,7 +511,7 @@ mod tests {
     #[test]
     fn test_rename_no_tags() {
         run_test_on_files(&NO_TAGS_DIR, |temp_file| {
-            let mut renamer = Renamer::new_with_config(temp_file, CliConfig::new_for_tests());
+            let mut renamer = Renamer::new_with_config(temp_file, Config::new_for_tests());
             renamer.run().expect("Rename failed");
         });
     }
@@ -526,7 +519,7 @@ mod tests {
     #[test]
     fn test_rename_basic_tags() {
         run_test_on_files(&BASIC_TAGS_DIR, |temp_file| {
-            let mut renamer = Renamer::new_with_config(temp_file, CliConfig::new_for_tests());
+            let mut renamer = Renamer::new_with_config(temp_file, Config::new_for_tests());
             renamer.run().expect("Rename failed");
         });
     }
@@ -534,7 +527,7 @@ mod tests {
     #[test]
     fn test_rename_extended_tags() {
         run_test_on_files(&EXTENDED_TAGS_DIR, |temp_file| {
-            let mut renamer = Renamer::new_with_config(temp_file, CliConfig::new_for_tests());
+            let mut renamer = Renamer::new_with_config(temp_file, Config::new_for_tests());
             renamer.run().expect("Rename failed");
         });
     }

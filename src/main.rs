@@ -1,7 +1,6 @@
-mod cli_config;
+mod config;
 mod renamer;
 mod statistics;
-mod user_config;
 
 use std::env;
 use std::path::PathBuf;
