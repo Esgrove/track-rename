@@ -1,5 +1,7 @@
 use colored::Colorize;
+use id3::{Tag, TagLike};
 
+use crate::track::Track;
 use crate::utils;
 
 #[derive(Debug, Default, Clone)]
@@ -23,6 +25,44 @@ impl Tags {
             current_genre: genre,
             ..Default::default()
         }
+    }
+
+    /// Try to read tags such as artist and title from tags.
+    /// Fallback to parsing them from filename if tags are empty.
+    pub fn parse_tag_data(track: &Track, tag: &Tag) -> Tags {
+        let mut artist = String::new();
+        let mut title = String::new();
+
+        match (tag.artist(), tag.title()) {
+            (Some(a), Some(t)) => {
+                artist = utils::normalize_str(a);
+                title = utils::normalize_str(t);
+            }
+            (None, None) => {
+                eprintln!("\n{}", format!("Missing tags: {}", track.path.display()).yellow());
+                if let Some((a, t)) = utils::get_tags_from_filename(&track.name) {
+                    artist = a;
+                    title = t;
+                }
+            }
+            (None, Some(t)) => {
+                eprintln!("\n{}", format!("Missing artist tag: {}", track.path.display()).yellow());
+                if let Some((a, _)) = utils::get_tags_from_filename(&track.name) {
+                    artist = a;
+                }
+                title = utils::normalize_str(t);
+            }
+            (Some(a), None) => {
+                eprintln!("\n{}", format!("Missing title tag: {}", track.path.display()).yellow());
+                artist = utils::normalize_str(a);
+                if let Some((_, t)) = utils::get_tags_from_filename(&track.name) {
+                    title = t;
+                }
+            }
+        }
+        let album = utils::normalize_str(tag.album().unwrap_or_default());
+        let genre = utils::normalize_str(tag.genre_parsed().unwrap_or_default().as_ref());
+        Tags::new(artist, title, album, genre)
     }
 
     pub fn current_name(&self) -> String {

@@ -7,7 +7,7 @@ use std::time::Instant;
 
 use anyhow::{Context, Result};
 use colored::Colorize;
-use id3::{Tag, TagLike};
+use id3::TagLike;
 use lazy_static::lazy_static;
 use rayon::prelude::*;
 use walkdir::WalkDir;
@@ -269,7 +269,7 @@ impl Renamer {
                 }
             }
 
-            let tags: Tags = Self::parse_tag_data(track, &file_tags);
+            let tags = Tags::parse_tag_data(track, &file_tags);
             track.format_tags(tags);
             let formatted_name = track.formatted_name();
             if formatted_name.is_empty() {
@@ -439,44 +439,6 @@ impl Renamer {
         for (format, count) in counts {
             println!("{}: {}", format, count);
         }
-    }
-
-    /// Try to read tags such as artist and title from tags.
-    /// Fallback to parsing them from filename if tags are empty.
-    fn parse_tag_data(track: &Track, tag: &Tag) -> Tags {
-        let mut artist = String::new();
-        let mut title = String::new();
-
-        match (tag.artist(), tag.title()) {
-            (Some(a), Some(t)) => {
-                artist = utils::normalize_str(a);
-                title = utils::normalize_str(t);
-            }
-            (None, None) => {
-                eprintln!("\n{}", format!("Missing tags: {}", track.path.display()).yellow());
-                if let Some((a, t)) = utils::get_tags_from_filename(&track.name) {
-                    artist = a;
-                    title = t;
-                }
-            }
-            (None, Some(t)) => {
-                eprintln!("\n{}", format!("Missing artist tag: {}", track.path.display()).yellow());
-                if let Some((a, _)) = utils::get_tags_from_filename(&track.name) {
-                    artist = a;
-                }
-                title = utils::normalize_str(t);
-            }
-            (Some(a), None) => {
-                eprintln!("\n{}", format!("Missing title tag: {}", track.path.display()).yellow());
-                artist = utils::normalize_str(a);
-                if let Some((_, t)) = utils::get_tags_from_filename(&track.name) {
-                    title = t;
-                }
-            }
-        }
-        let album = utils::normalize_str(tag.album().unwrap_or_default());
-        let genre = utils::normalize_str(tag.genre_parsed().unwrap_or_default().as_ref());
-        Tags::new(artist, title, album, genre)
     }
 
     /// Print all paths for duplicate tracks with the same name.
