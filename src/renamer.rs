@@ -244,11 +244,15 @@ impl Renamer {
                 }
             };
 
-            if self.config.debug {
+            if self.config.debug && self.config.verbose {
                 println!("\nTags:");
                 println!("  Version: {}", file_tags.version());
-                for text in file_tags.frames().filter_map(|frame| frame.content().text()) {
-                    println!("  {}", text);
+                for frame in file_tags.frames() {
+                    if let Some(text) = frame.content().text() {
+                        println!("{}: {}", frame.name(), text);
+                    } else {
+                        println!("{}: {}", frame.name(), frame.content());
+                    }
                 }
                 if file_tags.comments().count() > 0 {
                     println!("  Comments: {}", file_tags.comments().count());
