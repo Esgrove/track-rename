@@ -172,7 +172,7 @@ pub fn print_tag_data(file_tags: &Tag) {
     println!("\n{}", format!("Tags ({}):", file_tags.version()).cyan().bold());
     file_tags
         .frames()
-        .map(|frame| format!("  {}: {}", frame.id(), frame.content()))
+        .map(|frame| format!("{}: {}", frame.id(), frame.content()))
         .sorted_unstable()
         .for_each(|string| println!("  {}", string));
 }
