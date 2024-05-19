@@ -1,7 +1,8 @@
 use std::collections::{HashMap, HashSet};
 use std::fs;
+use std::fs::File;
 use std::io::{self, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::string::String;
 use std::time::Instant;
 
@@ -325,12 +326,14 @@ impl TrackRenamer {
             let original_path_string = utils::path_to_string_relative(&track.path);
 
             if formatted_path_string != original_path_string {
-                let mut capitalization_change_only = false;
-                if formatted_path_string.to_lowercase() == original_path_string.to_lowercase() {
-                    // File path contains only capitalization changes:
-                    // Need to use a temp file to workaround case-insensitive file systems.
-                    capitalization_change_only = true;
-                }
+                let capitalization_change_only =
+                    if formatted_path_string.to_lowercase() == original_path_string.to_lowercase() {
+                        // File path contains only capitalization changes:
+                        // Need to use a temp file to workaround case-insensitive file systems.
+                        true
+                    } else {
+                        false
+                    };
                 if !formatted_path.is_file() || capitalization_change_only {
                     // Rename files if the flag was given or if tags were not changed
                     if self.config.rename_files || !track.tags_updated {
@@ -349,6 +352,7 @@ impl TrackRenamer {
                             if self.config.test_mode && formatted_path.exists() {
                                 fs::remove_file(formatted_path).context("Failed to remove renamed file")?;
                             } else {
+                                // Update track data with the renamed path
                                 *track = track.renamed_track(formatted_path, formatted_name.clone());
                             }
                             self.stats.num_renamed += 1;
@@ -356,7 +360,7 @@ impl TrackRenamer {
                         utils::print_divider(&formatted_file_name);
                     }
                 } else if formatted_path != track.path {
-                    // A file with the new name already exists
+                    // A file with the formatted name already exists
                     track.show(self.total_tracks, max_index_width);
                     println!("{}", "Duplicate:".bright_red().bold());
                     println!("Rename:   {}", original_path_string);
@@ -365,7 +369,6 @@ impl TrackRenamer {
                     self.stats.num_duplicates += 1;
                 }
             }
-
             processed_files
                 .entry(formatted_name.to_lowercase())
                 .or_default()
@@ -381,41 +384,17 @@ impl TrackRenamer {
         if self.config.log_failures && !failed_files.is_empty() {
             utils::write_log_for_failed_files(&failed_files)?;
         }
-
         if self.config.verbose {
-            println!("{}", "Tag versions:".cyan().bold());
-            let total: usize = tag_versions.values().sum();
-            tag_versions
-                .into_iter()
-                .sorted_unstable_by(|a, b| b.1.cmp(&a.1))
-                .map(|(tag, count)| {
-                    format!(
-                        "{tag}   {count:>width$} ({:.1}%)",
-                        count as f64 / total as f64 * 100.0,
-                        width = total.to_string().chars().count()
-                    )
-                })
-                .for_each(|string| println!("{}", string));
+            Self::print_tag_version_counts(tag_versions);
         }
-
         if self.config.genre_statistics {
             println!("{}", format!("Genres ({}):", genres.len()).cyan().bold());
-            let mut genre_list: Vec<(String, usize)> = genres.into_iter().collect();
-            genre_list.sort_unstable_by(|a, b| b.1.cmp(&a.1));
-            let max_length = genre_list
-                .iter()
-                .take(20)
-                .map(|g| g.0.chars().count())
-                .max()
-                .unwrap_or(60);
-
-            for (genre, count) in genre_list.iter().take(20) {
-                println!("{genre:<width$}   {count}", width = max_length);
-            }
+            let mut genre_list: Vec<(String, usize)> =
+                genres.into_iter().sorted_unstable_by(|a, b| b.1.cmp(&a.1)).collect();
+            Self::print_top_genres(&genre_list);
             genre_list.sort_unstable();
-            utils::write_genre_log(&genre_list)?;
+            Self::write_genre_log(&genre_list)?;
         }
-
         Self::print_all_duplicates(processed_files);
 
         Ok(())
@@ -458,6 +437,47 @@ impl TrackRenamer {
                 println!("  {}", track);
             }
         }
+    }
+
+    fn print_tag_version_counts(tag_versions: HashMap<String, usize>) {
+        println!("{}", "Tag versions:".cyan().bold());
+        let total: usize = tag_versions.values().sum();
+        tag_versions
+            .into_iter()
+            .sorted_unstable_by(|a, b| b.1.cmp(&a.1))
+            .map(|(tag, count)| {
+                format!(
+                    "{tag}   {count:>width$} ({:.1}%)",
+                    count as f64 / total as f64 * 100.0,
+                    width = total.to_string().chars().count()
+                )
+            })
+            .for_each(|string| println!("{}", string));
+    }
+
+    fn print_top_genres(genre_list: &[(String, usize)]) {
+        let max_length = genre_list
+            .iter()
+            .take(20)
+            .map(|g| g.0.chars().count())
+            .max()
+            .unwrap_or(60);
+
+        for (genre, count) in genre_list.iter().take(20) {
+            println!("{genre:<width$}   {count}", width = max_length);
+        }
+    }
+
+    /// Write a txt log file for failed tracks to current working directory.
+    fn write_genre_log(genres: &[(String, usize)]) -> anyhow::Result<()> {
+        let filepath = Path::new("genres.txt");
+        let mut file = File::create(filepath).context("Failed to create output file")?;
+        for (genre, _) in genres.iter() {
+            writeln!(file, "{}", genre)?;
+        }
+
+        println!("Logged genres to: {}", dunce::canonicalize(filepath)?.display());
+        Ok(())
     }
 }
 

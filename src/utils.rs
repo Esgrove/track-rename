@@ -219,18 +219,6 @@ pub fn write_log_for_failed_files(paths: &[String]) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Write a txt log file for failed tracks to current working directory.
-pub fn write_genre_log(genres: &[(String, usize)]) -> anyhow::Result<()> {
-    let filepath = Path::new("genres.txt");
-    let mut file = File::create(filepath).context("Failed to create output file")?;
-    for (genre, _) in genres.iter() {
-        writeln!(file, "{}", genre)?;
-    }
-
-    println!("Logged genres to: {}", dunce::canonicalize(filepath)?.display());
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
