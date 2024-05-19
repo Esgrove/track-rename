@@ -23,7 +23,7 @@ use track_rename::utils;
 
 /// Audio track tag and filename formatting.
 #[derive(Debug, Default)]
-pub struct Renamer {
+pub struct TrackRenamer {
     root: PathBuf,
     config: Config,
     tracks: Vec<Track>,
@@ -31,10 +31,10 @@ pub struct Renamer {
     stats: Statistics,
 }
 
-impl Renamer {
+impl TrackRenamer {
     /// Create Renamer from command line arguments.
-    pub fn new(path: PathBuf, args: RenamerArgs) -> Renamer {
-        Renamer {
+    pub fn new(path: PathBuf, args: RenamerArgs) -> TrackRenamer {
+        TrackRenamer {
             root: path,
             config: Config::from_args(args),
             ..Default::default()
@@ -43,8 +43,8 @@ impl Renamer {
 
     #[cfg(test)]
     /// Create Renamer with config directly. Used in tests.
-    pub fn new_with_config(path: PathBuf, config: Config) -> Renamer {
-        Renamer {
+    pub fn new_with_config(path: PathBuf, config: Config) -> TrackRenamer {
+        TrackRenamer {
             root: path,
             config,
             ..Default::default()
@@ -104,7 +104,7 @@ impl Renamer {
     }
 
     /// Find and return a list of audio tracks from the root directory.
-    fn get_tracks_from_root_directory(&mut self) -> Vec<Track> {
+    fn get_tracks_from_root_directory(&self) -> Vec<Track> {
         if self.config.verbose {
             println!(
                 "Getting audio files from: {}",
@@ -513,7 +513,7 @@ mod tests {
     #[test]
     fn test_rename_no_tags() {
         run_test_on_files(&NO_TAGS_DIR, |temp_file| {
-            let mut renamer = Renamer::new_with_config(temp_file, Config::new_for_tests());
+            let mut renamer = TrackRenamer::new_with_config(temp_file, Config::new_for_tests());
             renamer.run().expect("Rename failed");
         });
     }
@@ -521,7 +521,7 @@ mod tests {
     #[test]
     fn test_rename_basic_tags() {
         run_test_on_files(&BASIC_TAGS_DIR, |temp_file| {
-            let mut renamer = Renamer::new_with_config(temp_file, Config::new_for_tests());
+            let mut renamer = TrackRenamer::new_with_config(temp_file, Config::new_for_tests());
             renamer.run().expect("Rename failed");
         });
     }
@@ -529,7 +529,7 @@ mod tests {
     #[test]
     fn test_rename_extended_tags() {
         run_test_on_files(&EXTENDED_TAGS_DIR, |temp_file| {
-            let mut renamer = Renamer::new_with_config(temp_file, Config::new_for_tests());
+            let mut renamer = TrackRenamer::new_with_config(temp_file, Config::new_for_tests());
             renamer.run().expect("Rename failed");
         });
     }

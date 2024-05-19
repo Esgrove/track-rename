@@ -1,6 +1,6 @@
 mod config;
-mod renamer;
 mod statistics;
+mod track_renamer;
 
 use std::env;
 use std::path::PathBuf;
@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 use clap::Parser;
 
-use crate::renamer::Renamer;
+use crate::track_renamer::TrackRenamer;
 
 #[derive(Parser)]
 #[command(author, about, version)]
@@ -78,5 +78,5 @@ fn main() -> Result<()> {
 
     let absolute_input_path = dunce::canonicalize(filepath)?;
 
-    Renamer::new(absolute_input_path, args).run()
+    TrackRenamer::new(absolute_input_path, args).run()
 }

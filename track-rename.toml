@@ -8,3 +8,9 @@ convert_failed = false
 # List of filenames to ignore.
 # These can be with the file extension or not.
 exclude = []
+
+# Log failed tracks to a file in the root dir.
+log_failures = false
+
+# Log genre statistics
+genre_statistics = false

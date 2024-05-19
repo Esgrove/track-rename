@@ -10,7 +10,7 @@ use crate::RenamerArgs;
 
 use track_rename::utils;
 
-/// Renamer settings.
+/// Renamer settings combined from CLI options and user config file.
 #[derive(Default, Debug, Serialize, Deserialize)]
 pub struct Config {
     pub force: bool,
@@ -37,6 +37,8 @@ struct UserConfig {
     /// Convert files that could not be read to AIFF
     pub convert_failed: bool,
     #[serde(default)]
+    pub genre_statistics: bool,
+    #[serde(default)]
     pub log_failures: bool,
 }
 
@@ -56,7 +58,7 @@ impl Config {
             log_failures: args.log || user_config.log_failures,
             convert_failed: args.convert || user_config.convert_failed,
             write_all_tags: args.all_tags,
-            genre_statistics: args.genre,
+            genre_statistics: args.genre || user_config.genre_statistics,
             excluded_tracks: user_config.exclude,
         }
     }
@@ -135,6 +137,8 @@ impl fmt::Display for UserConfig {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "{}", "UserConfig:".bold())?;
         writeln!(f, "  convert_failed: {}", utils::colorize_bool(self.convert_failed))?;
+        writeln!(f, "  genre_statistics: {}", utils::colorize_bool(self.convert_failed))?;
+        writeln!(f, "  log_failures: {}", utils::colorize_bool(self.convert_failed))?;
         if self.exclude.is_empty() {
             writeln!(f, "  exclude: []")
         } else {
