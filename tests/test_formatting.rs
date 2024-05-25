@@ -297,6 +297,12 @@ static FORMATTING_TEST_DATA: &[FormattingTestData] = &[
         title: "Puffin' On Blunts And Drankin' Tanqueray (12 Version) (Dirty)",
         correct_title: "Puffin' On Blunts And Drankin' Tanqueray (12'' Version) (Dirty)",
     },
+    FormattingTestData {
+        artist: "Frankie Cutlass",
+        correct_artist: "Frankie Cutlass",
+        title: "Song Name (Original Mix)",
+        correct_title: "Song Name",
+    },
 ];
 
 static NESTED_PARENTHESES_TEST_DATA: &[FormattingTestData] = &[
