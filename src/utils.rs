@@ -190,7 +190,10 @@ pub fn read_tags(track: &Track) -> Option<Tag> {
         }
         Err(error) => {
             eprintln!("\n{}", format!("Failed to read tags for: {}\n{}", track, error).red());
-            None
+            if let Some(ref partial_tags) = error.partial_tag {
+                print_tag_data(partial_tags);
+            }
+            error.partial_tag
         }
     }
 }
