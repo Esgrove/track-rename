@@ -30,7 +30,7 @@ lazy_static! {
         ("–", "-"),
         ("—", "-"),
     ];
-    static ref TITLE_SUBSTITUTES: [(&'static str, &'static str); 15] = [
+    static ref TITLE_SUBSTITUTES: [(&'static str, &'static str); 18] = [
         ("(Original Mix/", "("),
         ("12\"", "12''"),
         (" (12 Version) ", " (12'' Version) "),
@@ -43,9 +43,12 @@ lazy_static! {
         ("/Clean-Beat Junkie Sound ", " - Clean Beat Junkie Sound "),
         ("-Clean/Beat Junkie Sound ", " - Clean Beat Junkie Sound "),
         ("-CleanBeat Junkie Sound ", " - Clean Beat Junkie Sound "),
+        ("(Clean-Beat Junkie Sound ", "(Clean Beat Junkie Sound "),
+        ("(Dirty-Beat Junkie Sound ", "(Dirty Beat Junkie Sound "),
         (" Version/cyberkid ", " Version - Cyberkid "),
         ("/Beat Junkie ", " - Beat Junkie "),
-        ("(Clean- ", "(Clean "),
+        ("(Clean-", "(Clean "),
+        ("(Dirty-", "(Dirty "),
     ];
     static ref REGEX_SUBSTITUTES: [(Regex, &'static str); 12] = [
         // Replace various opening bracket types with "("

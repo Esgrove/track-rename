@@ -303,6 +303,18 @@ static FORMATTING_TEST_DATA: &[FormattingTestData] = &[
         title: "Song Name (Original Mix)",
         correct_title: "Song Name",
     },
+    FormattingTestData {
+        artist: "Sadat X feat. Grand Puba & Lord Jamar",
+        correct_artist: "Sadat X feat. Grand Puba & Lord Jamar",
+        title: "Lump Lump (Nubian Remix) (Clean-Beat Junkie Sound Edit)",
+        correct_title: "Lump Lump (Nubian Remix) (Clean Beat Junkie Sound Edit)",
+    },
+    FormattingTestData {
+        artist: "Sadat X feat. Grand Puba & Lord Jamar",
+        correct_artist: "Sadat X feat. Grand Puba & Lord Jamar",
+        title: "Lump Lump  - Nubian Remix) (Dirty-Beat Junkie Sound Edit)",
+        correct_title: "Lump Lump (Nubian Remix) (Dirty Beat Junkie Sound Edit)",
+    },
 ];
 
 static NESTED_PARENTHESES_TEST_DATA: &[FormattingTestData] = &[
