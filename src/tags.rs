@@ -14,15 +14,17 @@ pub struct Tags {
     pub formatted_title: String,
     pub formatted_album: String,
     pub formatted_genre: String,
+    pub update_needed: bool,
 }
 
 impl Tags {
-    pub fn new(artist: String, title: String, album: String, genre: String) -> Tags {
+    pub fn new(artist: String, title: String, album: String, genre: String, update_needed: bool) -> Tags {
         Tags {
             current_artist: artist,
             current_title: title,
             current_album: album,
             current_genre: genre,
+            update_needed,
             ..Default::default()
         }
     }
@@ -33,6 +35,8 @@ impl Tags {
         let mut artist = String::new();
         let mut title = String::new();
 
+        // Tags might be formatted correctly but a missing field needs to be written
+        let mut update_needed = false;
         match (tag.artist(), tag.title()) {
             (Some(a), Some(t)) => {
                 artist = utils::normalize_str(a);
@@ -43,12 +47,14 @@ impl Tags {
                 if let Some((a, t)) = utils::get_tags_from_filename(&track.name) {
                     artist = a;
                     title = t;
+                    update_needed = true;
                 }
             }
             (None, Some(t)) => {
                 eprintln!("\n{}", format!("Missing artist tag: {}", track.path.display()).yellow());
                 if let Some((a, _)) = utils::get_tags_from_filename(&track.name) {
                     artist = a;
+                    update_needed = true;
                 }
                 title = utils::normalize_str(t);
             }
@@ -57,12 +63,13 @@ impl Tags {
                 artist = utils::normalize_str(a);
                 if let Some((_, t)) = utils::get_tags_from_filename(&track.name) {
                     title = t;
+                    update_needed = true;
                 }
             }
         }
         let album = utils::normalize_str(tag.album().unwrap_or_default());
         let genre = utils::normalize_str(tag.genre_parsed().unwrap_or_default().as_ref());
-        Tags::new(artist, title, album, genre)
+        Tags::new(artist, title, album, genre, update_needed)
     }
 
     pub fn current_name(&self) -> String {
@@ -75,7 +82,8 @@ impl Tags {
 
     /// Returns true if any of the formatted tag fields differ from their current value.
     pub fn changed(&self) -> bool {
-        self.current_artist != self.formatted_artist
+        self.update_needed
+            || self.current_artist != self.formatted_artist
             || self.current_title != self.formatted_title
             || self.current_album != self.formatted_album
             || self.current_genre != self.formatted_genre

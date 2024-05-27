@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use lazy_static::lazy_static;
 use regex::Regex;
 
-use crate::formatting::fix_whitespace;
+use crate::formatting;
 
 lazy_static! {
     // Map folder names to default genre for that folder
@@ -401,7 +401,7 @@ pub fn format_genre(genre: &str) -> String {
     formatted_genre = formatted_genre.replace("Original Samples / ", "").replace(" / ", ", ");
 
     reorder_house_genres(&mut formatted_genre);
-    fix_whitespace(&mut formatted_genre);
+    formatting::fix_whitespace(&mut formatted_genre);
 
     formatted_genre
 }
@@ -440,6 +440,7 @@ mod tests {
     fn test_genre_mappings() {
         assert_eq!(format_genre("Hip-Hop 90s"), "Hip-Hop 90's");
         assert_eq!(format_genre(" other "), "");
+        assert_eq!(format_genre("Other"), "");
     }
 
     #[test]

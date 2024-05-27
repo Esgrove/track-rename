@@ -17,6 +17,7 @@ pub struct Statistics {
 }
 
 impl Statistics {
+    /// Return true if nothing needs to change
     pub fn no_changes(&self) -> bool {
         self.num_tags == 0
             && self.num_to_rename == 0
