@@ -327,6 +327,18 @@ static FORMATTING_TEST_DATA: &[FormattingTestData] = &[
         title: "Post2b (Alien Bankroll) Rmx",
         correct_title: "Post2b (Alien Bankroll) (Remix)",
     },
+    FormattingTestData {
+        artist: "Mr. V ",
+        correct_artist: "Mr. V",
+        title: "H.O.U.S.E",
+        correct_title: "H.O.U.S.E",
+    },
+    FormattingTestData {
+        artist: "Queen Latifah",
+        correct_artist: "Queen Latifah",
+        title: "u.n.i.t.y",
+        correct_title: "U.N.I.T.Y",
+    },
 ];
 
 static NESTED_PARENTHESES_TEST_DATA: &[FormattingTestData] = &[

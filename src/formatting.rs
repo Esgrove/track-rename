@@ -255,13 +255,15 @@ pub fn format_tags_for_artist_and_title(artist: &str, title: &str) -> (String, S
     }
 
     if formatted_title == formatted_title.to_uppercase()
-        && formatted_title.chars().count() > 8
+        && formatted_title.chars().count() > 10
         && !RE_CHARS_AND_DOTS.is_match(&formatted_title)
     {
         formatted_title = titlecase::titlecase(&formatted_title);
         if formatted_artist == formatted_artist.to_uppercase() && formatted_artist.chars().count() > 8 {
             formatted_artist = titlecase::titlecase(&formatted_artist);
         }
+    } else if RE_CHARS_AND_DOTS.is_match(&formatted_title) {
+        formatted_title = formatted_title.to_uppercase();
     }
 
     (formatted_artist.trim().to_string(), formatted_title.trim().to_string())
