@@ -106,7 +106,7 @@ impl TrackRenamer {
 
     /// Find and return a list of audio tracks from the root directory.
     fn get_tracks_from_root_directory(&self) -> Vec<Track> {
-        if self.config.verbose {
+        if self.config.verbose || self.config.debug {
             println!(
                 "Getting audio files from: {}",
                 format!("{}", self.root.display()).cyan()
