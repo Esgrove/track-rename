@@ -76,7 +76,7 @@ lazy_static! {
         // Collapses multiple spaces into a single space
         (Regex::new(r"\s+").unwrap(), " "),
     ];
-    static ref REGEX_NAME_SUBSTITUTES: [(Regex, &'static str); 42] = [
+    static ref REGEX_NAME_SUBSTITUTES: [(Regex, &'static str); 44] = [
         // Matches "12 Inch" or "12Inch" with optional space, case-insensitive
         (Regex::new(r"(?i)\b12\s?inch\b").unwrap(), "12''"),
         // Matches "12in" or "12 in" with optional space, case-insensitive
@@ -90,6 +90,9 @@ lazy_static! {
         (Regex::new(r"(?i)\(\s*(?:feat\.?|ft\.?|featuring)\b").unwrap(), "(feat."),
         // Standardize "w/" to "feat."
         (Regex::new(r"(?i)\sW/").unwrap(), " feat. "),
+        // Standardize Remix
+        (Regex::new(r"(?i)\(Rmx\)").unwrap(), "(Remix)"),
+        (Regex::new(r"(?i)\bRmx\b").unwrap(), "Remix"),
         // Remove trademark symbols
         (Regex::new(r"[®™]").unwrap(), ""),
         // Correct name for "Missy Elliott"
@@ -100,7 +103,7 @@ lazy_static! {
         // Correct name for "Gang Starr"
         (Regex::new(r"(?i)\bGangstarr\b|\bGangstarr$").unwrap(), "Gang Starr"),
         // Fix capitalization for SZA
-        (Regex::new(r"(?i)\sSza\b").unwrap(), " SZA"),
+        (Regex::new(r"(?i)\bSza\b").unwrap(), "SZA"),
         // Fix spelling for "You're"
         (Regex::new(r"(?i)\bYoure\b").unwrap(), "You're"),
         // Fix spelling for "I'm"

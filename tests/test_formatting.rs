@@ -321,6 +321,12 @@ static FORMATTING_TEST_DATA: &[FormattingTestData] = &[
         title: "Rich Baby Daddy (Constantine Remix)",
         correct_title: "Rich Baby Daddy (Constantine Remix)",
     },
+    FormattingTestData {
+        artist: "Fake Omarion",
+        correct_artist: "Fake Omarion",
+        title: "Post2b (Alien Bankroll) Rmx",
+        correct_title: "Post2b (Alien Bankroll) (Remix)",
+    },
 ];
 
 static NESTED_PARENTHESES_TEST_DATA: &[FormattingTestData] = &[
@@ -334,7 +340,7 @@ static NESTED_PARENTHESES_TEST_DATA: &[FormattingTestData] = &[
         artist: "Krewella",
         correct_artist: "Krewella",
         title: "Live For The Night (Simo 128 (70) (Trayze Rmx) Transition) (Quick)",
-        correct_title: "Live For The Night (Simo 128) (70) (Trayze Rmx Transition) (Quick)",
+        correct_title: "Live For The Night (Simo 128) (70) (Trayze Remix Transition) (Quick)",
     },
     FormattingTestData {
         artist: "Krewella",
