@@ -315,6 +315,12 @@ static FORMATTING_TEST_DATA: &[FormattingTestData] = &[
         title: "Lump Lump  - Nubian Remix) (Dirty-Beat Junkie Sound Edit)",
         correct_title: "Lump Lump (Nubian Remix) (Dirty Beat Junkie Sound Edit)",
     },
+    FormattingTestData {
+        artist: "Drake Feat. Sza & Sexyy Red",
+        correct_artist: "Drake feat. SZA & Sexyy Red",
+        title: "Rich Baby Daddy (Constantine Remix)",
+        correct_title: "Rich Baby Daddy (Constantine Remix)",
+    },
 ];
 
 static NESTED_PARENTHESES_TEST_DATA: &[FormattingTestData] = &[
