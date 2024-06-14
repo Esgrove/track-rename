@@ -3,7 +3,6 @@ name: Rust
 on:
   push:
     branches:
-      - master
       - main
     paths:
       - ".github/workflows/rust.yml"
@@ -41,6 +40,7 @@ jobs:
         uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: stable
+          components: clippy
 
       - name: Cache dependencies
         uses: actions/cache@v4
@@ -60,7 +60,10 @@ jobs:
       - name: Run tests
         run: cargo test --no-fail-fast
 
-  lint:
+      - name: Lint
+        run: cargo clippy -- -Dwarnings
+
+  format:
     runs-on: ubuntu-latest
     steps:
       - name: Check out source repository
@@ -70,23 +73,7 @@ jobs:
         uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: stable
-
-      - name: Cache dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            rust/target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-
+          components: rustfmt
 
       - name: Check formatting
         run: cargo fmt --check --verbose
-
-      - name: Lint
-        # Exit non-zero if there are any warnings
-        # https://doc.rust-lang.org/stable/clippy/usage.html
-        run: cargo clippy -- -Dwarnings
