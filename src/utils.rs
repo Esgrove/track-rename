@@ -2,6 +2,7 @@ use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::UNIX_EPOCH;
 use std::{env, fs, io};
 
 use anyhow::Context;
@@ -9,6 +10,7 @@ use colored::{ColoredString, Colorize};
 use difference::{Changeset, Difference};
 use id3::{Error, ErrorKind, Tag};
 use itertools::Itertools;
+use sha2::{Digest, Sha256};
 use unicode_normalization::UnicodeNormalization;
 
 use crate::track::Track;
@@ -90,9 +92,25 @@ pub fn contains_subpath(main_path: &Path, subpath: &Path) -> bool {
     false
 }
 
+pub fn compute_file_hash(path: &Path) -> anyhow::Result<String> {
+    let mut file = fs::File::open(path)?;
+    let mut hasher = Sha256::new();
+    io::copy(&mut file, &mut hasher)?;
+    Ok(format!("{:x}", hasher.finalize()))
+}
+
 /// Check ffmpeg is found in PATH.
 pub fn ffmpeg_available() -> bool {
     Command::new("ffmpeg").arg("-version").output().is_ok()
+}
+
+pub fn get_file_modified_time(path: &Path) -> anyhow::Result<u64> {
+    let metadata = fs::metadata(path)?;
+    let modified_time = metadata.modified()?;
+    let duration = modified_time
+        .duration_since(UNIX_EPOCH)
+        .context("Failed to get duration since unix epoch")?;
+    Ok(duration.as_secs())
 }
 
 /// Convert the given path to be relative to the current working directory.

@@ -19,6 +19,8 @@ use crate::RenamerArgs;
 
 use track_rename::file_format::FileFormat;
 use track_rename::genre::GENRE_MAPPINGS;
+use track_rename::state;
+use track_rename::state::State;
 use track_rename::track::{Track, DJ_MUSIC_PATH};
 use track_rename::utils;
 
@@ -27,6 +29,7 @@ use track_rename::utils;
 pub struct TrackRenamer {
     root: PathBuf,
     config: Config,
+    state: State,
     tracks: Vec<Track>,
     total_tracks: usize,
     stats: Statistics,
@@ -38,6 +41,7 @@ impl TrackRenamer {
         TrackRenamer {
             root: path,
             config: Config::from_args(args),
+            state: state::load_state(),
             ..Default::default()
         }
     }
@@ -56,6 +60,8 @@ impl TrackRenamer {
     pub fn run(&mut self) -> Result<()> {
         if self.config.debug {
             println!("{}", self.config);
+            println!("State: {}", self.state.len());
+            println!("{:#?}", self.state);
         }
 
         if self.config.convert_failed && !utils::ffmpeg_available() {
@@ -64,6 +70,12 @@ impl TrackRenamer {
 
         self.gather_files()?;
         self.process_tracks()?;
+        self.update_state();
+        if self.config.debug {
+            println!("State: {}", self.state.len());
+            println!("{:#?}", self.state);
+        }
+        state::save_state(&self.state)?;
         Ok(())
     }
 
@@ -85,8 +97,20 @@ impl TrackRenamer {
             anyhow::bail!("no supported audio files found");
         }
 
-        self.total_tracks = track_list.len();
-        self.tracks = track_list;
+        let filtered_tracks: Vec<Track> = track_list
+            .into_par_iter()
+            .filter(|track| match self.state.get(&track.path) {
+                Some(state) => {
+                    state.modified < track.metadata.modified
+                        || state.hash != track.metadata.hash
+                        || state.version != track.metadata.version
+                }
+                None => true,
+            })
+            .collect();
+
+        self.total_tracks = filtered_tracks.len();
+        self.tracks = filtered_tracks;
 
         if self.config.verbose {
             if self.total_tracks < 100 {
@@ -138,6 +162,10 @@ impl TrackRenamer {
 
     // Format tags and rename files if needed.
     pub fn process_tracks(&mut self) -> Result<()> {
+        if self.total_tracks == 0 {
+            println!("{}", "No tracks to process".green());
+            return Ok(());
+        }
         println!("{}", format!("Processing {} tracks...", self.total_tracks).bold());
         let dryrun_header = if self.config.print_only {
             println!("{}", "Running in print-only mode".yellow().bold());
@@ -332,7 +360,8 @@ impl TrackRenamer {
                                 fs::remove_file(formatted_path).context("Failed to remove renamed file")?;
                             } else {
                                 // Update track data with the renamed path
-                                *track = track.renamed_track(formatted_path, formatted_name.clone());
+                                let renamed_track = track.renamed_track(formatted_path, formatted_name.clone())?;
+                                *track = renamed_track;
                             }
                             self.stats.num_renamed += 1;
                         }
@@ -419,6 +448,12 @@ impl TrackRenamer {
             .into_iter()
             .sorted_unstable_by(|a, b| b.1.cmp(&a.1))
             .for_each(|(format, count)| println!("{format}: {count}"))
+    }
+
+    fn update_state(&mut self) {
+        for track in self.tracks.iter() {
+            self.state.insert(track.path.clone(), track.metadata.clone());
+        }
     }
 
     /// Print all paths for duplicate tracks with the same name.

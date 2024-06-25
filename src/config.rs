@@ -2,13 +2,15 @@ use std::{fmt, fs};
 
 use anyhow::{anyhow, Context};
 use colored::Colorize;
-use dirs::home_dir;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 use crate::RenamerArgs;
 
 use track_rename::utils;
+
+const CONFIG_FILE_DIR: &str = ".config";
+const CONFIG_FILE_NAME: &str = "track-rename.toml";
 
 /// Renamer settings combined from CLI options and user config file.
 #[derive(Default, Debug, Serialize, Deserialize)]
@@ -92,8 +94,8 @@ impl UserConfig {
 
     /// Get user config file if it exists.
     fn user_config_file_path() -> anyhow::Result<PathBuf> {
-        let home_dir = home_dir().context("Failed to find home directory")?;
-        let config_path = home_dir.join(".config/track-rename.toml");
+        let home_dir = dirs::home_dir().context("Failed to get home directory path")?;
+        let config_path = home_dir.join(CONFIG_FILE_DIR).join(CONFIG_FILE_NAME);
         match config_path.exists() {
             true => Ok(config_path),
             false => Err(anyhow!("Config file not found: {}", config_path.display())),

@@ -12,13 +12,15 @@ use unicode_normalization::UnicodeNormalization;
 
 use crate::file_format::FileFormat;
 use crate::genre::GENRE_MAPPINGS;
+use crate::state::TrackMetadata;
 use crate::tags::Tags;
 use crate::utils;
-use crate::utils::{path_to_string, path_to_string_relative};
+use crate::utils::{compute_file_hash, get_file_modified_time, path_to_string, path_to_string_relative};
 use crate::{formatting, genre};
 
 // Other audio file extensions that should trigger a warning message,
 const OTHER_FILE_EXTENSIONS: [&str; 3] = ["wav", "flac", "m4a"];
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 lazy_static! {
     pub static ref DJ_MUSIC_PATH: PathBuf = ["Dropbox", "DJ MUSIC"].iter().collect();
@@ -39,6 +41,8 @@ pub struct Track {
     pub root: PathBuf,
     /// Full filepath for the existing file
     pub path: PathBuf,
+    /// File metadata
+    pub metadata: TrackMetadata,
     /// The index of this track
     pub number: usize,
     pub tags: Tags,
@@ -77,6 +81,7 @@ impl Track {
 
         // Rebuild full path with desired unicode handling
         let path = dunce::simplified(root.join(format!("{}.{}", name, extension)).as_path()).to_path_buf();
+        let metadata = Track::read_metadata(&path)?;
         Ok(Track {
             name,
             extension,
@@ -84,6 +89,7 @@ impl Track {
             format,
             root,
             path,
+            metadata,
             ..Default::default()
         })
     }
@@ -178,19 +184,21 @@ impl Track {
     }
 
     /// Create new Track from existing Track that has been renamed.
-    pub fn renamed_track(&self, path: PathBuf, name: String) -> Track {
-        Track {
+    pub fn renamed_track(&self, path: PathBuf, name: String) -> anyhow::Result<Track> {
+        let metadata = Track::read_metadata(&path)?;
+        Ok(Track {
             name,
             extension: self.format.to_string(),
             directory: self.directory.to_string(),
             format: self.format.clone(),
             root: self.root.clone(),
             path,
+            metadata,
             number: self.number,
             tags: self.tags.clone(),
             tags_updated: self.tags_updated,
             printed: self.printed,
-        }
+        })
     }
 
     /// Print track if it has not been already.
@@ -247,6 +255,7 @@ impl Track {
 
         trash::delete(&self.path).context("Failed to move mp3 file to trash".red())?;
 
+        let metadata = Track::read_metadata(&output_path)?;
         let new_track = Track {
             name: self.name.clone(),
             extension: "aif".to_string(),
@@ -254,6 +263,7 @@ impl Track {
             format: FileFormat::Aif,
             root: self.root.clone(),
             path: output_path,
+            metadata,
             number: self.number,
             tags: Tags::default(),
             tags_updated: self.tags_updated,
@@ -278,6 +288,23 @@ impl Track {
             // https://github.com/unicode-rs/unicode-normalization
             .nfc()
             .collect::<String>())
+    }
+
+    fn read_metadata(path: &Path) -> anyhow::Result<TrackMetadata> {
+        if !path.exists() {
+            #[cfg(test)]
+            return Ok(TrackMetadata::default());
+
+            #[cfg(not(test))]
+            anyhow::bail!("File does not exist: {}", path.display());
+        }
+        let modified = get_file_modified_time(path)?;
+        let hash = compute_file_hash(path)?;
+        Ok(TrackMetadata {
+            modified,
+            hash,
+            version: VERSION.to_string(),
+        })
     }
 }
 
