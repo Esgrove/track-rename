@@ -105,6 +105,10 @@ impl TrackRenamer {
                 .collect();
         }
 
+        track_list.par_iter_mut().enumerate().for_each(|(number, track)| {
+            track.number = number + 1;
+        });
+
         self.total_tracks = track_list.len();
         self.tracks = track_list;
 
@@ -148,10 +152,6 @@ impl TrackRenamer {
             // Sort by full path so directories are in sorted order
             track_list.par_sort_unstable_by(|a, b| a.path.cmp(&b.path));
         }
-
-        track_list.par_iter_mut().enumerate().for_each(|(number, track)| {
-            track.number = number + 1;
-        });
 
         track_list
     }
