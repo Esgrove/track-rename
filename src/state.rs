@@ -15,7 +15,6 @@ const STATE_FILE_NAME: &str = "test_state.json";
 #[derive(Debug, Clone, Default, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct TrackMetadata {
     pub modified: u64,
-    pub hash: String,
     pub version: String,
 }
 
@@ -84,7 +83,6 @@ mod tests {
             test_path,
             TrackMetadata {
                 modified: 123456789,
-                hash: "test_hash".to_string(),
                 version: "test_version".to_string(),
             },
         );
@@ -108,7 +106,6 @@ mod tests {
             .collect();
         let test_data = TrackMetadata {
             modified: 123456789,
-            hash: "test_hash".to_string(),
             version: "test_version".to_string(),
         };
         state.insert(test_path.clone(), test_data.clone());

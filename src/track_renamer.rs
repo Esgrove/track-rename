@@ -99,11 +99,7 @@ impl TrackRenamer {
             track_list = track_list
                 .into_par_iter()
                 .filter(|track| match self.state.get(&track.path) {
-                    Some(state) => {
-                        state.modified < track.metadata.modified
-                            || state.hash != track.metadata.hash
-                            || state.version != track.metadata.version
-                    }
+                    Some(state) => state.modified < track.metadata.modified || state.version != track.metadata.version,
                     None => true,
                 })
                 .collect();

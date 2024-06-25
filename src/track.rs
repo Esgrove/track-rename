@@ -15,7 +15,7 @@ use crate::genre::GENRE_MAPPINGS;
 use crate::state::TrackMetadata;
 use crate::tags::Tags;
 use crate::utils;
-use crate::utils::{compute_file_hash, get_file_modified_time, path_to_string, path_to_string_relative};
+use crate::utils::{get_file_modified_time, path_to_string, path_to_string_relative};
 use crate::{formatting, genre};
 
 // Other audio file extensions that should trigger a warning message,
@@ -299,10 +299,8 @@ impl Track {
             anyhow::bail!("File does not exist: {}", path.display());
         }
         let modified = get_file_modified_time(path)?;
-        let hash = compute_file_hash(path)?;
         Ok(TrackMetadata {
             modified,
-            hash,
             version: VERSION.to_string(),
         })
     }

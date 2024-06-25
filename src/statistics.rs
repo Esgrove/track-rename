@@ -31,7 +31,7 @@ impl Statistics {
 impl fmt::Display for Statistics {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.no_changes() {
-            writeln!(f, "{}", "All Good".green())?;
+            write!(f, "{}", "All Good".green())?;
         } else {
             writeln!(f, "{}", "Updated:".bold())?;
             writeln!(f, "Fix tags:   {} / {}", self.num_tags_fixed, self.num_tags)?;
