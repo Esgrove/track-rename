@@ -161,8 +161,12 @@ impl TrackRenamer {
         if self.total_tracks == 0 {
             println!("{}", "No tracks to process".green());
             return Ok(());
+        } else if self.total_tracks == 1 {
+            println!("{}", "Processing 1 track...".bold());
+        } else {
+            println!("{}", format!("Processing {} tracks...", self.total_tracks).bold());
         }
-        println!("{}", format!("Processing {} tracks...", self.total_tracks).bold());
+
         let dryrun_header = if self.config.print_only {
             println!("{}", "Running in print-only mode".yellow().bold());
             " (dryrun)".to_string()
