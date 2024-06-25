@@ -61,7 +61,6 @@ impl TrackRenamer {
         if self.config.debug {
             println!("{}", self.config);
             println!("State: {}", self.state.len());
-            println!("{:#?}", self.state);
         }
 
         if self.config.convert_failed && !utils::ffmpeg_available() {
@@ -73,7 +72,6 @@ impl TrackRenamer {
         self.update_state();
         if self.config.debug {
             println!("State: {}", self.state.len());
-            println!("{:#?}", self.state);
         }
         state::save_state(&self.state)?;
         Ok(())
@@ -82,7 +80,7 @@ impl TrackRenamer {
     /// Gather audio files recursively from the root path.
     pub fn gather_files(&mut self) -> Result<()> {
         let start_instant = Instant::now();
-        let track_list: Vec<Track> = if self.root.is_file() {
+        let mut track_list: Vec<Track> = if self.root.is_file() {
             if let Some(mut track) = Track::try_from_path(&self.root) {
                 track.number = 1;
                 vec![track]
@@ -97,20 +95,22 @@ impl TrackRenamer {
             anyhow::bail!("no supported audio files found");
         }
 
-        let filtered_tracks: Vec<Track> = track_list
-            .into_par_iter()
-            .filter(|track| match self.state.get(&track.path) {
-                Some(state) => {
-                    state.modified < track.metadata.modified
-                        || state.hash != track.metadata.hash
-                        || state.version != track.metadata.version
-                }
-                None => true,
-            })
-            .collect();
+        if !self.config.no_state {
+            track_list = track_list
+                .into_par_iter()
+                .filter(|track| match self.state.get(&track.path) {
+                    Some(state) => {
+                        state.modified < track.metadata.modified
+                            || state.hash != track.metadata.hash
+                            || state.version != track.metadata.version
+                    }
+                    None => true,
+                })
+                .collect();
+        }
 
-        self.total_tracks = filtered_tracks.len();
-        self.tracks = filtered_tracks;
+        self.total_tracks = track_list.len();
+        self.tracks = track_list;
 
         if self.config.verbose {
             if self.total_tracks < 100 {

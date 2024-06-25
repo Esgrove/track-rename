@@ -40,6 +40,10 @@ pub struct RenamerArgs {
     #[arg(short, long)]
     log: bool,
 
+    /// Don't skip unchanged files since last run
+    #[arg(short, long)]
+    no_state: bool,
+
     /// Only print changes without modifying files
     #[arg(short, long)]
     print: bool,

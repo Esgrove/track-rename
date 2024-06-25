@@ -15,19 +15,20 @@ const CONFIG_FILE_NAME: &str = "track-rename.toml";
 /// Renamer settings combined from CLI options and user config file.
 #[derive(Default, Debug, Serialize, Deserialize)]
 pub struct Config {
+    pub convert_failed: bool,
+    pub debug: bool,
+    pub excluded_tracks: Vec<String>,
     pub force: bool,
+    pub genre_statistics: bool,
+    pub log_failures: bool,
+    pub no_state: bool,
+    pub print_only: bool,
     pub rename_files: bool,
     pub sort_files: bool,
-    pub print_only: bool,
     pub tags_only: bool,
-    pub verbose: bool,
-    pub debug: bool,
     pub test_mode: bool,
-    pub log_failures: bool,
-    pub convert_failed: bool,
+    pub verbose: bool,
     pub write_all_tags: bool,
-    pub genre_statistics: bool,
-    pub excluded_tracks: Vec<String>,
 }
 
 /// User config options from a config file.
@@ -42,6 +43,8 @@ struct UserConfig {
     pub genre_statistics: bool,
     #[serde(default)]
     pub log_failures: bool,
+    #[serde(default)]
+    pub no_state: bool,
 }
 
 impl Config {
@@ -49,19 +52,20 @@ impl Config {
     pub fn from_args(args: RenamerArgs) -> Self {
         let user_config = UserConfig::get_user_config();
         Config {
+            convert_failed: args.convert || user_config.convert_failed,
+            debug: args.debug,
+            excluded_tracks: user_config.exclude,
             force: args.force,
+            genre_statistics: args.genre || user_config.genre_statistics,
+            log_failures: args.log || user_config.log_failures,
+            no_state: args.no_state || user_config.no_state,
+            print_only: args.print,
             rename_files: args.rename,
             sort_files: args.sort,
-            print_only: args.print,
             tags_only: args.tags_only,
-            verbose: args.verbose,
-            debug: args.debug,
             test_mode: false,
-            log_failures: args.log || user_config.log_failures,
-            convert_failed: args.convert || user_config.convert_failed,
+            verbose: args.verbose,
             write_all_tags: args.all_tags,
-            genre_statistics: args.genre || user_config.genre_statistics,
-            excluded_tracks: user_config.exclude,
         }
     }
 
