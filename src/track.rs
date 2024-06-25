@@ -48,6 +48,8 @@ pub struct Track {
     pub tags: Tags,
     /// True if updated tag data has been saved to file
     pub tags_updated: bool,
+    /// If the track needs to be updated but is not, then skip saving state
+    pub not_processed: bool,
     /// True if track info has been displayed in the terminal
     printed: bool,
 }
@@ -197,6 +199,7 @@ impl Track {
             number: self.number,
             tags: self.tags.clone(),
             tags_updated: self.tags_updated,
+            not_processed: self.not_processed,
             printed: self.printed,
         })
     }
@@ -267,6 +270,7 @@ impl Track {
             number: self.number,
             tags: Tags::default(),
             tags_updated: self.tags_updated,
+            not_processed: self.not_processed,
             printed: self.printed,
         };
 

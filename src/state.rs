@@ -1,8 +1,8 @@
-use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
 use anyhow::{anyhow, Context};
+use dashmap::DashMap;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -18,7 +18,7 @@ pub struct TrackMetadata {
     pub version: String,
 }
 
-pub type State = HashMap<PathBuf, TrackMetadata>;
+pub type State = DashMap<PathBuf, TrackMetadata>;
 
 pub fn load_state() -> State {
     read_state().into_par_iter().filter(|(path, _)| path.exists()).collect()
@@ -75,12 +75,14 @@ mod tests {
     fn test_state() {
         // Everything is tested in a single test case since otherwise tests can fail as they all touch the same file.
         let state_path = setup_test_env();
-        let mut state = State::default();
+
         let test_path: PathBuf = ["tests", "files", "basic_tags", "Basic Tags - Song - 16-44.aif"]
             .iter()
             .collect();
+
+        let state = State::default();
         state.insert(
-            test_path,
+            test_path.clone(),
             TrackMetadata {
                 modified: 123456789,
                 version: "test_version".to_string(),
@@ -94,24 +96,37 @@ mod tests {
         let saved_data = fs::read_to_string(state_path).expect("Failed to read state file");
         let loaded_state: State = serde_json::from_str(&saved_data).expect("Failed to deserialize state");
 
-        assert_eq!(state, loaded_state);
+        // DashMap does not have PartialEq so need to compare values manually
+        assert_eq!(
+            state.get(&test_path).unwrap().version,
+            loaded_state.get(&test_path).unwrap().version
+        );
+        assert_eq!(
+            state.get(&test_path).unwrap().modified,
+            loaded_state.get(&test_path).unwrap().modified
+        );
 
         setup_test_env();
         let state = load_state();
         assert!(state.is_empty());
 
-        let mut state = State::default();
-        let test_path: PathBuf = ["tests", "files", "basic_tags", "Basic Tags - Song - 16-44.aif"]
-            .iter()
-            .collect();
         let test_data = TrackMetadata {
-            modified: 123456789,
-            version: "test_version".to_string(),
+            modified: 1716068288,
+            version: "1.0.0".to_string(),
         };
+
+        let state = State::default();
         state.insert(test_path.clone(), test_data.clone());
         save_state(&state).expect("Failed to save state");
 
         let loaded_state = load_state();
-        assert_eq!(state, loaded_state);
+        assert_eq!(
+            state.get(&test_path).unwrap().version,
+            loaded_state.get(&test_path).unwrap().version
+        );
+        assert_eq!(
+            state.get(&test_path).unwrap().modified,
+            loaded_state.get(&test_path).unwrap().modified
+        );
     }
 }

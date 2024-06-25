@@ -295,11 +295,14 @@ impl TrackRenamer {
                 }
                 if !self.config.print_only
                     && (self.config.force || utils::confirm())
-                    && Self::write_tags(&track, &mut file_tags)
-                    && track.tags.changed()
+                    && Self::write_tags(track, &mut file_tags)
                 {
-                    track.tags_updated = true;
-                    self.stats.num_tags_fixed += 1;
+                    if track.tags.changed() {
+                        track.tags_updated = true;
+                        self.stats.num_tags_fixed += 1;
+                    }
+                } else {
+                    track.not_processed = true;
                 }
                 if track.tags.changed() {
                     utils::print_divider(&track.tags.formatted_name());
@@ -360,6 +363,8 @@ impl TrackRenamer {
                                 *track = renamed_track;
                             }
                             self.stats.num_renamed += 1;
+                        } else {
+                            track.not_processed = true;
                         }
                         utils::print_divider(&formatted_file_name);
                     }
@@ -404,36 +409,6 @@ impl TrackRenamer {
         Ok(())
     }
 
-    fn write_tags(track: &&mut Track, file_tags: &mut Tag) -> bool {
-        // Remove genre first to try to get rid of old ID3v1 genre IDs
-        file_tags.remove_genre();
-        file_tags.remove_disc();
-        file_tags.remove_total_discs();
-        file_tags.remove_track();
-        file_tags.remove_total_tracks();
-        file_tags.remove_all_lyrics();
-        file_tags.remove_all_synchronised_lyrics();
-        if let Err(error) = file_tags.write_to_path(&track.path, id3::Version::Id3v24) {
-            eprintln!(
-                "\n{}",
-                format!("Failed to remove tags for: {}\n{}", track.path.display(), error).red()
-            );
-        }
-        file_tags.set_artist(track.tags.formatted_artist.clone());
-        file_tags.set_title(track.tags.formatted_title.clone());
-        file_tags.set_album(track.tags.formatted_album.clone());
-        file_tags.set_genre(track.tags.formatted_genre.clone());
-        if let Err(error) = file_tags.write_to_path(&track.path, id3::Version::Id3v24) {
-            eprintln!(
-                "\n{}",
-                format!("Failed to write tags for: {}\n{}", track.path.display(), error).red()
-            );
-            false
-        } else {
-            true
-        }
-    }
-
     /// Count and print the total number of each file extension in the file list.
     fn print_extension_counts(&self) {
         println!("{}", "File format counts:".bold());
@@ -447,9 +422,12 @@ impl TrackRenamer {
     }
 
     fn update_state(&mut self) {
-        for track in self.tracks.iter() {
-            self.state.insert(track.path.clone(), track.metadata.clone());
-        }
+        self.tracks
+            .par_iter()
+            .filter(|track| !track.not_processed)
+            .for_each(|track| {
+                self.state.insert(track.path.clone(), track.metadata.clone());
+            })
     }
 
     /// Print all paths for duplicate tracks with the same name.
@@ -518,6 +496,36 @@ impl TrackRenamer {
 
         println!("Logged genres to: {}", dunce::canonicalize(filepath)?.display());
         Ok(())
+    }
+
+    fn write_tags(track: &mut Track, file_tags: &mut Tag) -> bool {
+        // Remove genre first to try to get rid of old ID3v1 genre IDs
+        file_tags.remove_genre();
+        file_tags.remove_disc();
+        file_tags.remove_total_discs();
+        file_tags.remove_track();
+        file_tags.remove_total_tracks();
+        file_tags.remove_all_lyrics();
+        file_tags.remove_all_synchronised_lyrics();
+        if let Err(error) = file_tags.write_to_path(&track.path, id3::Version::Id3v24) {
+            eprintln!(
+                "\n{}",
+                format!("Failed to remove tags for: {}\n{}", track.path.display(), error).red()
+            );
+        }
+        file_tags.set_artist(track.tags.formatted_artist.clone());
+        file_tags.set_title(track.tags.formatted_title.clone());
+        file_tags.set_album(track.tags.formatted_album.clone());
+        file_tags.set_genre(track.tags.formatted_genre.clone());
+        if let Err(error) = file_tags.write_to_path(&track.path, id3::Version::Id3v24) {
+            eprintln!(
+                "\n{}",
+                format!("Failed to write tags for: {}\n{}", track.path.display(), error).red()
+            );
+            false
+        } else {
+            true
+        }
     }
 }
 
