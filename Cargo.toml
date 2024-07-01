@@ -12,7 +12,7 @@ categories = ["command-line-utilities"]
 
 [dependencies]
 anyhow = { version = "1.0.86", features = ["backtrace"] }
-clap = { version = "4.5.7", features = ["derive"] }
+clap = { version = "4.5.8", features = ["derive"] }
 colored = "2.1.0"
 difference = "2.0.0"
 dirs = "5.0.1"
