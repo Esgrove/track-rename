@@ -29,7 +29,7 @@ lazy_static! {
 /// Represents one audio file.
 #[derive(Debug, Default, Clone)]
 pub struct Track {
-    /// Filename of the existing file
+    /// Filename of the existing file without the file extension
     pub name: String,
     /// File extension string for the existing file
     pub extension: String,
@@ -45,6 +45,7 @@ pub struct Track {
     pub metadata: TrackMetadata,
     /// The index of this track
     pub number: usize,
+    /// Tag data
     pub tags: Tags,
     /// True if updated tag data has been saved to file
     pub tags_updated: bool,
@@ -163,7 +164,7 @@ impl Track {
         self.tags = tags;
     }
 
-    /// Return formatted file name without file extension
+    /// Return formatted file name without the file extension
     pub fn formatted_name(&self) -> String {
         let (file_artist, file_title) =
             formatting::format_filename(&self.tags.formatted_artist, &self.tags.formatted_title);
