@@ -403,7 +403,7 @@ pub fn format_genre(genre: &str) -> String {
     reorder_house_genres(&mut formatted_genre);
     formatting::fix_whitespace(&mut formatted_genre);
 
-    formatted_genre
+    formatted_genre.replace(" / ", ", ")
 }
 
 /// Reorder house genres to start with "House".
