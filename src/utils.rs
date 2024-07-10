@@ -240,6 +240,16 @@ pub fn write_log_for_failed_files(paths: &[String]) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Get filename string for given Path.
+pub fn get_filename_from_path(path: &Path) -> anyhow::Result<String> {
+    let file_name = path
+        .file_name()
+        .context("Failed to get zip file name")?
+        .to_string_lossy()
+        .replace('\u{FFFD}', "");
+    Ok(file_name)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

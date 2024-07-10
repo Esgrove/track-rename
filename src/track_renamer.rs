@@ -626,12 +626,10 @@ mod tests {
 
     /// Check if this is a hidden file like ".DS_Store" on macOS
     fn not_hidden_file(path: &Path) -> bool {
-        !path
-            .file_name()
-            .unwrap()
-            .to_str()
-            .map(|s| s.starts_with('.'))
-            .unwrap_or(false)
+        path.file_name()
+            .and_then(|name| name.to_str())
+            .map(|s| !s.starts_with('.'))
+            .unwrap_or(true)
     }
 
     /// Create a new temporary file with an added random string in the name

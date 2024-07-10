@@ -76,11 +76,7 @@ impl Track {
     pub fn new_with_extension(path: PathBuf, extension: String, format: FileFormat) -> anyhow::Result<Track> {
         let name = Self::get_nfc_filename_from_path(&path)?;
         let root = path.parent().context("Failed to get file root")?.to_owned();
-        let directory = root
-            .file_name()
-            .context("Failed to get parent directory name")?
-            .to_string_lossy()
-            .to_string();
+        let directory = utils::get_filename_from_path(&root).context("Failed to get parent directory name")?;
 
         // Rebuild full path with desired unicode handling
         let path = dunce::simplified(root.join(format!("{}.{}", name, extension)).as_path()).to_path_buf();
