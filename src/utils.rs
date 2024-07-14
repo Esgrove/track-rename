@@ -15,7 +15,7 @@ use unicode_normalization::UnicodeNormalization;
 
 use crate::track::Track;
 
-/// Format bool value as a coloured string
+/// Format bool value as a coloured string.
 pub fn colorize_bool(value: bool) -> ColoredString {
     if value {
         "true".green()
@@ -24,11 +24,35 @@ pub fn colorize_bool(value: bool) -> ColoredString {
     }
 }
 
-/// Create a colored diff for given strings
-pub fn color_diff(old: &str, new: &str) -> (String, String) {
+/// Create a coloured diff for the given strings.
+pub fn color_diff(old: &str, new: &str, stacked: bool) -> (String, String) {
     let changeset = Changeset::new(old, new, "");
     let mut old_diff = String::new();
     let mut new_diff = String::new();
+
+    if stacked {
+        // Find the starting index of the first matching sequence.
+        for diff in &changeset.diffs {
+            if let Difference::Same(ref x) = diff {
+                if x.chars().all(char::is_whitespace) {
+                    continue;
+                }
+
+                let old_first_match_index = old.find(x);
+                let new_first_match_index = new.find(x);
+
+                // Add leading whitespace so that the first matching sequence lines up.
+                if let (Some(old_index), Some(new_index)) = (old_first_match_index, new_first_match_index) {
+                    if old_index < new_index {
+                        old_diff = " ".repeat(new_index.saturating_sub(old_index));
+                    } else if new_index < old_index {
+                        new_diff = " ".repeat(old_index.saturating_sub(new_index));
+                    }
+                }
+                break;
+            }
+        }
+    }
 
     for diff in changeset.diffs {
         match diff {
@@ -170,13 +194,13 @@ pub fn path_to_string_relative(path: &Path) -> String {
 
 /// Print a single line diff of the changes.
 pub fn print_diff(old: &str, new: &str) {
-    let (old_diff, new_diff) = color_diff(old, new);
+    let (old_diff, new_diff) = color_diff(old, new, false);
     println!("{} -> {}", old_diff, new_diff);
 }
 
 /// Print a stacked diff of the changes.
 pub fn print_stacked_diff(old: &str, new: &str) {
-    let (old_diff, new_diff) = color_diff(old, new);
+    let (old_diff, new_diff) = color_diff(old, new, true);
     println!("{}", old_diff);
     println!("{}", new_diff);
 }
