@@ -13,7 +13,7 @@ use unicode_normalization::UnicodeNormalization;
 use crate::file_format::FileFormat;
 use crate::genre::GENRE_MAPPINGS;
 use crate::state::TrackMetadata;
-use crate::tags::Tags;
+use crate::tags::TrackTags;
 use crate::utils;
 use crate::utils::{get_file_modified_time, path_to_string, path_to_string_relative};
 use crate::{formatting, genre};
@@ -46,7 +46,7 @@ pub struct Track {
     /// The index of this track
     pub number: usize,
     /// Tag data
-    pub tags: Tags,
+    pub tags: TrackTags,
     /// True if updated tag data has been saved to file
     pub tags_updated: bool,
     /// If the track needs to be updated but is not, then skip saving state
@@ -132,7 +132,7 @@ impl Track {
     }
 
     pub fn format_tags(&mut self, file_tags: &Tag) {
-        let mut tags = Tags::parse_tag_data(self, file_tags);
+        let mut tags = TrackTags::parse_tag_data(self, file_tags);
         let (formatted_artist, formatted_title) =
             formatting::format_tags_for_artist_and_title(&tags.current_artist, &tags.current_title);
 
@@ -152,6 +152,7 @@ impl Track {
             formatted_genre = GENRE_MAPPINGS.get(self.directory.as_str()).unwrap_or(&"").to_string();
         }
 
+        tags.formatted_name = format!("{formatted_artist} - {formatted_title}");
         tags.formatted_artist = formatted_artist;
         tags.formatted_title = formatted_title;
         tags.formatted_album = formatted_album;
@@ -160,24 +161,25 @@ impl Track {
         self.tags = tags;
     }
 
-    /// Return formatted file name without the file extension
-    pub fn formatted_name(&self) -> String {
+    /// Return formatted file name without the file extension.
+    pub fn formatted_filename(&self) -> String {
         let (file_artist, file_title) =
             formatting::format_filename(&self.tags.formatted_artist, &self.tags.formatted_title);
 
-        if file_artist.is_empty() {
-            file_title
-        } else {
-            format!("{} - {}", file_artist, file_title)
+        match (file_artist.is_empty(), file_title.is_empty()) {
+            (true, true) => String::new(),
+            (true, false) => file_title,
+            (false, true) => file_artist,
+            (false, false) => format!("{} - {}", file_artist, file_title),
         }
     }
 
-    /// Return formatted file name with file extension
-    pub fn formatted_filename(&self) -> String {
-        format!("{}.{}", self.formatted_name(), self.format)
+    /// Return formatted file name with the file extension.
+    pub fn formatted_filename_with_extension(&self) -> String {
+        format!("{}.{}", self.formatted_filename(), self.format)
     }
 
-    /// Return full path with new filename.
+    /// Return the full path with new filename.
     pub fn path_with_new_name(&self, filename: &str) -> PathBuf {
         dunce::simplified(&self.root.join(filename)).to_path_buf()
     }
@@ -265,7 +267,7 @@ impl Track {
             path: output_path,
             metadata,
             number: self.number,
-            tags: Tags::default(),
+            tags: TrackTags::default(),
             tags_updated: self.tags_updated,
             not_processed: self.not_processed,
             printed: self.printed,

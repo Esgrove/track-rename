@@ -272,7 +272,7 @@ impl TrackRenamer {
                 }
 
                 track.format_tags(&file_tags);
-                let formatted_name = track.formatted_name();
+                let formatted_name = track.formatted_filename();
                 if formatted_name.is_empty() {
                     eprintln!(
                         "\n{}",
@@ -298,7 +298,7 @@ impl TrackRenamer {
                         track.not_processed = true;
                     }
                     if track.tags.changed() {
-                        utils::print_divider(&track.tags.formatted_name());
+                        utils::print_divider(&track.tags.formatted_name);
                     }
                 }
 
@@ -315,7 +315,7 @@ impl TrackRenamer {
                     continue;
                 }
 
-                let formatted_file_name = track.formatted_filename();
+                let formatted_file_name = track.formatted_filename_with_extension();
                 let formatted_path = track.path_with_new_name(&formatted_file_name);
 
                 // Convert paths to strings for additional comparisons.

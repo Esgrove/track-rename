@@ -5,11 +5,13 @@ use crate::track::Track;
 use crate::utils;
 
 #[derive(Debug, Default, Clone)]
-pub struct Tags {
+pub struct TrackTags {
     pub current_artist: String,
     pub current_title: String,
     pub current_album: String,
     pub current_genre: String,
+    pub current_name: String,
+    pub formatted_name: String,
     pub formatted_artist: String,
     pub formatted_title: String,
     pub formatted_album: String,
@@ -17,83 +19,79 @@ pub struct Tags {
     pub update_needed: bool,
 }
 
-impl Tags {
-    pub fn new(artist: String, title: String, album: String, genre: String, update_needed: bool) -> Tags {
-        Tags {
+impl TrackTags {
+    pub fn new(name: String, artist: String, title: String, album: String, genre: String) -> TrackTags {
+        TrackTags {
+            current_name: name,
             current_artist: artist,
             current_title: title,
             current_album: album,
             current_genre: genre,
-            update_needed,
             ..Default::default()
         }
     }
 
     /// Try to read tags such as artist and title from tags.
     /// Fallback to parsing them from filename if tags are empty.
-    pub fn parse_tag_data(track: &Track, tag: &Tag) -> Tags {
+    pub fn parse_tag_data(track: &Track, tag: &Tag) -> TrackTags {
         let mut artist = String::new();
         let mut title = String::new();
 
-        // Tags might be formatted correctly but a missing field needs to be written
-        let mut update_needed = false;
+        // Tags might be formatted correctly but a missing field needs to be written.
+        // Store formatted name before parsing missing fields from filename.
+        let current_name: String;
+
         match (tag.artist(), tag.title()) {
             (Some(a), Some(t)) => {
                 artist = utils::normalize_str(a);
                 title = utils::normalize_str(t);
+                current_name = format!("{artist} - {title}");
             }
             (None, None) => {
                 eprintln!("\n{}", format!("Missing tags: {}", track.path.display()).yellow());
+                current_name = format!("{artist} - {title}");
                 if let Some((a, t)) = utils::get_tags_from_filename(&track.name) {
                     artist = a;
                     title = t;
-                    update_needed = true;
                 }
             }
             (None, Some(t)) => {
                 eprintln!("\n{}", format!("Missing artist tag: {}", track.path.display()).yellow());
+                title = utils::normalize_str(t);
+                current_name = format!("{artist} - {title}");
                 if let Some((a, _)) = utils::get_tags_from_filename(&track.name) {
                     artist = a;
-                    update_needed = true;
                 }
-                title = utils::normalize_str(t);
             }
             (Some(a), None) => {
                 eprintln!("\n{}", format!("Missing title tag: {}", track.path.display()).yellow());
                 artist = utils::normalize_str(a);
+                current_name = format!("{artist} - {title}");
                 if let Some((_, t)) = utils::get_tags_from_filename(&track.name) {
                     title = t;
-                    update_needed = true;
                 }
             }
         }
         let album = utils::normalize_str(tag.album().unwrap_or_default());
         let genre = utils::normalize_str(tag.genre_parsed().unwrap_or_default().as_ref());
-        Tags::new(artist, title, album, genre, update_needed)
+        TrackTags::new(current_name, artist, title, album, genre)
     }
 
-    pub fn current_name(&self) -> String {
-        format!("{} - {}", self.current_artist, self.current_title)
-    }
-
-    pub fn formatted_name(&self) -> String {
-        format!("{} - {}", self.formatted_artist, self.formatted_title)
-    }
-
-    /// Returns true if any of the formatted tag fields differ from their current value.
+    /// Returns true if any of the formatted tag fields differ from their current value,
+    /// or artist and/or title tag is missing.
     pub fn changed(&self) -> bool {
-        self.update_needed
+        self.current_name != self.formatted_name
             || self.current_artist != self.formatted_artist
             || self.current_title != self.formatted_title
             || self.current_album != self.formatted_album
             || self.current_genre != self.formatted_genre
     }
 
+    /// Print coloured diff for changes in tags.
+    /// Prints nothing if there are no changes.
     pub fn show_diff(&self) {
-        let current = self.current_name();
-        let formatted = self.formatted_name();
-        if current != formatted {
-            utils::print_stacked_diff(&current, &formatted);
+        if self.current_name != self.formatted_name {
+            utils::print_stacked_diff(&self.current_name, &self.formatted_name);
         }
         if self.current_album != self.formatted_album {
             print!("{}: ", "Album".bold());
