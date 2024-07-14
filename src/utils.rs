@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -43,13 +44,17 @@ pub fn color_diff(old: &str, new: &str, stacked: bool) -> (String, String) {
 
                 // Add leading whitespace so that the first matching sequence lines up.
                 if let (Some(old_index), Some(new_index)) = (old_first_match_index, new_first_match_index) {
-                    if old_index < new_index {
-                        old_diff = " ".repeat(new_index.saturating_sub(old_index));
-                    } else if new_index < old_index {
-                        new_diff = " ".repeat(old_index.saturating_sub(new_index));
+                    match old_index.cmp(&new_index) {
+                        Ordering::Greater => {
+                            new_diff = " ".repeat(old_index.saturating_sub(new_index));
+                        }
+                        Ordering::Less => {
+                            old_diff = " ".repeat(new_index.saturating_sub(old_index));
+                        }
+                        Ordering::Equal => {}
                     }
+                    break;
                 }
-                break;
             }
         }
     }
@@ -76,6 +81,7 @@ pub fn color_diff(old: &str, new: &str, stacked: bool) -> (String, String) {
             }
         }
     }
+
     (old_diff, new_diff)
 }
 
