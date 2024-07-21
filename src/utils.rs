@@ -170,8 +170,8 @@ pub fn get_tags_from_filename(filename: &str) -> Option<(String, String)> {
     let trimmed_filename = filename.trim_start_matches("Various Artists - ").trim().to_string();
     let parts: Vec<&str> = trimmed_filename.splitn(2, " - ").collect();
     if parts.len() == 2 {
-        let artist = normalize_str(parts[0]);
-        let title = normalize_str(parts[1]);
+        let artist = normalize_str(parts[0].trim());
+        let title = normalize_str(parts[1].trim());
         Some((artist, title))
     } else {
         None
@@ -307,15 +307,24 @@ mod tests {
 
     #[test]
     fn test_get_tags_from_filename_with_additional_delimiters() {
-        let filename = "Artist - Title - Remix";
+        let filename = "Various Artists - Dave & Maurissa  - Look At The Stars (Dave’s Starshine Club Mix)";
         assert_eq!(
             get_tags_from_filename(filename),
-            Some(("Artist".to_string(), "Title - Remix".to_string()))
+            Some((
+                "Dave & Maurissa".to_string(),
+                "Look At The Stars (Dave’s Starshine Club Mix)".to_string()
+            ))
         );
     }
 
     #[test]
     fn test_get_tags_from_filename_empty_filename() {
+        let filename = "";
+        assert_eq!(get_tags_from_filename(filename), None);
+    }
+
+    #[test]
+    fn test_get_tags_from_filename_various_artists() {
         let filename = "";
         assert_eq!(get_tags_from_filename(filename), None);
     }
