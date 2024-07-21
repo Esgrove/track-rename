@@ -167,8 +167,8 @@ pub fn get_tags_from_filename(filename: &str) -> Option<(String, String)> {
             Some((String::new(), filename.to_string()))
         };
     }
-
-    let parts: Vec<&str> = filename.splitn(2, " - ").collect();
+    let trimmed_filename = filename.trim_start_matches("Various Artists - ").trim().to_string();
+    let parts: Vec<&str> = trimmed_filename.splitn(2, " - ").collect();
     if parts.len() == 2 {
         let artist = normalize_str(parts[0]);
         let title = normalize_str(parts[1]);

@@ -222,6 +222,7 @@ pub fn format_tags_for_artist_and_title(artist: &str, title: &str) -> (String, S
     }
 
     formatted_artist = formatted_artist.replace(" / ", ", ");
+    formatted_artist = formatted_artist.trim_start_matches("Various Artists - ").to_string();
 
     // Remove duplicate artist name from title
     let artist_with_dash = format!("{formatted_artist} - ");
