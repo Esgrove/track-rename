@@ -122,6 +122,7 @@ pub fn contains_subpath(main_path: &Path, subpath: &Path) -> bool {
     false
 }
 
+/// Calculate SHA256 hash for the given file.
 pub fn compute_file_hash(path: &Path) -> anyhow::Result<String> {
     let mut file = fs::File::open(path)?;
     let mut hasher = Sha256::new();
@@ -134,6 +135,7 @@ pub fn ffmpeg_available() -> bool {
     Command::new("ffmpeg").arg("-version").output().is_ok()
 }
 
+/// Get file modified time as seconds since unix epoch.
 pub fn get_file_modified_time(path: &Path) -> anyhow::Result<u64> {
     let metadata = fs::metadata(path)?;
     let modified_time = metadata.modified()?;
@@ -176,6 +178,7 @@ pub fn get_tags_from_filename(filename: &str) -> Option<(String, String)> {
     }
 }
 
+/// Normalize unicode.
 pub fn normalize_str(input: &str) -> String {
     input.nfc().collect::<String>()
 }
