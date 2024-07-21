@@ -33,6 +33,12 @@ static BALANCE_PARENTHESES_TEST_DATA: &[FormattingTestData] = &[
         title: "If (Jes) Live Set Version)",
         correct_title: "If (Jes) (Live Set Version)",
     },
+    FormattingTestData {
+        artist: "Dynasty",
+        correct_artist: "Dynasty",
+        title: "Still In Love) (Dave Lee Original Vibe Mix)",
+        correct_title: "Still In Love (Dave Lee Original Vibe Mix)",
+    },
 ];
 
 static FEAT_TEST_DATA: &[FormattingTestData] = &[
@@ -338,6 +344,12 @@ static FORMATTING_TEST_DATA: &[FormattingTestData] = &[
         correct_artist: "Queen Latifah",
         title: "u.n.i.t.y",
         correct_title: "U.N.I.T.Y",
+    },
+    FormattingTestData {
+        artist: "Various Artists - AC Soul Symphony",
+        correct_artist: "AC Soul Symphony",
+        title: "Windy City Theme",
+        correct_title: "Windy City Theme",
     },
 ];
 
