@@ -219,6 +219,7 @@ pub fn print_divider(text: &str) {
     println!("{}", "-".repeat(text.chars().count()));
 }
 
+/// Print all tag data.
 pub fn print_tag_data(file_tags: &Tag) {
     println!("\n{}", format!("Tags ({}):", file_tags.version()).cyan().bold());
     file_tags

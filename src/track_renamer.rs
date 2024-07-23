@@ -233,10 +233,11 @@ impl TrackRenamer {
                 continue;
             }
 
-            let needs_processing = match self.state.get(&track.path) {
-                Some(state) => state.modified < track.metadata.modified || state.version != track.metadata.version,
-                None => true,
-            };
+            let needs_processing = self.config.no_state
+                || match self.state.get(&track.path) {
+                    Some(state) => state.modified < track.metadata.modified || state.version != track.metadata.version,
+                    None => true,
+                };
 
             if needs_processing {
                 let mut tag_result = utils::read_tags(track);
