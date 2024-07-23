@@ -6,7 +6,7 @@ use std::{fmt, str};
 use anyhow::{anyhow, Context, Result};
 use base64::{engine::general_purpose, Engine as _};
 use byteorder::{BigEndian, ReadBytesExt};
-use colored::Colorize;
+use colored::{ColoredString, Colorize};
 use id3::Tag;
 
 #[derive(Debug, Clone, Default)]
@@ -98,7 +98,7 @@ impl Display for BeatGridMarker {
 impl BpmLock {
     fn load(data: &[u8]) -> Result<BpmLock> {
         if data.len() != 1 {
-            return Err(anyhow!("Invalid data length for BpmLockEntry"));
+            return Err(anyhow!("Invalid data length for BpmLock"));
         }
         let lock = BpmLock { enabled: data[0] != 0 };
         Ok(lock)
@@ -145,6 +145,11 @@ impl Color {
             g: bytes[2],
             b: bytes[3],
         }
+    }
+
+    #[inline]
+    pub fn format(&self, text: &str) -> ColoredString {
+        text.truecolor(self.r, self.g, self.b)
     }
 
     fn load(data: &[u8]) -> Result<Color> {
@@ -215,7 +220,7 @@ impl Display for Cue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let seconds = self.position as f32 * 0.001;
         let position = format!("{seconds:.3}s");
-        let msg = format!("Cue {}", self.index + 1).truecolor(self.color.r, self.color.g, self.color.b);
+        let msg = self.color.format(format!("Cue {}", self.index + 1).as_str());
         if self.name.is_empty() {
             write!(f, "{msg}: {position}")
         } else {
@@ -286,7 +291,7 @@ impl Loop {
 
 impl Display for Loop {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let msg = format!("Loop {}", self.index + 1).truecolor(self.color.r, self.color.g, self.color.b);
+        let msg = self.color.format(format!("Loop {}", self.index + 1).as_str());
         write!(
             f,
             "{msg}: {} [{:.2}s - {:.2}s] {}",
