@@ -95,6 +95,7 @@ lazy_static! {
             ("HIPHOP", "Hip-Hop"),
             ("HIPHOP 1", "Hip-Hop"),
             ("HIPHOP AFRO BEATS", "Afrobeats"),
+            ("HIPHOP AFRO BEATS INSTRUMENTAL", "Afrobeats"),
             ("HIPHOP BATTLE", "Hip-Hop"),
             ("HIPHOP BATTLE 1", "Hip-Hop"),
             ("HIPHOP BATTLE 90's", "Hip-Hop 90's"),
