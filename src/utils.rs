@@ -229,57 +229,6 @@ pub fn print_tag_data(file_tags: &Tag) {
         .for_each(|string| println!("  {}", string));
 }
 
-pub fn get_serato_tags(file_tags: &Tag) {
-    println!("{}", "Serato tags:".cyan());
-    for frame in file_tags.frames() {
-        if let Some(object) = frame.content().encapsulated_object() {
-            println!("  {}:", object.description);
-            println!("{}", hexdump(&object.data, false))
-        }
-    }
-}
-
-fn hexdump(buffer: &[u8], ascii: bool) -> String {
-    let mut offset = 0;
-    let mut result = String::new();
-    while offset < buffer.len() {
-        let end = std::cmp::min(buffer.len(), offset + 16);
-        let line = &buffer[offset..end];
-
-        // Format the offset
-        result.push_str(&format!("    {:08x}  ", offset));
-
-        // Format the hexadecimal values
-        for byte in line {
-            result.push_str(&format!("{:02x} ", byte));
-        }
-
-        // Add padding if the line is less than 16 bytes
-        if line.len() < 16 {
-            for _ in 0..(16 - line.len()) {
-                result.push_str("   ");
-            }
-        }
-
-        if ascii {
-            // Format the ASCII representation
-            result.push_str(" |");
-            for &byte in line {
-                if byte.is_ascii_graphic() || byte == b' ' {
-                    result.push(byte as char);
-                } else {
-                    result.push('.');
-                }
-            }
-            result.push('|');
-        }
-        result.push('\n');
-
-        offset += 16;
-    }
-    result
-}
-
 /// Try to read tags from file.
 /// Will return empty tags when there are no tags.
 pub fn read_tags(track: &Track) -> Option<Tag> {

@@ -19,6 +19,7 @@ use crate::RenamerArgs;
 
 use track_rename::file_format::FileFormat;
 use track_rename::genre::GENRE_MAPPINGS;
+use track_rename::serato;
 use track_rename::state;
 use track_rename::state::State;
 use track_rename::track::{Track, DJ_MUSIC_PATH};
@@ -270,7 +271,7 @@ impl TrackRenamer {
 
                 if self.config.debug && self.config.verbose {
                     utils::print_tag_data(&file_tags);
-                    utils::get_serato_tags(&file_tags);
+                    serato::print_serato_tags(&file_tags);
                 }
 
                 track.format_tags(&file_tags);

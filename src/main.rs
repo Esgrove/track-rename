@@ -66,6 +66,7 @@ pub struct RenamerArgs {
 }
 
 fn main() -> Result<()> {
+    env::set_var("RUST_BACKTRACE", "1");
     let args = RenamerArgs::parse();
     let input_path = args.path.clone().unwrap_or_default().trim().to_string();
     let filepath = if input_path.is_empty() {
