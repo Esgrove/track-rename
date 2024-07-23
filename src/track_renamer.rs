@@ -270,6 +270,7 @@ impl TrackRenamer {
 
                 if self.config.debug && self.config.verbose {
                     utils::print_tag_data(&file_tags);
+                    utils::get_serato_tags(&file_tags);
                 }
 
                 track.format_tags(&file_tags);
