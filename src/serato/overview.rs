@@ -42,68 +42,71 @@ impl Overview {
     }
 
     fn draw_waveform(&self) -> Result<String> {
-        let (term_width, _) = terminal::size().map_err(|e| anyhow!("Failed to get terminal size: {}", e))?;
+        let (terminal_width, _) = terminal::size().map_err(|e| anyhow!("Failed to get terminal size: {}", e))?;
         let width = self.blocks.len();
 
         let mut waveform = String::new();
 
-        // Calculate average for each consecutive two values to reduce height to 8
+        // Calculate average for each consecutive four values to reduce height to 4
         let new_height = 4;
         let mut averaged_blocks: Vec<Vec<u8>> = vec![vec![0; new_height]; width];
 
-        for x in 0..width {
-            for y in 0..new_height {
-                let avg = self.blocks[x][4 * y] as u16
-                    + self.blocks[x][4 * y + 1] as u16
-                    + self.blocks[x][4 * y + 2] as u16
-                    + self.blocks[x][4 * y + 3] as u16 / new_height as u16;
-                averaged_blocks[x][y] = avg as u8;
+        for (x, column) in averaged_blocks.iter_mut().enumerate().take(width) {
+            for (y, value) in column.iter_mut().enumerate().take(new_height) {
+                let avg: u16 =
+                    self.blocks[x][4 * y..4 * y + 4].iter().map(|&v| v as u16).sum::<u16>() / new_height as u16;
+                *value = avg as u8;
             }
         }
 
-        let resampled_blocks = if width > term_width as usize {
-            // Resample to fit terminal width
-            let ratio = width as f32 / term_width as f32;
-            (0..term_width as usize)
-                .map(|x| {
-                    let src_start = (x as f32 * ratio).floor() as usize;
-                    let src_end = ((x as f32 * ratio).ceil() as usize).min(width);
-                    let count = (src_end - src_start).max(1);
-                    let mut block = vec![0; new_height];
-                    for i in src_start..src_end {
-                        for y in 0..new_height {
-                            block[y] += averaged_blocks[i][y];
-                        }
-                    }
-                    for y in 0..new_height {
-                        block[y] /= count as u8;
-                    }
-                    block
-                })
-                .collect::<Vec<_>>()
-        } else {
+        // Adjust width if needed to fit into available terminal width
+        let resampled_blocks = if terminal_width >= 240 {
             averaged_blocks
+        } else if terminal_width >= 120 {
+            // Downsample by two, 240 -> 120
+            (0..width / 2)
+                .map(|i| {
+                    (0..new_height)
+                        .map(|y| ((averaged_blocks[2 * i][y] as u16 + averaged_blocks[2 * i + 1][y] as u16) / 2) as u8)
+                        .collect()
+                })
+                .collect()
+        } else {
+            // Downsample by three, 240 -> 80
+            (0..width / 3)
+                .map(|i| {
+                    (0..new_height)
+                        .map(|y| {
+                            ((averaged_blocks[3 * i][y] as u16
+                                + averaged_blocks[3 * i + 1][y] as u16
+                                + averaged_blocks[3 * i + 2][y] as u16)
+                                / 3) as u8
+                        })
+                        .collect()
+                })
+                .collect()
         };
 
+        // Iterate in reverse so first values of the vertical block go to the bottom of the waveform
         for y in (0..new_height).rev() {
-            for x in 0..(term_width as usize) {
-                let value = resampled_blocks[x][y];
-                let symbol = match value {
-                    0..=34 => '░',
-                    35..=78 => '▒',
+            for block in &resampled_blocks {
+                let symbol = match block[y] {
+                    0..=24 => '░',
+                    25..=50 => '▒',
                     _ => '█',
                 };
-                waveform += format!("{}", symbol).as_str();
+                waveform.push(symbol);
             }
             waveform.push('\n');
         }
+
         Ok(waveform)
     }
 }
 
 impl Display for Overview {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(f, "Overview ({}):", self.blocks.len())?;
+        writeln!(f, "Overview:")?;
         match self.draw_waveform() {
             Ok(view) => {
                 write!(f, "{view}")
