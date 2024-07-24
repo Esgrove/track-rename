@@ -17,12 +17,16 @@ pub enum Markers {
 }
 
 #[derive(Debug, Clone)]
+/// Boolean for BPM lock status.
+/// True means lock is enabled.
+/// https://support.serato.com/hc/en-us/articles/235214887-Lock-Beatgrids
 pub struct BpmLock {
     enabled: bool,
 }
 
 #[derive(Debug, Clone)]
-/// RGB track colour.
+/// RGB colour.
+/// Used for track, cues, and loops.
 pub struct Color {
     r: u8,
     b: u8,
@@ -30,7 +34,7 @@ pub struct Color {
 }
 
 #[derive(Debug, Clone)]
-/// Cue point.
+/// A cue point.
 ///
 /// | Offset |            Length | Raw Value     | Decoded   | Type                    | Description
 /// | ------ | ----------------- | ------------- | --------- | ----------------------- | -----------
@@ -45,12 +49,12 @@ pub struct Color {
 pub struct Cue {
     /// Cue number
     index: u8,
+    /// Position in milliseconds
+    position: u32,
     /// RGB Color
     color: Color,
     /// Name
     name: String,
-    /// Position in milliseconds
-    position: u32,
 }
 
 #[derive(Debug, Clone)]
@@ -81,56 +85,56 @@ pub struct Loop {
     name: String,
 }
 
-pub fn parse_markers(data: &[u8]) -> Result<Vec<Markers>> {
-    let b64data_start = 2;
-    let b64data_end = data
-        .iter()
-        .position(|&x| x == b'\x00')
-        .ok_or_else(|| anyhow!("No null terminator found"))?;
-    let b64data = &data[b64data_start..b64data_end];
-
-    // Remove linefeed characters
-    let b64data: Vec<u8> = b64data.iter().cloned().filter(|&x| x != b'\n').collect();
-
-    // Calculate padding
-    let padding = match b64data.len() % 4 {
-        1 => b"A==".to_vec(),
-        2 => b"==".to_vec(),
-        3 => b"=".to_vec(),
-        _ => Vec::new(),
-    };
-
-    // Concatenate base64 data with padding
-    let mut b64data_padded = b64data.clone();
-    b64data_padded.extend_from_slice(&padding);
-
-    let payload = general_purpose::STANDARD
-        .decode(&b64data_padded)
-        .context("Failed to decode base64 data")?;
-
-    let mut cursor = Cursor::new(payload);
-    let version = (cursor.read_u8()?, cursor.read_u8()?);
-    if version != (0x01, 0x01) {
-        return Err(anyhow!("Invalid payload version: {:?}", version));
-    }
-
-    let mut entries = Vec::new();
-    while let Ok(entry_name_bytes) = read_bytes(&mut cursor) {
-        let entry_name = String::from_utf8(entry_name_bytes)?;
-        let name = entry_name.trim();
-        if name.is_empty() {
-            break;
-        }
-        let entry_len = cursor.read_u32::<BigEndian>()?;
-        let mut entry_data = vec![0; entry_len as usize];
-        cursor.read_exact(&mut entry_data)?;
-        entries.push(Markers::load(&entry_name, &entry_data)?);
-    }
-
-    Ok(entries)
-}
-
 impl Markers {
+    pub fn parse(data: &[u8]) -> Result<Vec<Markers>> {
+        let b64data_start = 2;
+        let b64data_end = data
+            .iter()
+            .position(|&x| x == b'\x00')
+            .ok_or_else(|| anyhow!("No null terminator found"))?;
+        let b64data = &data[b64data_start..b64data_end];
+
+        // Remove linefeed characters
+        let b64data: Vec<u8> = b64data.iter().cloned().filter(|&x| x != b'\n').collect();
+
+        // Calculate padding
+        let padding = match b64data.len() % 4 {
+            1 => b"A==".to_vec(),
+            2 => b"==".to_vec(),
+            3 => b"=".to_vec(),
+            _ => Vec::new(),
+        };
+
+        // Concatenate base64 data with padding
+        let mut b64data_padded = b64data.clone();
+        b64data_padded.extend_from_slice(&padding);
+
+        let payload = general_purpose::STANDARD
+            .decode(&b64data_padded)
+            .context("Failed to decode base64 data")?;
+
+        let mut cursor = Cursor::new(payload);
+        let version = (cursor.read_u8()?, cursor.read_u8()?);
+        if version != (0x01, 0x01) {
+            return Err(anyhow!("Invalid payload version: {:?}", version));
+        }
+
+        let mut entries = Vec::new();
+        while let Ok(entry_name_bytes) = read_bytes(&mut cursor) {
+            let entry_name = String::from_utf8(entry_name_bytes)?;
+            let name = entry_name.trim();
+            if name.is_empty() {
+                break;
+            }
+            let entry_len = cursor.read_u32::<BigEndian>()?;
+            let mut entry_data = vec![0; entry_len as usize];
+            cursor.read_exact(&mut entry_data)?;
+            entries.push(Markers::load(&entry_name, &entry_data)?);
+        }
+
+        Ok(entries)
+    }
+
     fn load(entry_name: &str, data: &[u8]) -> Result<Markers> {
         match entry_name {
             "BPMLOCK" => Ok(Markers::BpmLock(BpmLock::load(data)?)),
@@ -147,8 +151,7 @@ impl BpmLock {
         if data.len() != 1 {
             return Err(anyhow!("Invalid data length for BpmLock"));
         }
-        let lock = BpmLock { enabled: data[0] != 0 };
-        Ok(lock)
+        Ok(BpmLock { enabled: data[0] != 0 })
     }
 }
 
@@ -179,12 +182,11 @@ impl Color {
         if data.len() != 4 {
             return Err(anyhow!("Invalid data length for Color"));
         }
-        let color = Color {
+        Ok(Color {
             r: data[1],
             g: data[2],
             b: data[3],
-        };
-        Ok(color)
+        })
     }
 }
 
@@ -194,15 +196,15 @@ impl Cue {
             return Err(anyhow!("Invalid data length for CueEntry"));
         }
         let mut cursor = Cursor::new(data);
-        let _ = cursor.read_u8()?;
+        // Skip first byte
+        cursor.set_position(1);
         let index = cursor.read_u8()?;
         let position = cursor.read_u32::<BigEndian>()?;
-        let _ = cursor.read_u8()?;
+        cursor.set_position(cursor.position() + 1);
         let mut color = [0; 3];
         cursor.read_exact(&mut color)?;
         let color = Color::new(color);
-        let mut field6 = [0; 2];
-        cursor.read_exact(&mut field6)?;
+        cursor.set_position(cursor.position() + 2);
         let mut name_bytes = Vec::new();
         cursor.read_to_end(&mut name_bytes)?;
         let name = str::from_utf8(&name_bytes)?.trim_end_matches('\x00').to_string();
@@ -225,10 +227,7 @@ impl Loop {
         let index = cursor.read_u8()?;
         let start_position = cursor.read_u32::<BigEndian>()?;
         let end_position = cursor.read_u32::<BigEndian>()?;
-        let mut field5 = [0; 4];
-        cursor.read_exact(&mut field5)?;
-        let mut field6 = [0; 4];
-        cursor.read_exact(&mut field6)?;
+        cursor.set_position(cursor.position() + 8);
         let mut color = [0; 4];
         cursor.read_exact(&mut color)?;
         let color = Color::new_argb(color);
@@ -244,6 +243,23 @@ impl Loop {
             locked,
             name,
         })
+    }
+}
+
+impl Display for Markers {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Markers::BpmLock(bpm_lock) => write!(f, "{}", bpm_lock),
+            Markers::Color(color) => write!(f, "{}", color),
+            Markers::Cue(cue) => write!(f, "{}", cue),
+            Markers::Loop(loop_var) => write!(f, "{}", loop_var),
+        }
+    }
+}
+
+impl Display for BpmLock {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "BPM Lock: {}", self.enabled)
     }
 }
 
@@ -281,23 +297,6 @@ impl Display for Loop {
             self.end_position as f32 * 0.001,
             if self.locked { "locked" } else { "unlocked" }
         )
-    }
-}
-
-impl Display for Markers {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Markers::BpmLock(bpm_lock) => write!(f, "{}", bpm_lock),
-            Markers::Color(color) => write!(f, "{}", color),
-            Markers::Cue(cue) => write!(f, "{}", cue),
-            Markers::Loop(loop_var) => write!(f, "{}", loop_var),
-        }
-    }
-}
-
-impl Display for BpmLock {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "BPM Lock: {}", self.enabled)
     }
 }
 

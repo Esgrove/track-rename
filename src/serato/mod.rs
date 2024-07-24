@@ -1,6 +1,8 @@
 mod analysis;
+mod autotags;
 mod beatgrid;
 mod markers;
+mod overview;
 
 use std::fmt::Display;
 use std::str;
@@ -11,14 +13,18 @@ use colored::Colorize;
 use id3::Tag;
 
 use crate::serato::analysis::AnalysisVersion;
+use crate::serato::autotags::AutoTags;
 use crate::serato::beatgrid::BeatGrid;
 use crate::serato::markers::Markers;
+use crate::serato::overview::Overview;
 
 #[derive(Debug, Clone, Default)]
 pub struct SeratoData {
     pub analysis: AnalysisVersion,
+    pub autotags: AutoTags,
     pub beatgrid: BeatGrid,
     pub markers: Vec<Markers>,
+    pub overview: Overview,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
@@ -78,26 +84,34 @@ pub fn print_serato_tags(file_tags: &Tag) {
         if let Some(object) = frame.content().encapsulated_object() {
             if let Ok(tag) = SeratoTag::from_str(&object.description) {
                 match tag {
-                    SeratoTag::Analysis => match analysis::parse_analysis_data(&object.data) {
+                    SeratoTag::Analysis => match AnalysisVersion::parse(&object.data) {
                         Ok(data) => {
                             println!("{}", data);
                             serato_data.analysis = data;
                         }
                         Err(error) => {
-                            eprintln!("{error}")
+                            eprintln!("Error: {error}")
                         }
                     },
-                    SeratoTag::Autotags => {}
-                    SeratoTag::BeatGrid => match beatgrid::parse_beatgrid_data(&object.data) {
+                    SeratoTag::Autotags => match AutoTags::parse(&object.data) {
+                        Ok(data) => {
+                            println!("{}", data);
+                            serato_data.autotags = data;
+                        }
+                        Err(error) => {
+                            eprintln!("Error: {error}")
+                        }
+                    },
+                    SeratoTag::BeatGrid => match BeatGrid::parse(&object.data) {
                         Ok(data) => {
                             println!("{}", data);
                             serato_data.beatgrid = data;
                         }
                         Err(error) => {
-                            eprintln!("{error}")
+                            eprintln!("Error: {error}")
                         }
                     },
-                    SeratoTag::Markers => match markers::parse_markers(&object.data) {
+                    SeratoTag::Markers => match Markers::parse(&object.data) {
                         Ok(data) => {
                             for marker in data.iter() {
                                 println!("{}", marker);
@@ -106,10 +120,18 @@ pub fn print_serato_tags(file_tags: &Tag) {
                             serato_data.markers = data;
                         }
                         Err(error) => {
-                            eprintln!("{error}")
+                            eprintln!("Error: {error}")
                         }
                     },
-                    SeratoTag::Overview => {}
+                    SeratoTag::Overview => match Overview::parse(&object.data) {
+                        Ok(data) => {
+                            println!("{}", data);
+                            serato_data.overview = data;
+                        }
+                        Err(error) => {
+                            eprintln!("Error: {error}")
+                        }
+                    },
                 }
             }
         }
