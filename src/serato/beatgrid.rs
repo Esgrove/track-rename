@@ -111,7 +111,7 @@ impl Display for BeatGridMarker {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             BeatGridMarker::Terminal { position, bpm } => {
-                write!(f, "{:.3}s {} BPM", position, bpm)
+                write!(f, "{:.3}s {:.2} BPM", position, bpm)
             }
             BeatGridMarker::NonTerminal {
                 position,

@@ -7,9 +7,9 @@ use anyhow::anyhow;
 pub struct AutoTags {
     /// Beats per minute
     pub bpm: f32,
-    /// Calculated auto gain
+    /// Calculated auto gain (dB)
     pub auto_gain: f32,
-    /// Manually adjusted gain
+    /// Manually adjusted gain (dB)
     pub gain: f32,
 }
 
@@ -32,24 +32,35 @@ impl AutoTags {
         // Parse BPM
         let bpm_str = std::str::from_utf8(&data[2..9])
             .map_err(|_| anyhow!("Failed to parse BPM string as UTF-8"))?
-            .trim_end_matches(char::from(0));
+            .trim_end_matches('\x00')
+            .trim();
         let bpm: f32 = bpm_str.parse().map_err(|_| anyhow!("Failed to parse BPM as f32"))?;
 
         // Parse Auto Gain
         let auto_gain_str = std::str::from_utf8(&data[9..16])
             .map_err(|_| anyhow!("Failed to parse Auto Gain string as UTF-8"))?
-            .trim_end_matches(char::from(0));
+            .replace('\x00', "")
+            .trim()
+            .to_string();
+
         let auto_gain: f32 = auto_gain_str
             .parse()
-            .map_err(|_| anyhow!("Failed to parse Auto Gain as f32"))?;
+            .map_err(|e| anyhow!("Failed to parse Auto Gain as f32: {e}"))?;
 
-        // Parse Gain dB
-        let gain_str = std::str::from_utf8(&data[16..22])
-            .map_err(|_| anyhow!("Failed to parse Gain dB string as UTF-8"))?
-            .trim_end_matches(char::from(0));
-        let gain: f32 = gain_str
-            .parse()
-            .map_err(|_| anyhow!("Failed to parse Gain dB as f32"))?;
+        // Parse Gain dB (only if data is long enough)
+        let gain: f32 = if data.len() >= 22 {
+            let gain_str = std::str::from_utf8(&data[16..22])
+                .map_err(|_| anyhow!("Failed to parse Gain dB string as UTF-8"))?
+                .replace('\x00', "")
+                .trim()
+                .to_string();
+
+            gain_str
+                .parse()
+                .map_err(|e| anyhow!("Failed to parse Gain dB as f32: {e}"))?
+        } else {
+            0.0
+        };
 
         Ok(AutoTags { bpm, auto_gain, gain })
     }
