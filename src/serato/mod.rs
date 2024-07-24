@@ -5,8 +5,8 @@ mod markers;
 mod overview;
 
 use std::fmt::Display;
-use std::str;
 use std::str::FromStr;
+use std::{fmt, str};
 
 use anyhow::{anyhow, Result};
 use colored::Colorize;
@@ -34,6 +34,61 @@ pub enum SeratoTag {
     BeatGrid,
     Markers,
     Overview,
+}
+
+impl SeratoData {
+    pub fn parse(file_tags: &Tag) -> SeratoData {
+        let mut serato_data = SeratoData::default();
+        for frame in file_tags.frames() {
+            if let Some(object) = frame.content().encapsulated_object() {
+                if let Ok(tag) = SeratoTag::from_str(&object.description) {
+                    match tag {
+                        SeratoTag::Analysis => match AnalysisVersion::parse(&object.data) {
+                            Ok(data) => {
+                                serato_data.analysis = data;
+                            }
+                            Err(error) => {
+                                eprintln!("Error: {error}")
+                            }
+                        },
+                        SeratoTag::Autotags => match AutoTags::parse(&object.data) {
+                            Ok(data) => {
+                                serato_data.autotags = data;
+                            }
+                            Err(error) => {
+                                eprintln!("Error: {error}")
+                            }
+                        },
+                        SeratoTag::BeatGrid => match BeatGrid::parse(&object.data) {
+                            Ok(data) => {
+                                serato_data.beatgrid = data;
+                            }
+                            Err(error) => {
+                                eprintln!("Error: {error}")
+                            }
+                        },
+                        SeratoTag::Markers => match Markers::parse(&object.data) {
+                            Ok(data) => {
+                                serato_data.markers = data;
+                            }
+                            Err(error) => {
+                                eprintln!("Error: {error}")
+                            }
+                        },
+                        SeratoTag::Overview => match Overview::parse(&object.data) {
+                            Ok(data) => {
+                                serato_data.overview = data;
+                            }
+                            Err(error) => {
+                                eprintln!("Error: {error}")
+                            }
+                        },
+                    }
+                }
+            }
+        }
+        serato_data
+    }
 }
 
 impl FromStr for SeratoTag {
@@ -78,63 +133,21 @@ impl Display for SeratoTag {
 }
 
 pub fn print_serato_tags(file_tags: &Tag) {
-    println!("{}", "Serato tags:".cyan());
-    let mut serato_data = SeratoData::default();
-    for frame in file_tags.frames() {
-        if let Some(object) = frame.content().encapsulated_object() {
-            if let Ok(tag) = SeratoTag::from_str(&object.description) {
-                match tag {
-                    SeratoTag::Analysis => match AnalysisVersion::parse(&object.data) {
-                        Ok(data) => {
-                            println!("{}", data);
-                            serato_data.analysis = data;
-                        }
-                        Err(error) => {
-                            eprintln!("Error: {error}")
-                        }
-                    },
-                    SeratoTag::Autotags => match AutoTags::parse(&object.data) {
-                        Ok(data) => {
-                            println!("{}", data);
-                            serato_data.autotags = data;
-                        }
-                        Err(error) => {
-                            eprintln!("Error: {error}")
-                        }
-                    },
-                    SeratoTag::BeatGrid => match BeatGrid::parse(&object.data) {
-                        Ok(data) => {
-                            println!("{}", data);
-                            serato_data.beatgrid = data;
-                        }
-                        Err(error) => {
-                            eprintln!("Error: {error}")
-                        }
-                    },
-                    SeratoTag::Markers => match Markers::parse(&object.data) {
-                        Ok(data) => {
-                            for marker in data.iter() {
-                                println!("{}", marker);
-                            }
+    let serato_data = SeratoData::parse(file_tags);
+    print!("{}", serato_data);
+}
 
-                            serato_data.markers = data;
-                        }
-                        Err(error) => {
-                            eprintln!("Error: {error}")
-                        }
-                    },
-                    SeratoTag::Overview => match Overview::parse(&object.data) {
-                        Ok(data) => {
-                            println!("{}", data);
-                            serato_data.overview = data;
-                        }
-                        Err(error) => {
-                            eprintln!("Error: {error}")
-                        }
-                    },
-                }
-            }
+impl Display for SeratoData {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(f, "{}", "Serato tags:".cyan())?;
+        writeln!(f, "{}", self.autotags)?;
+        writeln!(f, "{}", self.analysis)?;
+        writeln!(f, "{}", self.beatgrid)?;
+        write!(f, "{}", self.overview)?;
+        for marker in self.markers.iter() {
+            writeln!(f, "{marker}")?;
         }
+        Ok(())
     }
 }
 
@@ -191,7 +204,7 @@ fn hexdump(buffer: &[u8], ascii: bool) -> String {
 fn format_duration(position_in_ms: u32) -> String {
     let minutes = position_in_ms / 60000;
     let seconds = (position_in_ms % 60000) / 1000;
-    let tenths = (position_in_ms % 1000) / 100;
+    let tenths = ((position_in_ms % 1000) as f64 / 100.0).round();
 
     format!("{:02}:{:02}.{}", minutes, seconds, tenths)
 }

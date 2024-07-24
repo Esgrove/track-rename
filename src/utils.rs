@@ -196,7 +196,7 @@ pub fn path_to_string(path: &Path) -> String {
     }
 }
 
-/// Get relative path and convert to string with invalid unicode handling.
+/// Get the relative path and convert to string with invalid unicode handling.
 pub fn path_to_string_relative(path: &Path) -> String {
     path_to_string(&get_relative_path_from_current_working_directory(path))
 }
@@ -257,7 +257,7 @@ pub fn rename_track(path: &Path, new_path: &Path, test_mode: bool) -> anyhow::Re
         if test_mode {
             panic!("{}", message);
         } else {
-            eprintln!("{}", message.red());
+            print_error(&message);
         }
     }
     Ok(())
@@ -282,6 +282,10 @@ pub fn get_filename_from_path(path: &Path) -> anyhow::Result<String> {
         .to_string_lossy()
         .replace('\u{FFFD}', "");
     Ok(file_name)
+}
+
+pub fn print_error(message: &str) {
+    eprintln!("{}", message.red());
 }
 
 #[cfg(test)]

@@ -229,7 +229,7 @@ impl TrackRenamer {
             if !track.path.exists() {
                 track.show(self.total_tracks, max_index_width);
                 let message = format!("Track no longer exists: {}", track);
-                eprintln!("{}", message.red());
+                utils::print_error(&message);
                 utils::print_divider(&message);
                 continue;
             }
