@@ -292,7 +292,11 @@ impl Display for Loop {
         write!(
             f,
             "{msg}: {} [{:.2}s - {:.2}s] {}",
-            self.name,
+            if self.name.is_empty() {
+                super::format_duration(self.start_position)
+            } else {
+                self.name.clone()
+            },
             self.start_position as f32 * 0.001,
             self.end_position as f32 * 0.001,
             if self.locked { "locked" } else { "unlocked" }

@@ -89,10 +89,9 @@ impl Overview {
             for x in 0..(term_width as usize) {
                 let value = resampled_blocks[x][y];
                 let symbol = match value {
-                    0..=32 => ' ',
-                    33..=64 => '.',
-                    65..=97 => '*',
-                    _ => '#',
+                    0..=34 => '░',
+                    35..=78 => '▒',
+                    _ => '█',
                 };
                 waveform += format!("{}", symbol).as_str();
             }

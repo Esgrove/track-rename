@@ -187,3 +187,11 @@ fn hexdump(buffer: &[u8], ascii: bool) -> String {
     }
     result
 }
+
+fn format_duration(position_in_ms: u32) -> String {
+    let minutes = position_in_ms / 60000;
+    let seconds = (position_in_ms % 60000) / 1000;
+    let tenths = (position_in_ms % 1000) / 100;
+
+    format!("{:02}:{:02}.{}", minutes, seconds, tenths)
+}
