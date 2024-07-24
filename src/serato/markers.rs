@@ -35,17 +35,6 @@ pub struct Color {
 
 #[derive(Debug, Clone)]
 /// A cue point.
-///
-/// | Offset |            Length | Raw Value     | Decoded   | Type                    | Description
-/// | ------ | ----------------- | ------------- | --------- | ----------------------- | -----------
-/// | `00`   |              `01` | `00`          |           |                         |
-/// | `01`   |              `01` | `00`          | 0         | `uint8_t`               | Index
-/// | `02`   |              `04` | `00 00 00 00` | 0         | `uint32_t`              | Position in ms
-/// | `06`   |              `01` | `00`          |           |                         |
-/// | `07`   |              `03` | `cc 00 00`    | `#CC0000` | 3-byte RGB value        | Color
-/// | `0a`   |              `02` | `00 00`       |           |                         |
-/// | `0c`   | `01` <= X <= `33` | `00`          | ``        | UTF-8 (null-terminated) | Name
-///
 pub struct Cue {
     /// Cue number
     index: u8,
@@ -59,19 +48,6 @@ pub struct Cue {
 
 #[derive(Debug, Clone)]
 /// Saved loop.
-///
-/// | Offset   |              Length | Raw Value     | Decoded   | Type                    | Description
-/// | -------- | ------------------- | ------------- | --------- | ----------------------- | -----------
-/// | `00`     |                `01` | `00`          |           |                         |
-/// | `01`     |                `01` | `00`          | 0         | `uint8_t`               | Index
-/// | `02`     |                `04` | `00 00 00 00` | 0         | `uint32_t`              | Start Position in milliseconds
-/// | `06`     |                `04` | `00 00 08 26` | 2086      | `uint32_t`              | End Position in milliseconds
-/// | `0a`     |                `04` | `ff ff ff ff` |           |                         |
-/// | `0e`     |                `04` | `00 27 aa e1` | `#27aae1` | 4-byte ARGB value       | Color
-/// | `12`     |                `03` | `00`          |           |                         |
-/// | `13`     |                `01` | `00`          | False     | `uint8_t` (boolean)     | Locked
-/// | `14`     | `01` <= X <= `7fec` | `00`          | ``        | UTF-8 (null-terminated) | Name
-///
 pub struct Loop {
     /// Loop number
     index: u8,
@@ -191,6 +167,16 @@ impl Color {
 }
 
 impl Cue {
+    /// | Offset |            Length | Raw Value     | Decoded   | Type                    | Description
+    /// | ------ | ----------------- | ------------- | --------- | ----------------------- | -----------
+    /// | `00`   |              `01` | `00`          |           |                         |
+    /// | `01`   |              `01` | `00`          | 0         | `uint8_t`               | Index
+    /// | `02`   |              `04` | `00 00 00 00` | 0         | `uint32_t`              | Position in ms
+    /// | `06`   |              `01` | `00`          |           |                         |
+    /// | `07`   |              `03` | `cc 00 00`    | `#CC0000` | 3-byte RGB value        | Color
+    /// | `0a`   |              `02` | `00 00`       |           |                         |
+    /// | `0c`   | `01` <= X <= `33` | `00`          | ``        | UTF-8 (null-terminated) | Name
+    ///
     fn load(data: &[u8]) -> Result<Cue> {
         if data.len() < 13 {
             return Err(anyhow!("Invalid data length for CueEntry"));
@@ -218,20 +204,34 @@ impl Cue {
 }
 
 impl Loop {
+    /// | Offset   |              Length | Raw Value     | Decoded   | Type                    | Description
+    /// | -------- | ------------------- | ------------- | --------- | ----------------------- | -----------
+    /// | `00`     |                `01` | `00`          |           |                         |
+    /// | `01`     |                `01` | `00`          | 0         | `uint8_t`               | Index
+    /// | `02`     |                `04` | `00 00 00 00` | 0         | `uint32_t`              | Start Position in milliseconds
+    /// | `06`     |                `04` | `00 00 08 26` | 2086      | `uint32_t`              | End Position in milliseconds
+    /// | `0a`     |                `04` | `ff ff ff ff` |           |                         |
+    /// | `0e`     |                `04` | `00 27 aa e1` | `#27aae1` | 4-byte ARGB value       | Color
+    /// | `12`     |                `01` | `00`          |           |                         |
+    /// | `13`     |                `01` | `00`          | False     | `uint8_t` (boolean)     | Locked
+    /// | `14`     | `01` <= X <= `7fec` | `00`          | ``        | UTF-8 (null-terminated) | Name
+    ///
     fn load(data: &[u8]) -> Result<Loop> {
         if data.len() < 15 {
             return Err(anyhow!("Invalid data length for Loop"));
         }
         let mut cursor = Cursor::new(data);
-        let _ = cursor.read_u8()?;
+        cursor.set_position(1);
         let index = cursor.read_u8()?;
         let start_position = cursor.read_u32::<BigEndian>()?;
         let end_position = cursor.read_u32::<BigEndian>()?;
-        cursor.set_position(cursor.position() + 8);
+        cursor.set_position(cursor.position() + 4);
         let mut color = [0; 4];
         cursor.read_exact(&mut color)?;
         let color = Color::new_argb(color);
-        let locked = cursor.read_u8()? != 0;
+        cursor.set_position(cursor.position() + 1);
+        let locked = cursor.read_u8()?;
+        let locked = locked == 1;
         let mut name_bytes = Vec::new();
         cursor.read_to_end(&mut name_bytes)?;
         let name = str::from_utf8(&name_bytes)?.trim_end_matches('\x00').to_string();

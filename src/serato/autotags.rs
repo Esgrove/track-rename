@@ -15,7 +15,7 @@ pub struct AutoTags {
 
 impl AutoTags {
     /// Parse autotags data.
-    /// Contains the BPM, autogain, and manual gain values.
+    /// Contains the BPM, auto gain, and manual gain values.
     ///
     /// | Offset | Length | Raw Value              | Decoded Value | Type                    | Description
     /// | ------ | ------ | ---------------------- | ------------- | ----------------------- | -----------
