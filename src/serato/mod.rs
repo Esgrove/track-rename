@@ -17,6 +17,7 @@ use crate::serato::autotags::AutoTags;
 use crate::serato::beatgrid::BeatGrid;
 use crate::serato::markers::Markers;
 use crate::serato::overview::Overview;
+use crate::utils;
 
 #[derive(Debug, Clone, Default)]
 pub struct SeratoData {
@@ -47,41 +48,31 @@ impl SeratoData {
                             Ok(data) => {
                                 serato_data.analysis = data;
                             }
-                            Err(error) => {
-                                eprintln!("Error: {error}")
-                            }
+                            Err(error) => utils::print_error(format!("Error: {error}").as_str()),
                         },
                         SeratoTag::Autotags => match AutoTags::parse(&object.data) {
                             Ok(data) => {
                                 serato_data.autotags = data;
                             }
-                            Err(error) => {
-                                eprintln!("Error: {error}")
-                            }
+                            Err(error) => utils::print_error(format!("Error: {error}").as_str()),
                         },
                         SeratoTag::BeatGrid => match BeatGrid::parse(&object.data) {
                             Ok(data) => {
                                 serato_data.beatgrid = data;
                             }
-                            Err(error) => {
-                                eprintln!("Error: {error}")
-                            }
+                            Err(error) => utils::print_error(format!("Error: {error}").as_str()),
                         },
                         SeratoTag::Markers => match Markers::parse(&object.data) {
                             Ok(data) => {
                                 serato_data.markers = data;
                             }
-                            Err(error) => {
-                                eprintln!("Error: {error}")
-                            }
+                            Err(error) => utils::print_error(format!("Error: {error}").as_str()),
                         },
                         SeratoTag::Overview => match Overview::parse(&object.data) {
                             Ok(data) => {
                                 serato_data.overview = data;
                             }
-                            Err(error) => {
-                                eprintln!("Error: {error}")
-                            }
+                            Err(error) => utils::print_error(format!("Error: {error}").as_str()),
                         },
                     }
                 }
