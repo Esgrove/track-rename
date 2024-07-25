@@ -3,11 +3,12 @@ use std::fmt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str::FromStr;
+use std::sync::LazyLock;
 
 use anyhow::Context;
 use colored::Colorize;
 use id3::Tag;
-use lazy_static::lazy_static;
+
 use unicode_normalization::UnicodeNormalization;
 
 use crate::file_format::FileFormat;
@@ -22,9 +23,7 @@ use crate::{formatting, genre};
 const OTHER_FILE_EXTENSIONS: [&str; 3] = ["wav", "flac", "m4a"];
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-lazy_static! {
-    pub static ref DJ_MUSIC_PATH: PathBuf = ["Dropbox", "DJ MUSIC"].iter().collect();
-}
+pub static DJ_MUSIC_PATH: LazyLock<PathBuf> = LazyLock::new(|| ["Dropbox", "DJ MUSIC"].iter().collect());
 
 /// Represents one audio file.
 #[derive(Debug, Default, Clone)]

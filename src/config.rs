@@ -1,9 +1,9 @@
+use std::path::PathBuf;
 use std::{fmt, fs};
 
 use anyhow::{anyhow, Context};
 use colored::Colorize;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
 
 use crate::RenamerArgs;
 

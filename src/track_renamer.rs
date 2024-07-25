@@ -547,13 +547,14 @@ mod tests {
     use std::fs::copy;
     use std::path::Path;
     use std::path::PathBuf;
+    use std::sync::LazyLock;
 
-    use once_cell::sync::Lazy;
     use rand::{distributions::Alphanumeric, Rng};
 
-    static NO_TAGS_DIR: Lazy<PathBuf> = Lazy::new(|| ["tests", "files", "no_tags"].iter().collect());
-    static BASIC_TAGS_DIR: Lazy<PathBuf> = Lazy::new(|| ["tests", "files", "basic_tags"].iter().collect());
-    static EXTENDED_TAGS_DIR: Lazy<PathBuf> = Lazy::new(|| ["tests", "files", "extended_tags"].iter().collect());
+    static NO_TAGS_DIR: LazyLock<PathBuf> = LazyLock::new(|| ["tests", "files", "no_tags"].iter().collect());
+    static BASIC_TAGS_DIR: LazyLock<PathBuf> = LazyLock::new(|| ["tests", "files", "basic_tags"].iter().collect());
+    static EXTENDED_TAGS_DIR: LazyLock<PathBuf> =
+        LazyLock::new(|| ["tests", "files", "extended_tags"].iter().collect());
 
     #[test]
     fn test_no_tags() {

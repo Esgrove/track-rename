@@ -1,56 +1,57 @@
 use std::cmp::Ordering;
+use std::sync::LazyLock;
 
-use lazy_static::lazy_static;
 use regex::{Captures, Regex};
 
-lazy_static! {
-    static ref COMMON_SUBSTITUTES: [(&'static str, &'static str); 23] = [
-        ("\0", "/"),
-        ("`", "'"),
-        ("´", "'"),
-        (")(", ") ("),
-        ("()", " "),
-        (") - (", ""),
-        (" - (", " ("),
-        ("(- ", "("),
-        ("( - ", "("),
-        (" -)", " )"),
-        (" - ) ", ")"),
-        (" )", ")"),
-        ("( ", "("),
-        ("...", " "),
-        ("..", " "),
-        (" feat. - ", " feat. "),
-        (" feat.-", " feat. "),
-        ("o¨", "ö"),
-        ("e¨", "ë"),
-        (" ,", ","),
-        ("\u{FFFD}", " "),
-        // Replace en and em dashes with regular dash
-        ("–", "-"),
-        ("—", "-"),
-    ];
-    static ref TITLE_SUBSTITUTES: [(&'static str, &'static str); 18] = [
-        ("(Original Mix/", "("),
-        ("12\"", "12''"),
-        (" (12 Version) ", " (12'' Version) "),
-        ("(Inst)", "(Instrumental)"),
-        (" W/Drums", " With Drums"),
-        ("), Pt. 1", ") (Pt. 1)"),
-        ("/Cyberkid ", " - Cyberkid "),
-        ("-Dirty/Beat Junkie Sound ", " - Dirty Beat Junkie Sound "),
-        ("-DirtyBeat Junkie Sound ", " - Dirty Beat Junkie Sound "),
-        ("/Clean-Beat Junkie Sound ", " - Clean Beat Junkie Sound "),
-        ("-Clean/Beat Junkie Sound ", " - Clean Beat Junkie Sound "),
-        ("-CleanBeat Junkie Sound ", " - Clean Beat Junkie Sound "),
-        ("(Clean-Beat Junkie Sound ", "(Clean Beat Junkie Sound "),
-        ("(Dirty-Beat Junkie Sound ", "(Dirty Beat Junkie Sound "),
-        (" Version/cyberkid ", " Version - Cyberkid "),
-        ("/Beat Junkie ", " - Beat Junkie "),
-        ("(Clean-", "(Clean "),
-        ("(Dirty-", "(Dirty "),
-    ];
-    static ref REGEX_SUBSTITUTES: [(Regex, &'static str); 12] = [
+static COMMON_SUBSTITUTES: [(&str, &str); 23] = [
+    ("\0", "/"),
+    ("`", "'"),
+    ("´", "'"),
+    (")(", ") ("),
+    ("()", " "),
+    (") - (", ""),
+    (" - (", " ("),
+    ("(- ", "("),
+    ("( - ", "("),
+    (" -)", " )"),
+    (" - ) ", ")"),
+    (" )", ")"),
+    ("( ", "("),
+    ("...", " "),
+    ("..", " "),
+    (" feat. - ", " feat. "),
+    (" feat.-", " feat. "),
+    ("o¨", "ö"),
+    ("e¨", "ë"),
+    (" ,", ","),
+    ("\u{FFFD}", " "),
+    // Replace en and em dashes with regular dash
+    ("–", "-"),
+    ("—", "-"),
+];
+static TITLE_SUBSTITUTES: [(&str, &str); 18] = [
+    ("(Original Mix/", "("),
+    ("12\"", "12''"),
+    (" (12 Version) ", " (12'' Version) "),
+    ("(Inst)", "(Instrumental)"),
+    (" W/Drums", " With Drums"),
+    ("), Pt. 1", ") (Pt. 1)"),
+    ("/Cyberkid ", " - Cyberkid "),
+    ("-Dirty/Beat Junkie Sound ", " - Dirty Beat Junkie Sound "),
+    ("-DirtyBeat Junkie Sound ", " - Dirty Beat Junkie Sound "),
+    ("/Clean-Beat Junkie Sound ", " - Clean Beat Junkie Sound "),
+    ("-Clean/Beat Junkie Sound ", " - Clean Beat Junkie Sound "),
+    ("-CleanBeat Junkie Sound ", " - Clean Beat Junkie Sound "),
+    ("(Clean-Beat Junkie Sound ", "(Clean Beat Junkie Sound "),
+    ("(Dirty-Beat Junkie Sound ", "(Dirty Beat Junkie Sound "),
+    (" Version/cyberkid ", " Version - Cyberkid "),
+    ("/Beat Junkie ", " - Beat Junkie "),
+    ("(Clean-", "(Clean "),
+    ("(Dirty-", "(Dirty "),
+];
+
+static REGEX_SUBSTITUTES: LazyLock<[(Regex, &'static str); 12]> = LazyLock::new(|| {
+    [
         // Replace various opening bracket types with "("
         (Regex::new(r"[\[{]+").unwrap(), "("),
         // Replace various closing bracket types with ")"
@@ -75,8 +76,10 @@ lazy_static! {
         (Regex::new(r"\s\*+\b").unwrap(), ""),
         // Collapses multiple spaces into a single space
         (Regex::new(r"\s+").unwrap(), " "),
-    ];
-    static ref REGEX_NAME_SUBSTITUTES: [(Regex, &'static str); 44] = [
+    ]
+});
+static REGEX_NAME_SUBSTITUTES: LazyLock<[(Regex, &'static str); 44]> = LazyLock::new(|| {
+    [
         // Matches "12 Inch" or "12Inch" with optional space, case-insensitive
         (Regex::new(r"(?i)\b12\s?inch\b").unwrap(), "12''"),
         // Matches "12in" or "12 in" with optional space, case-insensitive
@@ -132,59 +135,79 @@ lazy_static! {
         (Regex::new(r"(?i)\bIn[:\s/+\-&]*out\b").unwrap(), "In-Out"),
         (Regex::new(r"(?i)\bIntro[:\s/+\-&]*outro\b").unwrap(), "Intro"),
         (Regex::new(r"(?i)\bAca In\b").unwrap(), "Acapella Intro"),
-        (Regex::new(r"(?i)\bAca intro[:\s/+\-&]*aca outro\b").unwrap(), "Acapella In-Out"),
-        (Regex::new(r"(?i)\bAcapella Intro[:\s/+\-&]*aca out\b").unwrap(), "Acapella In-Out"),
+        (
+            Regex::new(r"(?i)\bAca intro[:\s/+\-&]*aca outro\b").unwrap(),
+            "Acapella In-Out",
+        ),
+        (
+            Regex::new(r"(?i)\bAcapella Intro[:\s/+\-&]*aca out\b").unwrap(),
+            "Acapella In-Out",
+        ),
         (Regex::new(r"(?i)\bAca Out\b").unwrap(), "Acapella Out"),
         (Regex::new(r"(?i)\bAcap-In\b").unwrap(), "Acapella Intro"),
         (Regex::new(r"(?i)\bAcap - diy\b").unwrap(), "Acapella DIY"),
         (Regex::new(r"(?i)\bAcap in[:\s/+\-&]*out\b").unwrap(), "Acapella In-Out"),
         (Regex::new(r"(?i)\bAcap\b").unwrap(), "Acapella"),
-        (Regex::new(r"(?i)\bAcapella[\s/+\-]*In[:\s/+\-&]*Out\b").unwrap(), "Acapella In-Out"),
+        (
+            Regex::new(r"(?i)\bAcapella[\s/+\-]*In[:\s/+\-&]*Out\b").unwrap(),
+            "Acapella In-Out",
+        ),
         (Regex::new(r"(?i)\bAcapella[\s/+\-]*In\b").unwrap(), "Acapella Intro"),
-        (Regex::new(r"(?i)\bAcapella Intro[:\s/+\-&]*Out\b").unwrap(), "Acapella In-Out"),
-        (Regex::new(r"(?i)\bAcapella-Intro[:\s/+\-&]*Out\b").unwrap(), "Acapella In-Out"),
+        (
+            Regex::new(r"(?i)\bAcapella Intro[:\s/+\-&]*Out\b").unwrap(),
+            "Acapella In-Out",
+        ),
+        (
+            Regex::new(r"(?i)\bAcapella-Intro[:\s/+\-&]*Out\b").unwrap(),
+            "Acapella In-Out",
+        ),
         (Regex::new(r"(?i)\bAcapella-Intro\b").unwrap(), "Acapella Intro"),
         (Regex::new(r"(?i)\bAcapella-out\b").unwrap(), "Acapella Out"),
-    ];
-    static ref REGEX_FILENAME_SUBSTITUTES: [(Regex, &'static str); 3] = [
+    ]
+});
+static REGEX_FILENAME_SUBSTITUTES: LazyLock<[(Regex, &'static str); 3]> = LazyLock::new(|| {
+    [
         // Replace double quotes with two single quotes
         (Regex::new("\"").unwrap(), "''"),
         // Replace characters that are not allowed in filenames with a hyphen
         (Regex::new(r"([\\/<>|:\*\?])").unwrap(), "-"),
         // Collapse multiple spaces into a single space
         (Regex::new(r"\s+").unwrap(), " "),
-    ];
-    // Matches "feat." followed by any text until a dash, parenthesis, or end of string
-    static ref RE_FEAT: Regex = Regex::new(r"\bfeat\. .*?( -|\(|\)|$)").unwrap();
+    ]
+});
+// Matches "feat." followed by any text until a dash, parenthesis, or end of string
+static RE_FEAT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\bfeat\. .*?( -|\(|\)|$)").unwrap());
 
-    // Matches text after a closing parenthesis until the next opening parenthesis
-    static ref RE_TEXT_AFTER_PARENTHESES: Regex = Regex::new(r"\)\s(.*?)\s\(").unwrap();
+// Matches text after a closing parenthesis until the next opening parenthesis
+static RE_TEXT_AFTER_PARENTHESES: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\)\s(.*?)\s\(").unwrap());
 
-    // Matches BPM information inside parentheses at the end of a string,
-    // allowing for decimal BPMs or BPM with a trailing "a"
-    static ref RE_BPM_IN_PARENTHESES: Regex = Regex::new(r" \((\d{2,3}(\.\d)?|\d{2,3} \d{1,2}a)\)$").unwrap();
+// Matches BPM information inside parentheses at the end of a string,
+// allowing for decimal BPMs or BPM with a trailing "a"
+static RE_BPM_IN_PARENTHESES: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r" \((\d{2,3}(\.\d)?|\d{2,3} \d{1,2}a)\)$").unwrap());
 
-    // Matches BPM with an optional key, formatted within parentheses at the end of a string
-    static ref RE_BPM_WITH_KEY: Regex = Regex::new(r"\s\(\d{1,3}(?:\s\d{1,2})?\s?[a-zA-Z]\)$").unwrap();
+// Matches BPM with an optional key, formatted within parentheses at the end of a string
+static RE_BPM_WITH_KEY: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\s\(\d{1,3}(?:\s\d{1,2})?\s?[a-zA-Z]\)$").unwrap());
 
-    // Matches BPM followed by two or three letters (likely denoting key or mode),
-    // formatted within parentheses at the end of a string
-    static ref RE_BPM_WITH_TEXT_PARENTHESES: Regex = Regex::new(r"\s\(\d{2,3}\s?[a-zA-Z]{2,3}\)$").unwrap();
-    static ref RE_BPM_WITH_TEXT: Regex = Regex::new(r"\b\d{2,3}\s?[a-zA-Z]{2,3}\)$").unwrap();
+// Matches BPM followed by two or three letters (likely denoting key or mode),
+// formatted within parentheses at the end of a string
+static RE_BPM_WITH_TEXT_PARENTHESES: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\s\(\d{2,3}\s?[a-zA-Z]{2,3}\)$").unwrap());
+static RE_BPM_WITH_TEXT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\b\d{2,3}\s?[a-zA-Z]{2,3}\)$").unwrap());
 
-    // Matches any text within parentheses that contains a dash, separating it into two groups
-    static ref RE_DASH_IN_PARENTHESES: Regex = Regex::new(r"\((.*?) - (.*?)\)").unwrap();
+// Matches any text within parentheses that contains a dash, separating it into two groups
+static RE_DASH_IN_PARENTHESES: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\((.*?) - (.*?)\)").unwrap());
 
-    // Matches variations on "and" in feat artist names
-    static ref RE_FEAT_AND: Regex = Regex::new(r"(?i),?\s+and\s+").unwrap();
+// Matches variations on "and" in feat artist names
+static RE_FEAT_AND: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i),?\s+and\s+").unwrap());
 
-    // Collapse multiple spaces into a single space
-    static ref RE_MULTIPLE_SPACES: Regex = Regex::new(r"\s{2,}").unwrap();
+// Collapse multiple spaces into a single space
+static RE_MULTIPLE_SPACES: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\s{2,}").unwrap());
 
-    static ref RE_WWW: Regex = Regex::new(r"(?i)^www\.").unwrap();
+static RE_WWW: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)^www\.").unwrap());
 
-    static ref RE_CHARS_AND_DOTS: Regex = Regex::new(r"(?i)^([a-z]\.)+([a-z])?$").unwrap();
-}
+static RE_CHARS_AND_DOTS: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)^([a-z]\.)+([a-z])?$").unwrap());
 
 /// Return formatted artist and title string.
 pub fn format_tags_for_artist_and_title(artist: &str, title: &str) -> (String, String) {
