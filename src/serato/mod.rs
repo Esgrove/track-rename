@@ -192,7 +192,8 @@ fn hexdump(buffer: &[u8], ascii: bool) -> String {
     result
 }
 
-fn format_duration(position_in_ms: u32) -> String {
+/// Format duration in milliseconds as `MM:SS:T` to match Serato.
+fn format_position_timestamp(position_in_ms: u32) -> String {
     let minutes = position_in_ms / 60000;
     let seconds = (position_in_ms % 60000) / 1000;
     let tenths = ((position_in_ms % 1000) as f64 / 100.0).round();

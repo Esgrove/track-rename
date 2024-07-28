@@ -279,7 +279,11 @@ impl Display for Cue {
         let position = format!("{seconds:>7.3}s");
         let msg = self.color.format(format!("Cue {}", self.index + 1).as_str());
         if self.name.is_empty() {
-            write!(f, "{msg}: {:<12} {position}", super::format_duration(self.position))
+            write!(
+                f,
+                "{msg}: {:<12} {position}",
+                super::format_position_timestamp(self.position)
+            )
         } else {
             write!(f, "{msg}: {:<12} {position}", self.name)
         }
@@ -293,7 +297,7 @@ impl Display for Loop {
             f,
             "{msg}: {} [{:.2}s - {:.2}s] {}",
             if self.name.is_empty() {
-                super::format_duration(self.start_position)
+                super::format_position_timestamp(self.start_position)
             } else {
                 self.name.clone()
             },

@@ -8,7 +8,6 @@ use std::sync::LazyLock;
 use anyhow::Context;
 use colored::Colorize;
 use id3::Tag;
-
 use unicode_normalization::UnicodeNormalization;
 
 use crate::file_format::FileFormat;
