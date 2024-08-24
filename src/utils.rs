@@ -148,9 +148,10 @@ pub fn get_file_modified_time(path: &Path) -> anyhow::Result<u64> {
 /// Convert the given path to be relative to the current working directory.
 /// Returns the original path if the relative path cannot be created.
 pub fn get_relative_path_from_current_working_directory(path: &Path) -> PathBuf {
-    env::current_dir()
-        .map(|current_dir| path.strip_prefix(&current_dir).unwrap_or(path).to_path_buf())
-        .unwrap_or(path.to_path_buf())
+    env::current_dir().map_or_else(
+        |_| path.to_path_buf(),
+        |current_dir| path.strip_prefix(&current_dir).unwrap_or(path).to_path_buf(),
+    )
 }
 
 /// Convert filename to artist and title tags.
@@ -183,17 +184,18 @@ pub fn normalize_str(input: &str) -> String {
     input.nfc().collect::<String>()
 }
 
-/// Convert path to string with invalid unicode handling.
+/// Convert a path to string with invalid Unicode handling.
 pub fn path_to_string(path: &Path) -> String {
-    if let Some(string) = path.to_str() {
-        string.to_string()
-    } else {
-        let string = path.to_string_lossy().to_string().replace('\u{FFFD}', "");
-        eprintln!("{}", "Path contains invalid unicode".red());
-        eprintln!("{:?}", path);
-        eprintln!("{}", string);
-        string
-    }
+    path.to_str().map_or_else(
+        || {
+            let string = path.to_string_lossy().to_string().replace('\u{FFFD}', "");
+            eprintln!("{}", "Path contains invalid unicode".red());
+            eprintln!("{path:?}");
+            eprintln!("{string}");
+            string
+        },
+        ToString::to_string,
+    )
 }
 
 /// Get the relative path and convert to string with invalid unicode handling.
@@ -204,14 +206,14 @@ pub fn path_to_string_relative(path: &Path) -> String {
 /// Print a single line diff of the changes.
 pub fn print_diff(old: &str, new: &str) {
     let (old_diff, new_diff) = color_diff(old, new, false);
-    println!("{} -> {}", old_diff, new_diff);
+    println!("{old_diff} -> {new_diff}");
 }
 
 /// Print a stacked diff of the changes.
 pub fn print_stacked_diff(old: &str, new: &str) {
     let (old_diff, new_diff) = color_diff(old, new, true);
-    println!("{}", old_diff);
-    println!("{}", new_diff);
+    println!("{old_diff}");
+    println!("{new_diff}");
 }
 
 /// Print a divider line that matches the length of the reference text.
@@ -226,7 +228,7 @@ pub fn print_tag_data(file_tags: &Tag) {
         .frames()
         .map(|frame| format!("{}: {}", frame.id(), frame.content()))
         .sorted_unstable()
-        .for_each(|string| println!("  {}", string));
+        .for_each(|string| println!("  {string}"));
 }
 
 /// Try to read tags from file.
@@ -237,11 +239,11 @@ pub fn read_tags(track: &Track) -> Option<Tag> {
         Err(Error {
             kind: ErrorKind::NoTag, ..
         }) => {
-            println!("\n{}", format!("No tags: {}", track).yellow());
+            println!("\n{}", format!("No tags: {track}").yellow());
             Some(Tag::new())
         }
         Err(error) => {
-            eprintln!("\n{}", format!("Failed to read tags for: {}\n{}", track, error).red());
+            eprintln!("\n{}", format!("Failed to read tags for: {track}\n{error}").red());
             if let Some(ref partial_tags) = error.partial_tag {
                 print_tag_data(partial_tags);
             }
@@ -253,7 +255,7 @@ pub fn read_tags(track: &Track) -> Option<Tag> {
 /// Rename track from given path to new path.
 pub fn rename_track(path: &Path, new_path: &Path, test_mode: bool) -> anyhow::Result<()> {
     if let Err(error) = fs::rename(path, new_path) {
-        let message = format!("Failed to rename file: {}", error);
+        let message = format!("Failed to rename file: {error}");
         if test_mode {
             panic!("{}", message);
         } else {
@@ -267,8 +269,8 @@ pub fn rename_track(path: &Path, new_path: &Path, test_mode: bool) -> anyhow::Re
 pub fn write_log_for_failed_files(paths: &[String]) -> anyhow::Result<()> {
     let filepath = Path::new("track-rename-failed.txt");
     let mut file = File::create(filepath).context("Failed to create output file")?;
-    for path in paths.iter() {
-        writeln!(file, "{}", path)?;
+    for path in paths {
+        writeln!(file, "{path}")?;
     }
     println!("Logged failed files to: {}", dunce::canonicalize(filepath)?.display());
     Ok(())
@@ -306,7 +308,7 @@ mod tests {
         let filename = "Songtitle (Remix)";
         assert_eq!(
             get_tags_from_filename(filename),
-            Some(("".into(), "Songtitle (Remix)".into()))
+            Some((String::new(), "Songtitle (Remix)".into()))
         );
     }
 

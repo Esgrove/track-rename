@@ -567,42 +567,42 @@ fn run_tag_formatting_tests(test_data: &[FormattingTestData]) {
 
 #[test]
 fn test_balance_parentheses() {
-    run_tag_formatting_tests(BALANCE_PARENTHESES_TEST_DATA)
+    run_tag_formatting_tests(BALANCE_PARENTHESES_TEST_DATA);
 }
 
 #[test]
 fn test_feat_formatting() {
-    run_tag_formatting_tests(FEAT_TEST_DATA)
+    run_tag_formatting_tests(FEAT_TEST_DATA);
 }
 
 #[test]
 fn test_formatting() {
-    run_tag_formatting_tests(FORMATTING_TEST_DATA)
+    run_tag_formatting_tests(FORMATTING_TEST_DATA);
 }
 
 #[test]
 fn test_nested_parentheses() {
-    run_tag_formatting_tests(NESTED_PARENTHESES_TEST_DATA)
+    run_tag_formatting_tests(NESTED_PARENTHESES_TEST_DATA);
 }
 
 #[test]
 fn test_parentheses() {
-    run_tag_formatting_tests(PARENTHESES_TEST_DATA)
+    run_tag_formatting_tests(PARENTHESES_TEST_DATA);
 }
 
 #[test]
 fn test_remix_formatting() {
-    run_tag_formatting_tests(REMIX_FORMATTING_TEST_DATA)
+    run_tag_formatting_tests(REMIX_FORMATTING_TEST_DATA);
 }
 
 #[test]
 fn test_remove_bpm_and_key() {
-    run_tag_formatting_tests(REMOVE_BPM_AND_KEY_TEST_DATA)
+    run_tag_formatting_tests(REMOVE_BPM_AND_KEY_TEST_DATA);
 }
 
 #[test]
 fn test_whitespace_formatting() {
-    run_tag_formatting_tests(WHITESPACE_TEST_DATA)
+    run_tag_formatting_tests(WHITESPACE_TEST_DATA);
 }
 
 #[test]

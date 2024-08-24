@@ -23,7 +23,7 @@ pub struct Overview {
 }
 
 impl Overview {
-    pub fn parse(data: &[u8]) -> Result<Overview> {
+    pub fn parse(data: &[u8]) -> Result<Self> {
         if data.len() < 2 {
             return Err(anyhow!("Data too short to contain initial bytes"));
         }
@@ -38,7 +38,7 @@ impl Overview {
             offset += 16;
         }
 
-        Ok(Overview { blocks: frequency_info })
+        Ok(Self { blocks: frequency_info })
     }
 
     fn draw_waveform(&self) -> Result<String> {
@@ -53,8 +53,11 @@ impl Overview {
 
         for (x, column) in averaged_blocks.iter_mut().enumerate().take(width) {
             for (y, value) in column.iter_mut().enumerate().take(new_height) {
-                let avg: u16 =
-                    self.blocks[x][4 * y..4 * y + 4].iter().map(|&v| v as u16).sum::<u16>() / new_height as u16;
+                let avg: u16 = self.blocks[x][4 * y..4 * y + 4]
+                    .iter()
+                    .map(|&v| u16::from(v))
+                    .sum::<u16>()
+                    / new_height as u16;
                 *value = avg as u8;
             }
         }
@@ -67,7 +70,10 @@ impl Overview {
             (0..width / 2)
                 .map(|i| {
                     (0..new_height)
-                        .map(|y| ((averaged_blocks[2 * i][y] as u16 + averaged_blocks[2 * i + 1][y] as u16) / 2) as u8)
+                        .map(|y| {
+                            ((u16::from(averaged_blocks[2 * i][y]) + u16::from(averaged_blocks[2 * i + 1][y])) / 2)
+                                as u8
+                        })
                         .collect()
                 })
                 .collect()
@@ -77,9 +83,9 @@ impl Overview {
                 .map(|i| {
                     (0..new_height)
                         .map(|y| {
-                            ((averaged_blocks[3 * i][y] as u16
-                                + averaged_blocks[3 * i + 1][y] as u16
-                                + averaged_blocks[3 * i + 2][y] as u16)
+                            ((u16::from(averaged_blocks[3 * i][y])
+                                + u16::from(averaged_blocks[3 * i + 1][y])
+                                + u16::from(averaged_blocks[3 * i + 2][y]))
                                 / 3) as u8
                         })
                         .collect()
@@ -90,6 +96,7 @@ impl Overview {
         // Iterate in reverse so first values of the vertical block go to the bottom of the waveform
         for y in (0..new_height).rev() {
             for block in &resampled_blocks {
+                #[allow(clippy::match_on_vec_items)]
                 let symbol = match block[y] {
                     0..=24 => '░',
                     25..=50 => '▒',

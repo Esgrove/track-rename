@@ -19,12 +19,12 @@ impl AnalysisVersion {
     /// |   `00` |   `01` |      `02` |           `2` | `unsigned char` | Major Version
     /// |   `01` |   `01` |      `01` |           `1` | `unsigned char` | Minor Version
     ///
-    pub fn parse(data: &[u8]) -> Result<AnalysisVersion> {
+    pub fn parse(data: &[u8]) -> Result<Self> {
         if data.len() >= 2 {
             let major_version = data[0];
             let minor_version = data[1];
 
-            Ok(AnalysisVersion {
+            Ok(Self {
                 major_version,
                 minor_version,
             })

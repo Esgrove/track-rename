@@ -38,8 +38,8 @@ pub enum SeratoTag {
 }
 
 impl SeratoData {
-    pub fn parse(file_tags: &Tag) -> SeratoData {
-        let mut serato_data = SeratoData::default();
+    pub fn parse(file_tags: &Tag) -> Self {
+        let mut serato_data = Self::default();
         for frame in file_tags.frames() {
             if let Some(object) = frame.content().encapsulated_object() {
                 if let Ok(tag) = SeratoTag::from_str(&object.description) {
@@ -87,11 +87,11 @@ impl FromStr for SeratoTag {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "Serato Analysis" => Ok(SeratoTag::Analysis),
-            "Serato Autotags" => Ok(SeratoTag::Autotags),
-            "Serato BeatGrid" => Ok(SeratoTag::BeatGrid),
-            "Serato Markers2" => Ok(SeratoTag::Markers),
-            "Serato Overview" => Ok(SeratoTag::Overview),
+            "Serato Analysis" => Ok(Self::Analysis),
+            "Serato Autotags" => Ok(Self::Autotags),
+            "Serato BeatGrid" => Ok(Self::BeatGrid),
+            "Serato Markers2" => Ok(Self::Markers),
+            "Serato Overview" => Ok(Self::Overview),
             _ => Err(anyhow!("Unknown tag description: {}", s)),
         }
     }
@@ -103,19 +103,19 @@ impl Display for SeratoTag {
             f,
             "{}",
             match self {
-                SeratoTag::Analysis => {
+                Self::Analysis => {
                     "SeratoAnalysis"
                 }
-                SeratoTag::Autotags => {
+                Self::Autotags => {
                     "SeratoAutotags"
                 }
-                SeratoTag::BeatGrid => {
+                Self::BeatGrid => {
                     "SeratoBeatGrid"
                 }
-                SeratoTag::Markers => {
+                Self::Markers => {
                     "SeratoMarkers"
                 }
-                SeratoTag::Overview => {
+                Self::Overview => {
                     "SeratoOverview"
                 }
             }
@@ -125,7 +125,7 @@ impl Display for SeratoTag {
 
 pub fn print_serato_tags(file_tags: &Tag) {
     let serato_data = SeratoData::parse(file_tags);
-    print!("{}", serato_data);
+    print!("{serato_data}");
 }
 
 impl Display for SeratoData {
@@ -135,7 +135,7 @@ impl Display for SeratoData {
         writeln!(f, "{}", self.analysis)?;
         writeln!(f, "{}", self.beatgrid)?;
         write!(f, "{}", self.overview)?;
-        for marker in self.markers.iter() {
+        for marker in &self.markers {
             writeln!(f, "{marker}")?;
         }
         Ok(())
@@ -145,7 +145,7 @@ impl Display for SeratoData {
 #[allow(dead_code)]
 fn format_as_byte_string(data: &[u8]) -> String {
     data.iter()
-        .map(|byte| format!("{:02x}", byte))
+        .map(|byte| format!("{byte:02x}"))
         .collect::<Vec<String>>()
         .join(" ")
 }
@@ -159,11 +159,11 @@ fn hexdump(buffer: &[u8], ascii: bool) -> String {
         let line = &buffer[offset..end];
 
         // Format the offset
-        result.push_str(&format!("    {:08x}  ", offset));
+        result.push_str(&format!("    {offset:08x}  "));
 
         // Format the hexadecimal values
         for byte in line {
-            result.push_str(&format!("{:02x} ", byte));
+            result.push_str(&format!("{byte:02x} "));
         }
 
         // Add padding if the line is less than 16 bytes
@@ -196,7 +196,7 @@ fn hexdump(buffer: &[u8], ascii: bool) -> String {
 fn format_position_timestamp(position_in_ms: u32) -> String {
     let minutes = position_in_ms / 60000;
     let seconds = (position_in_ms % 60000) / 1000;
-    let tenths = ((position_in_ms % 1000) as f64 / 100.0).round();
+    let tenths = (f64::from(position_in_ms % 1000) / 100.0).round();
 
-    format!("{:02}:{:02}.{}", minutes, seconds, tenths)
+    format!("{minutes:02}:{seconds:02}.{tenths}")
 }

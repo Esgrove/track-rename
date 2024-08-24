@@ -83,5 +83,5 @@ fn main() -> Result<()> {
 
     let absolute_input_path = dunce::canonicalize(filepath)?;
 
-    TrackRenamer::new(absolute_input_path, args).run()
+    TrackRenamer::new(absolute_input_path, &args).run()
 }

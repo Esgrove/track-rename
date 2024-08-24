@@ -53,7 +53,7 @@ impl BeatGrid {
     /// |   `00` |   `04` |               | `float` (binary32) | Position
     /// |   `04` |   `04` | `00 00 00 04` | `uint32_t`         | Beats till next marker
     ///
-    pub fn parse(data: &[u8]) -> Result<BeatGrid> {
+    pub fn parse(data: &[u8]) -> Result<Self> {
         if data.len() < 11 {
             return Err(anyhow!("Data is too short to contain valid beatgrid information"));
         }
@@ -89,7 +89,7 @@ impl BeatGrid {
             offset += 8;
         }
 
-        Ok(BeatGrid { num_markers, markers })
+        Ok(Self { num_markers, markers })
     }
 }
 
@@ -99,8 +99,8 @@ impl Display for BeatGrid {
             write!(f, "Beatgrid {}", self.markers[0])
         } else {
             writeln!(f, "Beatgrid ({}):", self.num_markers)?;
-            for marker in self.markers.iter() {
-                write!(f, "  {}", marker)?;
+            for marker in &self.markers {
+                write!(f, "  {marker}")?;
             }
             Ok(())
         }
@@ -110,14 +110,14 @@ impl Display for BeatGrid {
 impl Display for BeatGridMarker {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            BeatGridMarker::Terminal { position, bpm } => {
-                write!(f, "{:.3}s {:.3} BPM", position, bpm)
+            Self::Terminal { position, bpm } => {
+                write!(f, "{position:.3}s {bpm:.3} BPM")
             }
-            BeatGridMarker::NonTerminal {
+            Self::NonTerminal {
                 position,
                 beats_till_next,
             } => {
-                writeln!(f, "{:.3}s {} beats", position, beats_till_next)
+                writeln!(f, "{position:.3}s {beats_till_next} beats")
             }
         }
     }

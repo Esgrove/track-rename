@@ -49,9 +49,9 @@ struct UserConfig {
 
 impl Config {
     /// Create config from given command line args and user config file.
-    pub fn from_args(args: RenamerArgs) -> Self {
+    pub fn from_args(args: &RenamerArgs) -> Self {
         let user_config = UserConfig::get_user_config();
-        Config {
+        Self {
             convert_failed: args.convert || user_config.convert_failed,
             debug: args.debug,
             excluded_tracks: user_config.exclude,
@@ -72,7 +72,7 @@ impl Config {
     #[cfg(test)]
     /// Used in test cases.
     pub fn new_for_tests() -> Self {
-        Config {
+        Self {
             force: true,
             rename_files: true,
             test_mode: true,
@@ -84,12 +84,12 @@ impl Config {
 impl UserConfig {
     /// Try to read user config from file if it exists.
     /// Otherwise, fall back to default config.
-    fn get_user_config() -> UserConfig {
+    fn get_user_config() -> Self {
         Self::read_user_config().unwrap_or_default()
     }
 
     /// Read and parse user config if it exists.
-    fn read_user_config() -> Option<UserConfig> {
+    fn read_user_config() -> Option<Self> {
         Self::user_config_file_path()
             .ok()
             .and_then(|path| fs::read_to_string(path).ok())
@@ -100,9 +100,10 @@ impl UserConfig {
     fn user_config_file_path() -> anyhow::Result<PathBuf> {
         let home_dir = dirs::home_dir().context("Failed to get home directory path")?;
         let config_path = home_dir.join(CONFIG_FILE_DIR).join(CONFIG_FILE_NAME);
-        match config_path.exists() {
-            true => Ok(config_path),
-            false => Err(anyhow!("Config file not found: {}", config_path.display())),
+        if config_path.exists() {
+            Ok(config_path)
+        } else {
+            Err(anyhow!("Config file not found: {}", config_path.display()))
         }
     }
 }
@@ -125,7 +126,7 @@ impl fmt::Display for Config {
         writeln!(f, "  write_all_tags: {}", utils::colorize_bool(self.write_all_tags))?;
         writeln!(f, "  genre_statistics: {}", utils::colorize_bool(self.genre_statistics))?;
         if self.excluded_tracks.is_empty() {
-            writeln!(f, "  excluded_tracks: []")?
+            writeln!(f, "  excluded_tracks: []")?;
         } else {
             let excluded_tracks: String = self
                 .excluded_tracks
@@ -133,7 +134,7 @@ impl fmt::Display for Config {
                 .map(|name| format!("    {}", name.yellow()))
                 .collect::<Vec<_>>()
                 .join("\n");
-            writeln!(f, "  excluded_tracks:\n{}", excluded_tracks)?
+            writeln!(f, "  excluded_tracks:\n{excluded_tracks}")?;
         }
         Ok(())
     }
@@ -154,7 +155,7 @@ impl fmt::Display for UserConfig {
                 .map(|name| format!("    {}", name.yellow()))
                 .collect::<Vec<_>>()
                 .join("\n");
-            writeln!(f, "  exclude:\n{}", excluded_files)
+            writeln!(f, "  exclude:\n{excluded_files}")
         }
     }
 }

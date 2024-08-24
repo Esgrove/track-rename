@@ -38,8 +38,8 @@ pub struct TrackRenamer {
 
 impl TrackRenamer {
     /// Create Renamer from command line arguments.
-    pub fn new(path: PathBuf, args: RenamerArgs) -> TrackRenamer {
-        TrackRenamer {
+    pub fn new(path: PathBuf, args: &RenamerArgs) -> Self {
+        Self {
             root: path,
             config: Config::from_args(args),
             state: state::load_state(),
@@ -49,8 +49,8 @@ impl TrackRenamer {
 
     #[cfg(test)]
     /// Create Renamer with config directly. Used in tests.
-    pub fn new_with_config(path: PathBuf, config: Config) -> TrackRenamer {
-        TrackRenamer {
+    pub fn new_with_config(path: PathBuf, config: Config) -> Self {
+        Self {
             root: path,
             config,
             ..Default::default()
@@ -106,7 +106,7 @@ impl TrackRenamer {
         if self.config.verbose {
             if self.total_tracks < 100 {
                 let index_width: usize = self.total_tracks.to_string().chars().count();
-                for track in self.tracks.iter() {
+                for track in &self.tracks {
                     println!("{:>width$}: {}", track.number, track, width = index_width);
                 }
             }
@@ -131,7 +131,7 @@ impl TrackRenamer {
         let mut track_list: Vec<Track> = WalkDir::new(&self.root)
             .into_iter()
             .par_bridge()
-            .filter_map(|e| e.ok())
+            .filter_map(std::result::Result::ok)
             .filter(|e| e.path().is_file())
             .filter_map(|entry| Track::try_from_path(entry.path()))
             .collect();
@@ -176,7 +176,7 @@ impl TrackRenamer {
         let mut current_path = self.root.clone();
 
         let start_instant = Instant::now();
-        for track in self.tracks.iter_mut() {
+        for track in &mut self.tracks {
             if !self.config.sort_files {
                 // Print current directory when iterating in directory order
                 if current_path != track.root {
@@ -217,7 +217,7 @@ impl TrackRenamer {
             {
                 if self.config.verbose {
                     track.show(self.total_tracks, max_index_width);
-                    let message = format!("Skipping track in exclude list: {}", track);
+                    let message = format!("Skipping track in exclude list: {track}");
                     println!("{}", message.yellow());
                     utils::print_divider(&message);
                 }
@@ -228,7 +228,7 @@ impl TrackRenamer {
             // for example when handling duplicates.
             if !track.path.exists() {
                 track.show(self.total_tracks, max_index_width);
-                let message = format!("Track no longer exists: {}", track);
+                let message = format!("Track no longer exists: {track}");
                 utils::print_error(&message);
                 utils::print_divider(&message);
                 continue;
@@ -246,24 +246,21 @@ impl TrackRenamer {
                     println!("Converting MP3 to AIF...");
                     match track.convert_mp3_to_aif() {
                         Ok(aif_track) => {
-                            self.stats.num_converted += 1;
+                            self.stats.converted += 1;
                             *track = aif_track;
                             tag_result = utils::read_tags(track);
                         }
                         Err(e) => {
-                            eprintln!("{}", e);
+                            eprintln!("{e}");
                         }
                     }
                 }
-                let mut file_tags = match tag_result {
-                    Some(tags) => tags,
-                    None => {
-                        self.stats.num_failed += 1;
-                        if self.config.log_failures {
-                            failed_files.push(utils::path_to_string(&track.path));
-                        }
-                        continue;
+                let Some(mut file_tags) = tag_result else {
+                    self.stats.failed += 1;
+                    if self.config.log_failures {
+                        failed_files.push(utils::path_to_string(&track.path));
                     }
+                    continue;
                 };
 
                 // Store id3 tag version count
@@ -285,8 +282,8 @@ impl TrackRenamer {
                 if track.tags.changed() || self.config.write_all_tags {
                     if track.tags.changed() {
                         track.show(self.total_tracks, max_index_width);
-                        self.stats.num_tags += 1;
-                        println!("{}", fix_tags_header);
+                        self.stats.tags += 1;
+                        println!("{fix_tags_header}");
                         track.tags.show_diff();
                     }
                     if !self.config.print_only
@@ -295,7 +292,7 @@ impl TrackRenamer {
                     {
                         if track.tags.changed() {
                             track.tags_updated = true;
-                            self.stats.num_tags_fixed += 1;
+                            self.stats.tags_fixed += 1;
                         }
                     } else {
                         track.not_processed = true;
@@ -340,9 +337,9 @@ impl TrackRenamer {
                         // Rename files if the flag was given or if tags were not changed
                         if self.config.rename_files || !track.tags_updated {
                             track.show(self.total_tracks, max_index_width);
-                            println!("{}", rename_file_header);
+                            println!("{rename_file_header}");
                             utils::print_stacked_diff(&track.filename(), &formatted_file_name);
-                            self.stats.num_to_rename += 1;
+                            self.stats.to_rename += 1;
                             if !self.config.print_only && (self.config.force || utils::confirm()) {
                                 if capitalization_change_only {
                                     let temp_file =
@@ -359,7 +356,7 @@ impl TrackRenamer {
                                     let renamed_track = track.renamed_track(formatted_path, formatted_name.clone())?;
                                     *track = renamed_track;
                                 }
-                                self.stats.num_renamed += 1;
+                                self.stats.renamed += 1;
                             } else {
                                 track.not_processed = true;
                             }
@@ -369,10 +366,10 @@ impl TrackRenamer {
                         // A file with the formatted name already exists
                         track.show(self.total_tracks, max_index_width);
                         println!("{}", "Duplicate:".bright_red().bold());
-                        println!("Rename:   {}", original_path_string);
-                        println!("Existing: {}", formatted_path_string);
+                        println!("Rename:   {original_path_string}");
+                        println!("Existing: {formatted_path_string}");
                         utils::print_divider(&formatted_file_name);
-                        self.stats.num_duplicates += 1;
+                        self.stats.duplicates += 1;
                     }
                 }
                 processed_files
@@ -415,7 +412,7 @@ impl TrackRenamer {
     #[inline]
     /// Print running index
     fn print_running_index(total_tracks: usize, number: usize, max_index_width: usize) {
-        print!("\r{:>width$}/{}", number, total_tracks, width = max_index_width);
+        print!("\r{number:>max_index_width$}/{total_tracks}");
         io::stdout().flush().unwrap();
     }
 
@@ -428,16 +425,16 @@ impl TrackRenamer {
             .counts()
             .into_iter()
             .sorted_unstable_by(|a, b| b.1.cmp(&a.1))
-            .for_each(|(format, count)| println!("{format}: {count}"))
+            .for_each(|(format, count)| println!("{format}: {count}"));
     }
 
-    fn update_state(&mut self) {
+    fn update_state(&self) {
         self.tracks
             .par_iter()
             .filter(|track| !track.not_processed)
             .for_each(|track| {
                 self.state.insert(track.path.clone(), track.metadata.clone());
-            })
+            });
     }
 
     /// Print all paths for duplicate tracks with the same name.
@@ -459,10 +456,10 @@ impl TrackRenamer {
             "{}",
             format!("Duplicates ({}):", duplicate_tracks.len()).magenta().bold()
         );
-        for (_, tracks) in duplicate_tracks.iter() {
+        for (_, tracks) in &duplicate_tracks {
             println!("{}", tracks[0].name.yellow());
             for track in tracks {
-                println!("  {}", track);
+                println!("  {track}");
             }
         }
     }
@@ -480,7 +477,7 @@ impl TrackRenamer {
                     width = total.to_string().chars().count()
                 )
             })
-            .for_each(|string| println!("{}", string));
+            .for_each(|string| println!("{string}"));
     }
 
     fn print_top_genres(genre_list: &[(String, usize)]) {
@@ -492,7 +489,7 @@ impl TrackRenamer {
             .unwrap_or(60);
 
         for (genre, count) in genre_list.iter().take(20) {
-            println!("{genre:<width$}   {count}", width = max_length);
+            println!("{genre:<max_length$}   {count}");
         }
     }
 
@@ -500,15 +497,15 @@ impl TrackRenamer {
     fn write_genre_log(genres: &[(String, usize)]) -> anyhow::Result<()> {
         let filepath = Path::new("genres.txt");
         let mut file = File::create(filepath).context("Failed to create output file")?;
-        for (genre, _) in genres.iter() {
-            writeln!(file, "{}", genre)?;
+        for (genre, _) in genres {
+            writeln!(file, "{genre}")?;
         }
 
         println!("Logged genres to: {}", dunce::canonicalize(filepath)?.display());
         Ok(())
     }
 
-    fn write_tags(track: &mut Track, file_tags: &mut Tag) -> bool {
+    fn write_tags(track: &Track, file_tags: &mut Tag) -> bool {
         // Remove genre first to try to get rid of old ID3v1 genre IDs
         file_tags.remove_genre();
         file_tags.remove_disc();
@@ -613,7 +610,7 @@ mod tests {
         });
     }
 
-    /// Generic test function that takes a function or closure with one PathBuf as input argument.
+    /// Generic test function that takes a function or closure with one `PathBuf` as input argument.
     /// It will create temporary test files and run the test function with them.
     fn run_test_on_files<F: Fn(PathBuf)>(test_dir: &Path, test_func: F) {
         for entry in fs::read_dir(test_dir).expect("Failed to read test directory") {
@@ -628,12 +625,11 @@ mod tests {
         }
     }
 
-    /// Check if this is a hidden file like ".DS_Store" on macOS
+    /// Check if this is a hidden file like `.DS_Store` on macOS
     fn not_hidden_file(path: &Path) -> bool {
         path.file_name()
             .and_then(|name| name.to_str())
-            .map(|s| !s.starts_with('.'))
-            .unwrap_or(true)
+            .map_or(true, |s| !s.starts_with('.'))
     }
 
     /// Create a new temporary file with an added random string in the name

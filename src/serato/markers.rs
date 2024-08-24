@@ -19,7 +19,7 @@ pub enum Markers {
 #[derive(Debug, Clone)]
 /// Boolean for BPM lock status.
 /// True means lock is enabled.
-/// https://support.serato.com/hc/en-us/articles/235214887-Lock-Beatgrids
+/// <https://support.serato.com/hc/en-us/articles/235214887-Lock-Beatgrids>
 pub struct BpmLock {
     enabled: bool,
 }
@@ -62,7 +62,7 @@ pub struct Loop {
 }
 
 impl Markers {
-    pub fn parse(data: &[u8]) -> Result<Vec<Markers>> {
+    pub fn parse(data: &[u8]) -> Result<Vec<Self>> {
         let b64data_start = 2;
         let b64data_end = data
             .iter()
@@ -71,7 +71,7 @@ impl Markers {
         let b64data = &data[b64data_start..b64data_end];
 
         // Remove linefeed characters
-        let b64data: Vec<u8> = b64data.iter().cloned().filter(|&x| x != b'\n').collect();
+        let b64data: Vec<u8> = b64data.iter().copied().filter(|&x| x != b'\n').collect();
 
         // Calculate padding
         let padding = match b64data.len() % 4 {
@@ -82,7 +82,7 @@ impl Markers {
         };
 
         // Concatenate base64 data with padding
-        let mut b64data_padded = b64data.clone();
+        let mut b64data_padded = b64data;
         b64data_padded.extend_from_slice(&padding);
 
         let payload = general_purpose::STANDARD
@@ -105,44 +105,46 @@ impl Markers {
             let entry_len = cursor.read_u32::<BigEndian>()?;
             let mut entry_data = vec![0; entry_len as usize];
             cursor.read_exact(&mut entry_data)?;
-            entries.push(Markers::load(&entry_name, &entry_data)?);
+            entries.push(Self::load(&entry_name, &entry_data)?);
         }
 
         Ok(entries)
     }
 
-    fn load(entry_name: &str, data: &[u8]) -> Result<Markers> {
+    fn load(entry_name: &str, data: &[u8]) -> Result<Self> {
         match entry_name {
-            "BPMLOCK" => Ok(Markers::BpmLock(BpmLock::load(data)?)),
-            "COLOR" => Ok(Markers::Color(Color::load(data)?)),
-            "CUE" => Ok(Markers::Cue(Cue::load(data)?)),
-            "LOOP" => Ok(Markers::Loop(Loop::load(data)?)),
+            "BPMLOCK" => Ok(Self::BpmLock(BpmLock::load(data)?)),
+            "COLOR" => Ok(Self::Color(Color::load(data)?)),
+            "CUE" => Ok(Self::Cue(Cue::load(data)?)),
+            "LOOP" => Ok(Self::Loop(Loop::load(data)?)),
             _ => Err(anyhow!("Unknown entry type: {}", entry_name)),
         }
     }
 }
 
 impl BpmLock {
-    fn load(data: &[u8]) -> Result<BpmLock> {
+    fn load(data: &[u8]) -> Result<Self> {
         if data.len() != 1 {
             return Err(anyhow!("Invalid data length for BpmLock"));
         }
-        Ok(BpmLock { enabled: data[0] != 0 })
+        Ok(Self { enabled: data[0] != 0 })
     }
 }
 
 impl Color {
-    /// Create a new RgbColor from an array [u8; 3].
-    pub fn new(bytes: [u8; 3]) -> Self {
-        Color {
+    /// Create a new `RgbColor` from an RGB array [u8; 3].
+    pub const fn new(bytes: [u8; 3]) -> Self {
+        Self {
             r: bytes[0],
             g: bytes[1],
             b: bytes[2],
         }
     }
 
-    pub fn new_argb(bytes: [u8; 4]) -> Self {
-        Color {
+    /// Create a new `RgbColor` from an ARGB array [u8; 4].
+    /// Ignores the alpha channel.
+    pub const fn new_argb(bytes: [u8; 4]) -> Self {
+        Self {
             r: bytes[1],
             g: bytes[2],
             b: bytes[3],
@@ -154,11 +156,11 @@ impl Color {
         text.truecolor(self.r, self.g, self.b)
     }
 
-    fn load(data: &[u8]) -> Result<Color> {
+    fn load(data: &[u8]) -> Result<Self> {
         if data.len() != 4 {
             return Err(anyhow!("Invalid data length for Color"));
         }
-        Ok(Color {
+        Ok(Self {
             r: data[1],
             g: data[2],
             b: data[3],
@@ -177,7 +179,7 @@ impl Cue {
     /// | `0a`   |              `02` | `00 00`       |           |                         |
     /// | `0c`   | `01` <= X <= `33` | `00`          | ``        | UTF-8 (null-terminated) | Name
     ///
-    fn load(data: &[u8]) -> Result<Cue> {
+    fn load(data: &[u8]) -> Result<Self> {
         if data.len() < 13 {
             return Err(anyhow!("Invalid data length for CueEntry"));
         }
@@ -194,7 +196,7 @@ impl Cue {
         let mut name_bytes = Vec::new();
         cursor.read_to_end(&mut name_bytes)?;
         let name = str::from_utf8(&name_bytes)?.trim_end_matches('\x00').to_string();
-        Ok(Cue {
+        Ok(Self {
             index,
             position,
             color,
@@ -216,7 +218,7 @@ impl Loop {
     /// | `13`     |                `01` | `00`          | False     | `uint8_t` (boolean)     | Locked
     /// | `14`     | `01` <= X <= `7fec` | `00`          | ``        | UTF-8 (null-terminated) | Name
     ///
-    fn load(data: &[u8]) -> Result<Loop> {
+    fn load(data: &[u8]) -> Result<Self> {
         if data.len() < 15 {
             return Err(anyhow!("Invalid data length for Loop"));
         }
@@ -235,7 +237,7 @@ impl Loop {
         let mut name_bytes = Vec::new();
         cursor.read_to_end(&mut name_bytes)?;
         let name = str::from_utf8(&name_bytes)?.trim_end_matches('\x00').to_string();
-        Ok(Loop {
+        Ok(Self {
             index,
             start_position,
             end_position,
@@ -249,10 +251,10 @@ impl Loop {
 impl Display for Markers {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Markers::BpmLock(bpm_lock) => write!(f, "{}", bpm_lock),
-            Markers::Color(color) => write!(f, "{}", color),
-            Markers::Cue(cue) => write!(f, "{}", cue),
-            Markers::Loop(loop_var) => write!(f, "{}", loop_var),
+            Self::BpmLock(bpm_lock) => write!(f, "{bpm_lock}"),
+            Self::Color(color) => write!(f, "{color}"),
+            Self::Cue(cue) => write!(f, "{cue}"),
+            Self::Loop(loop_var) => write!(f, "{loop_var}"),
         }
     }
 }

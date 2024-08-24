@@ -24,7 +24,7 @@ impl AutoTags {
     /// |   `09` |   `07` | `2d 33 2e 32 35 37 00` |      `-3.257` | ASCII (zero-terminated) | Auto Gain
     /// |   `16` |   `06` | `30 2e 30 30 30 00`    |       `0.000` | ASCII (zero-terminated) | Gain dB
     ///
-    pub fn parse(data: &[u8]) -> anyhow::Result<AutoTags> {
+    pub fn parse(data: &[u8]) -> anyhow::Result<Self> {
         if data.len() < 16 {
             return Err(anyhow!("Data is too short to contain all necessary information"));
         }
@@ -62,7 +62,7 @@ impl AutoTags {
             0.0
         };
 
-        Ok(AutoTags { bpm, auto_gain, gain })
+        Ok(Self { bpm, auto_gain, gain })
     }
 }
 

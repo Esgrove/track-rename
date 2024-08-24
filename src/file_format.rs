@@ -17,8 +17,8 @@ impl FromStr for FileFormat {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "mp3" => Ok(FileFormat::Mp3),
-            "aif" | "aiff" => Ok(FileFormat::Aif),
+            "mp3" => Ok(Self::Mp3),
+            "aif" | "aiff" => Ok(Self::Aif),
             _ => Err(anyhow!("Unsupported file format: {}", s)),
         }
     }
@@ -30,8 +30,8 @@ impl Display for FileFormat {
             f,
             "{}",
             match self {
-                FileFormat::Mp3 => "mp3",
-                FileFormat::Aif => "aif",
+                Self::Mp3 => "mp3",
+                Self::Aif => "aif",
             }
         )
     }

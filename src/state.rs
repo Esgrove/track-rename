@@ -34,9 +34,10 @@ pub fn save_state(state: &State) -> anyhow::Result<()> {
 
 fn get_state_path() -> anyhow::Result<PathBuf> {
     let state_path = state_path()?;
-    match state_path.exists() {
-        true => Ok(state_path),
-        false => Err(anyhow!("State file not found: {}", state_path.display())),
+    if state_path.exists() {
+        Ok(state_path)
+    } else {
+        Err(anyhow!("State file not found: {}", state_path.display()))
     }
 }
 
@@ -116,7 +117,7 @@ mod tests {
         };
 
         let state = State::default();
-        state.insert(test_path.clone(), test_data.clone());
+        state.insert(test_path.clone(), test_data);
         save_state(&state).expect("Failed to save state");
 
         let loaded_state = load_state();

@@ -389,7 +389,7 @@ pub fn format_genre(genre: &str) -> String {
         formatted_genre = String::new();
     }
 
-    for (pattern, replacement) in COMMON_SUBSTITUTES.iter() {
+    for (pattern, replacement) in &COMMON_SUBSTITUTES {
         formatted_genre = formatted_genre.replace(pattern, replacement);
     }
 

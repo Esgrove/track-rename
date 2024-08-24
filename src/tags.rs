@@ -20,8 +20,8 @@ pub struct TrackTags {
 }
 
 impl TrackTags {
-    pub fn new(name: String, artist: String, title: String, album: String, genre: String) -> TrackTags {
-        TrackTags {
+    pub fn new(name: String, artist: String, title: String, album: String, genre: String) -> Self {
+        Self {
             current_name: name,
             current_artist: artist,
             current_title: title,
@@ -33,7 +33,7 @@ impl TrackTags {
 
     /// Try to read tags such as artist and title from tags.
     /// Fallback to parsing them from filename if tags are empty.
-    pub fn parse_tag_data(track: &Track, tag: &Tag) -> TrackTags {
+    pub fn parse_tag_data(track: &Track, tag: &Tag) -> Self {
         let mut artist = String::new();
         let mut title = String::new();
 
@@ -74,7 +74,7 @@ impl TrackTags {
         }
         let album = utils::normalize_str(tag.album().unwrap_or_default());
         let genre = utils::normalize_str(tag.genre_parsed().unwrap_or_default().as_ref());
-        TrackTags::new(current_name, artist, title, album, genre)
+        Self::new(current_name, artist, title, album, genre)
     }
 
     /// Returns true if any of the formatted tag fields differ from their current value,
@@ -95,11 +95,11 @@ impl TrackTags {
         }
         if self.current_album != self.formatted_album {
             print!("{}: ", "Album".bold());
-            utils::print_diff(&self.current_album, &self.formatted_album)
+            utils::print_diff(&self.current_album, &self.formatted_album);
         }
         if self.current_genre != self.formatted_genre {
             print!("{}: ", "Genre".bold());
-            utils::print_diff(&self.current_genre, &self.formatted_genre)
+            utils::print_diff(&self.current_genre, &self.formatted_genre);
         }
     }
 }

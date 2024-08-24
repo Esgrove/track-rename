@@ -49,7 +49,6 @@ static TITLE_SUBSTITUTES: [(&str, &str); 18] = [
     ("(Clean-", "(Clean "),
     ("(Dirty-", "(Dirty "),
 ];
-
 static REGEX_SUBSTITUTES: LazyLock<[(Regex, &'static str); 12]> = LazyLock::new(|| {
     [
         // Replace various opening bracket types with "("
@@ -165,10 +164,8 @@ static REGEX_NAME_SUBSTITUTES: LazyLock<[(Regex, &'static str); 44]> = LazyLock:
         (Regex::new(r"(?i)\bAcapella-out\b").unwrap(), "Acapella Out"),
     ]
 });
-static REGEX_FILENAME_SUBSTITUTES: LazyLock<[(Regex, &'static str); 3]> = LazyLock::new(|| {
+static REGEX_FILENAME_SUBSTITUTES: LazyLock<[(Regex, &str); 2]> = LazyLock::new(|| {
     [
-        // Replace double quotes with two single quotes
-        (Regex::new("\"").unwrap(), "''"),
         // Replace characters that are not allowed in filenames with a hyphen
         (Regex::new(r"([\\/<>|:\*\?])").unwrap(), "-"),
         // Collapse multiple spaces into a single space
@@ -225,12 +222,12 @@ pub fn format_tags_for_artist_and_title(artist: &str, title: &str) -> (String, S
         }
     }
 
-    for (pattern, replacement) in COMMON_SUBSTITUTES.iter() {
+    for (pattern, replacement) in &COMMON_SUBSTITUTES {
         formatted_artist = formatted_artist.replace(pattern, replacement);
         formatted_title = formatted_title.replace(pattern, replacement);
     }
 
-    for (pattern, replacement) in TITLE_SUBSTITUTES.iter() {
+    for (pattern, replacement) in &TITLE_SUBSTITUTES {
         formatted_title = formatted_title.replace(pattern, replacement);
     }
 
@@ -275,7 +272,7 @@ pub fn format_tags_for_artist_and_title(artist: &str, title: &str) -> (String, S
         formatted_title = regex.replace_all(&formatted_title, *replacement).to_string();
     }
 
-    for (pattern, replacement) in COMMON_SUBSTITUTES.iter() {
+    for (pattern, replacement) in &COMMON_SUBSTITUTES {
         formatted_artist = formatted_artist.replace(pattern, replacement);
         formatted_title = formatted_title.replace(pattern, replacement);
     }
@@ -297,8 +294,9 @@ pub fn format_tags_for_artist_and_title(artist: &str, title: &str) -> (String, S
 
 /// Apply filename formatting.
 pub fn format_filename(artist: &str, title: &str) -> (String, String) {
-    let mut formatted_artist = artist.to_string();
-    let mut formatted_title = title.to_string();
+    // Replace double quotes with two single quotes
+    let mut formatted_artist = artist.replace('"', "''");
+    let mut formatted_title = title.replace('"', "''");
 
     for (regex, replacement) in REGEX_FILENAME_SUBSTITUTES.iter() {
         formatted_artist = regex.replace_all(&formatted_artist, *replacement).to_string();
@@ -326,7 +324,7 @@ fn balance_parenthesis(title: &mut String) {
     match open_count.cmp(&close_count) {
         Ordering::Greater => add_missing_closing_parentheses(title),
         Ordering::Less => add_missing_opening_parentheses(title),
-        _ => {}
+        Ordering::Equal => {}
     }
 }
 
@@ -356,7 +354,7 @@ fn move_feat_from_title_to_artist(artist: &mut String, title: &mut String) {
         let feat_artists: Vec<String> = feat
             .split(&['&', ',', '+'][..])
             .map(str::trim)
-            .map(|s| s.to_string())
+            .map(std::string::ToString::to_string)
             .collect();
 
         for feat_artist in &feat_artists {
@@ -501,7 +499,7 @@ fn extract_feat_from_parentheses(artist: &mut String) {
     let start_pattern = "(feat. ";
     if let Some(start) = artist.find(start_pattern) {
         if let Some(end) = artist[start..].find(')') {
-            let feature_part = &artist[start..start + end + 1];
+            let feature_part = &artist[start..=(start + end)];
             *artist = artist.replacen(feature_part, &feature_part[1..feature_part.len() - 1], 1);
         }
     }
@@ -515,7 +513,7 @@ fn remove_bpm_in_parentheses_from_end(text: &mut String) {
         return;
     }
 
-    let mut result = text.to_string();
+    let mut result = (*text).to_string();
     result = RE_BPM_IN_PARENTHESES.replace_all(&result, "").to_string();
     result = RE_BPM_WITH_KEY.replace_all(&result, "").to_string();
     result = RE_BPM_WITH_TEXT_PARENTHESES.replace_all(&result, "").to_string();
@@ -548,7 +546,7 @@ fn wrap_text_after_parentheses(text: &mut String) {
         }
     }
 
-    *text = format!("{}{}", start, result);
+    *text = format!("{start}{result}");
 }
 
 fn replace_dash_in_parentheses(text: &mut String) {

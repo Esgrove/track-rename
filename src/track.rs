@@ -55,7 +55,7 @@ pub struct Track {
 
 impl Track {
     /// New Track from the given path.
-    pub fn new(path: PathBuf) -> anyhow::Result<Track> {
+    pub fn new(path: &Path) -> anyhow::Result<Self> {
         let extension = path
             .extension()
             .context("Failed to get file extension")?
@@ -68,18 +68,18 @@ impl Track {
     }
 
     /// New Track with already extracted extension and file format.
-    /// Note that extension string is needed in addition to format
+    /// Note that extension string is necessary in addition to format
     /// since the file name extension might differ from the one used by `FileFormat`,
     /// in which case it would not point to the original filename.
-    pub fn new_with_extension(path: PathBuf, extension: String, format: FileFormat) -> anyhow::Result<Track> {
-        let name = Self::get_nfc_filename_from_path(&path)?;
+    pub fn new_with_extension(path: &Path, extension: String, format: FileFormat) -> anyhow::Result<Self> {
+        let name = Self::get_nfc_filename_from_path(path)?;
         let root = path.parent().context("Failed to get file root")?.to_owned();
         let directory = utils::get_filename_from_path(&root).context("Failed to get parent directory name")?;
 
-        // Rebuild full path with desired unicode handling
-        let path = dunce::simplified(root.join(format!("{}.{}", name, extension)).as_path()).to_path_buf();
-        let metadata = Track::read_metadata(&path)?;
-        Ok(Track {
+        // Rebuild the full path with desired Unicode handling
+        let path = dunce::simplified(root.join(format!("{name}.{extension}")).as_path()).to_path_buf();
+        let metadata = Self::read_metadata(&path)?;
+        Ok(Self {
             name,
             extension,
             directory,
@@ -91,13 +91,13 @@ impl Track {
         })
     }
 
-    pub fn try_from_path(path: &Path) -> Option<Track> {
+    pub fn try_from_path(path: &Path) -> Option<Self> {
         let extension = path.extension().and_then(|e| e.to_str()).unwrap_or_default().trim();
         if extension.is_empty() {
             return None;
         }
         match FileFormat::from_str(extension) {
-            Ok(format) => match Track::new_with_extension(path.to_path_buf(), extension.to_string(), format) {
+            Ok(format) => match Self::new_with_extension(path, extension.to_string(), format) {
                 Ok(track) => return Some(track),
                 Err(error) => {
                     eprintln!(
@@ -147,7 +147,7 @@ impl Track {
         if formatted_genre.is_empty()
             && (self.root.ends_with(DJ_MUSIC_PATH.as_path()) || GENRE_MAPPINGS.contains_key(self.directory.as_str()))
         {
-            formatted_genre = GENRE_MAPPINGS.get(self.directory.as_str()).unwrap_or(&"").to_string();
+            formatted_genre = (*GENRE_MAPPINGS.get(self.directory.as_str()).unwrap_or(&"")).to_string();
         }
 
         tags.formatted_name = format!("{formatted_artist} - {formatted_title}");
@@ -168,7 +168,7 @@ impl Track {
             (true, true) => String::new(),
             (true, false) => file_title,
             (false, true) => file_artist,
-            (false, false) => format!("{} - {}", file_artist, file_title),
+            (false, false) => format!("{file_artist} - {file_title}"),
         }
     }
 
@@ -183,9 +183,9 @@ impl Track {
     }
 
     /// Create new Track from existing Track that has been renamed.
-    pub fn renamed_track(&self, path: PathBuf, name: String) -> anyhow::Result<Track> {
-        let metadata = Track::read_metadata(&path)?;
-        Ok(Track {
+    pub fn renamed_track(&self, path: PathBuf, name: String) -> anyhow::Result<Self> {
+        let metadata = Self::read_metadata(&path)?;
+        Ok(Self {
             name,
             extension: self.format.to_string(),
             directory: self.directory.to_string(),
@@ -210,18 +210,18 @@ impl Track {
                 self.filename(),
                 width = max_width
             );
-            self.printed = true
+            self.printed = true;
         }
     }
 
     /// Convert mp3 file to aif using ffmpeg.
     /// Returns an updated Track if conversion was successful.
-    pub fn convert_mp3_to_aif(&self) -> anyhow::Result<Track> {
+    pub fn convert_mp3_to_aif(&self) -> anyhow::Result<Self> {
         let output_path = self.path.with_extension("aif");
         let output_path_string = path_to_string_relative(&output_path);
         output_path
             .try_exists()
-            .context(format!("File already exists: {}", output_path_string).red())?;
+            .context(format!("File already exists: {output_path_string}").red())?;
 
         let output = Command::new("ffmpeg")
             .args([
@@ -249,14 +249,14 @@ impl Track {
 
         output_path
             .try_exists()
-            .context(format!("Converted file does not exist: {}", output_path_string).red())?;
+            .context(format!("Converted file does not exist: {output_path_string}").red())?;
 
         println!("Conversion successful: {}", output_path_string.cyan());
 
         trash::delete(&self.path).context("Failed to move mp3 file to trash".red())?;
 
-        let metadata = Track::read_metadata(&output_path)?;
-        let new_track = Track {
+        let metadata = Self::read_metadata(&output_path)?;
+        let new_track = Self {
             name: self.name.clone(),
             extension: "aif".to_string(),
             directory: self.directory.to_string(),
@@ -374,7 +374,7 @@ mod tests {
 
     #[test]
     fn test_track_new_valid_path() {
-        let path = PathBuf::from("/users/test/test_song.mp3");
+        let path = Path::new("/users/test/test_song.mp3");
         let track = Track::new(path).expect("Failed to create track");
         assert_eq!(track.name, "test_song");
         assert_eq!(track.extension, "mp3");
@@ -385,7 +385,7 @@ mod tests {
 
     #[test]
     fn test_track_with_special_characters() {
-        let path = PathBuf::from("/Users/akseli/Räntä & Benjamin Mùll - Sippa På En Tequila (Ö Remix).mp3");
+        let path = Path::new("/Users/akseli/Räntä & Benjamin Mùll - Sippa På En Tequila (Ö Remix).mp3");
         let track = Track::new(path).expect("Failed to create track");
         assert_eq!(track.name, "Räntä & Benjamin Mùll - Sippa På En Tequila (Ö Remix)");
         assert_eq!(track.extension, "mp3");
@@ -407,7 +407,7 @@ mod tests {
 
     #[test]
     fn test_track_new_with_extension() {
-        let path = PathBuf::from("/users/test/another/artist - test song.aiff");
+        let path = Path::new("/users/test/another/artist - test song.aiff");
         let track = Track::new_with_extension(path, "aiff".to_string(), FileFormat::Aif)
             .expect("Failed to create track with extension");
         assert_eq!(track.name, "artist - test song");
@@ -419,8 +419,8 @@ mod tests {
 
     #[test]
     fn test_track_equality() {
-        let track1 = Track::new(PathBuf::from("/users/test/Test - song1.mp3")).expect("Failed to create track");
-        let track2 = Track::new(PathBuf::from("/users/other/Test - song1.aif")).expect("Failed to create track");
+        let track1 = Track::new(Path::new("/users/test/Test - song1.mp3")).expect("Failed to create track");
+        let track2 = Track::new(Path::new("/users/other/Test - song1.aif")).expect("Failed to create track");
         assert_eq!(track1.extension, "mp3");
         assert_eq!(track1.format, FileFormat::Mp3);
         assert_eq!(track2.extension, "aif");
@@ -431,8 +431,8 @@ mod tests {
     #[test]
     fn test_track_display() {
         let dir = env::current_dir().expect("Failed to get current dir");
-        let track = Track::new(dir.join("artist - title.mp3")).expect("Failed to create track");
-        let displayed = format!("{}", track);
+        let track = Track::new(dir.join("artist - title.mp3").as_path()).expect("Failed to create track");
+        let displayed = format!("{track}");
         assert!(displayed.contains("artist - title.mp3"));
 
         let path_display = format!("{}", track.path.display());
@@ -442,11 +442,11 @@ mod tests {
     #[test]
     fn test_track_display_with_special_characters() {
         let dir = env::current_dir().expect("Failed to get current dir");
-        let track = Track::new(dir.join("Ääkköset - Test.aif")).expect("Failed to create track");
+        let track = Track::new(dir.join("Ääkköset - Test.aif").as_path()).expect("Failed to create track");
         assert_eq!(track.extension, "aif");
         assert_eq!(track.format, FileFormat::Aif);
 
-        let displayed = format!("{}", track);
+        let displayed = format!("{track}");
         assert!(displayed.contains("Ääkköset - Test.aif"));
 
         let path_display = format!("{}", track.path.display());
@@ -455,27 +455,30 @@ mod tests {
 
     #[test]
     fn test_full_match() {
-        let track = Track::new(PathBuf::from("/users/test/Test - song1.mp3")).expect("Failed to create track");
+        let track =
+            Track::new(PathBuf::from("/users/test/Test - song1.mp3").as_path()).expect("Failed to create track");
         assert_eq!(track, "Test - song1.mp3".to_string());
     }
 
     #[test]
     fn test_name_match() {
-        let track = Track::new(PathBuf::from("/users/test/Ääkköset - song2.mp3")).expect("Failed to create track");
+        let track =
+            Track::new(PathBuf::from("/users/test/Ääkköset - song2.mp3").as_path()).expect("Failed to create track");
         assert_eq!(track, "Ääkköset - song2".to_string());
         assert_eq!(track, "Ääkköset - song2.mp3".to_string());
     }
 
     #[test]
     fn test_mismatch() {
-        let track = Track::new(PathBuf::from("/users/test/Test - song3.mp3")).expect("Failed to create track");
+        let track =
+            Track::new(PathBuf::from("/users/test/Test - song3.mp3").as_path()).expect("Failed to create track");
         assert_ne!(track, "Test - song3.wav"); // Different extension
         assert_ne!(track, "Test - song4.mp3"); // Different name
     }
 
     #[test]
     fn test_extension_ignored() {
-        let track = Track::new(PathBuf::from("/users/test/song5.mp3")).expect("Failed to create track");
+        let track = Track::new(PathBuf::from("/users/test/song5.mp3").as_path()).expect("Failed to create track");
         assert_eq!(track, "song5".to_string());
         assert_eq!(track, "song5.mp3".to_string());
         assert_ne!(track, "song");
