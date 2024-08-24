@@ -25,9 +25,9 @@ id3 = { version = "1.14.0" }
 itertools = "0.13.0"
 rand = "0.8.5"
 rayon = "1.10.0"
-regex = "1.10.5"
-serde = { version = "1.0.208", features = ["derive"] }
-serde_json = "1.0.125"
+regex = "1.10.6"
+serde = { version = "1.0.209", features = ["derive"] }
+serde_json = "1.0.127"
 sha2 = "0.10.8"
 titlecase = "3.3.0"
 toml = "0.8.19"
@@ -46,3 +46,11 @@ incremental = true
 lto = true
 # https://doc.rust-lang.org/rustc/codegen-options/index.html#codegen-units
 codegen-units = 1
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+# https://rust-lang.github.io/rust-clippy/master/index.html
+enum_glob_use = "deny"
+unwrap_used = "deny"
