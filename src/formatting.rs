@@ -337,9 +337,7 @@ fn remove_unmatched_closing_parenthesis(input: &mut String) {
 
 fn move_feat_from_title_to_artist(artist: &mut String, title: &mut String) {
     if let Some(feat_match) = RE_FEAT.find(&title.clone()) {
-        let feat = feat_match
-            .as_str()
-            .trim_end_matches(|c| c == '(' || c == ')' || c == '-');
+        let feat = feat_match.as_str().trim_end_matches(['(', ')', '-']);
 
         // Remove the feat from the title
         *title = title.replace(feat, "").trim().to_string();
