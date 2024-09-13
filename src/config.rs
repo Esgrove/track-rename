@@ -29,6 +29,7 @@ pub struct Config {
     pub test_mode: bool,
     pub verbose: bool,
     pub write_all_tags: bool,
+    pub overwrite_existing: bool,
 }
 
 /// User config options from a config file.
@@ -66,6 +67,7 @@ impl Config {
             test_mode: false,
             verbose: args.verbose,
             write_all_tags: args.all_tags,
+            overwrite_existing: args.overwrite,
         }
     }
 

@@ -333,7 +333,7 @@ impl TrackRenamer {
                         } else {
                             false
                         };
-                    if !formatted_path.is_file() || capitalization_change_only {
+                    if !formatted_path.is_file() || self.config.overwrite_existing || capitalization_change_only {
                         // Rename files if the flag was given or if tags were not changed
                         if self.config.rename_files || !track.tags_updated {
                             track.show(self.total_tracks, max_index_width);

@@ -44,6 +44,10 @@ pub struct RenamerArgs {
     #[arg(short, long)]
     no_state: bool,
 
+    /// Overwrite existing files when renaming
+    #[arg(short, long)]
+    overwrite: bool,
+
     /// Only print changes without modifying files
     #[arg(short, long)]
     print: bool,
