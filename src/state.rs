@@ -12,13 +12,13 @@ const STATE_FILE_NAME: &str = "state.json";
 #[cfg(test)]
 const STATE_FILE_NAME: &str = "test_state.json";
 
+pub type State = DashMap<PathBuf, TrackMetadata>;
+
 #[derive(Debug, Clone, Default, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct TrackMetadata {
     pub modified: u64,
     pub version: String,
 }
-
-pub type State = DashMap<PathBuf, TrackMetadata>;
 
 pub fn load_state() -> State {
     read_state().into_par_iter().filter(|(path, _)| path.exists()).collect()
@@ -41,16 +41,16 @@ fn get_state_path() -> anyhow::Result<PathBuf> {
     }
 }
 
-fn state_path() -> anyhow::Result<PathBuf> {
-    let data_dir = dirs::data_dir().context("Failed to get data directory path")?;
-    Ok(data_dir.join(STATE_FILE_DIR).join(STATE_FILE_NAME))
-}
-
 fn read_state() -> State {
     get_state_path()
         .and_then(|file_path| fs::read_to_string(file_path).map_err(anyhow::Error::from))
         .and_then(|contents| serde_json::from_str(&contents).map_err(anyhow::Error::from))
         .unwrap_or_default()
+}
+
+fn state_path() -> anyhow::Result<PathBuf> {
+    let data_dir = dirs::data_dir().context("Failed to get data directory path")?;
+    Ok(data_dir.join(STATE_FILE_DIR).join(STATE_FILE_NAME))
 }
 
 #[cfg(test)]
