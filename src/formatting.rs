@@ -242,7 +242,17 @@ pub fn format_tags_for_artist_and_title(artist: &str, title: &str) -> (String, S
     }
 
     formatted_artist = formatted_artist.replace(" / ", ", ");
-    formatted_artist = formatted_artist.trim_start_matches("Various Artists - ").to_string();
+    if formatted_artist.eq_ignore_ascii_case("Various Artists") {
+        let (artist, title) = match formatted_title.splitn(2, " - ").collect::<Vec<&str>>().as_slice() {
+            [artist, title] => (*artist, *title),
+            [no_split] => ("", *no_split),
+            _ => ("", ""),
+        };
+        formatted_artist = artist.to_string();
+        formatted_title = title.to_string();
+    } else {
+        formatted_artist = formatted_artist.trim_start_matches("Various Artists - ").to_string();
+    }
 
     // Remove duplicate artist name from title
     let artist_with_dash = format!("{formatted_artist} - ");

@@ -351,6 +351,18 @@ static FORMATTING_TEST_DATA: &[FormattingTestData] = &[
         title: "Windy City Theme",
         correct_title: "Windy City Theme",
     },
+    FormattingTestData {
+        artist: "Various Artists",
+        correct_artist: "AC Soul Symphony",
+        title: "AC Soul Symphony - Windy City Theme",
+        correct_title: "Windy City Theme",
+    },
+    FormattingTestData {
+        artist: "Various Artists",
+        correct_artist: "Jerzzey Boy",
+        title: "Jerzzey Boy – Is It Good To You?",
+        correct_title: "Is It Good To You?",
+    },
 ];
 
 static NESTED_PARENTHESES_TEST_DATA: &[FormattingTestData] = &[
