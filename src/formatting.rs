@@ -77,7 +77,7 @@ static REGEX_SUBSTITUTES: LazyLock<[(Regex, &'static str); 12]> = LazyLock::new(
         (Regex::new(r"\s+").unwrap(), " "),
     ]
 });
-static REGEX_NAME_SUBSTITUTES: LazyLock<[(Regex, &'static str); 44]> = LazyLock::new(|| {
+static REGEX_NAME_SUBSTITUTES: LazyLock<[(Regex, &'static str); 43]> = LazyLock::new(|| {
     [
         // Matches "12 Inch" or "12Inch" with optional space, case-insensitive
         (Regex::new(r"(?i)\b12\s?inch\b").unwrap(), "12''"),
@@ -131,7 +131,6 @@ static REGEX_NAME_SUBSTITUTES: LazyLock<[(Regex, &'static str); 44]> = LazyLock:
         (Regex::new(r"(?i)\bintro - dirty\b").unwrap(), "Dirty Intro"),
         (Regex::new(r"(?i)\(clean - intro\)").unwrap(), "(Clean Intro)"),
         (Regex::new(r"(?i)\(dirty - intro\)").unwrap(), "(Dirty Intro)"),
-        (Regex::new(r"(?i)\bIn[:\s/+\-&]*out\b").unwrap(), "In-Out"),
         (Regex::new(r"(?i)\bIntro[:\s/+\-&]*outro\b").unwrap(), "Intro"),
         (Regex::new(r"(?i)\bAca In\b").unwrap(), "Acapella Intro"),
         (
