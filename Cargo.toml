@@ -25,7 +25,7 @@ id3 = { version = "1.14.0" }
 itertools = "0.13.0"
 rand = "0.8.5"
 rayon = "1.10.0"
-regex = "1.10.6"
+regex = "1.11.0"
 serde = { version = "1.0.210", features = ["derive"] }
 serde_json = "1.0.128"
 sha2 = "0.10.8"
