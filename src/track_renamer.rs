@@ -279,8 +279,9 @@ impl TrackRenamer {
                         format!("Formatted name should never be empty: {}", track.path.display()).red()
                     );
                 }
-                if track.tags.changed() || self.config.write_all_tags {
-                    if track.tags.changed() {
+                let tags_changed = track.tags.changed();
+                if tags_changed || self.config.write_all_tags {
+                    if tags_changed {
                         track.show(self.total_tracks, max_index_width);
                         self.stats.tags += 1;
                         println!("{fix_tags_header}");
@@ -290,14 +291,14 @@ impl TrackRenamer {
                         && (self.config.force || utils::confirm())
                         && Self::write_tags(track, &mut file_tags)
                     {
-                        if track.tags.changed() {
+                        if tags_changed {
                             track.tags_updated = true;
                             self.stats.tags_fixed += 1;
                         }
                     } else {
                         track.not_processed = true;
                     }
-                    if track.tags.changed() {
+                    if tags_changed {
                         utils::print_divider(&track.tags.formatted_name);
                     }
                 }
@@ -342,6 +343,12 @@ impl TrackRenamer {
                             utils::print_stacked_diff(&track.filename(), &formatted_file_name);
                             self.stats.to_rename += 1;
                             if !self.config.print_only && (self.config.force || utils::confirm()) {
+                                if formatted_path.is_file() && self.config.overwrite_existing {
+                                    println!(
+                                        "{}",
+                                        format!("Overwriting existing file: {formatted_path_string}").yellow()
+                                    );
+                                }
                                 if capitalization_change_only {
                                     let temp_file =
                                         formatted_path.with_extension(format!("{}.{}", track.format, "tmp"));
