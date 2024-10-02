@@ -1,6 +1,6 @@
 [package]
 name = "track-rename"
-version = "1.23.1"
+version = "1.23.2"
 edition = "2021"
 authors = ["Esgrove <esgrove@outlook.com>"]
 description = "CLI tool for formatting and renaming audio tracks"
@@ -14,14 +14,14 @@ categories = ["command-line-utilities"]
 anyhow = { version = "1.0.89", features = ["backtrace"] }
 base64 = "0.22.1"
 byteorder = "1.5.0"
-clap = { version = "4.5.18", features = ["derive"] }
+clap = { version = "4.5.19", features = ["derive"] }
 colored = "2.1.0"
 crossterm = "0.28.1"
-dashmap = { version = "6.0.1", features = ["serde", "rayon"] }
+dashmap = { version = "6.1.0", features = ["serde", "rayon", "inline"] }
 difference = "2.0.0"
 dirs = "5.0.1"
 dunce = "1.0.5"
-id3 = { version = "1.14.0" }
+id3 = "1.14.0"
 itertools = "0.13.0"
 rand = "0.8.5"
 rayon = "1.10.0"
