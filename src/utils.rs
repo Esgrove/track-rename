@@ -233,7 +233,7 @@ pub fn print_tag_data(file_tags: &Tag) {
 
 /// Try to read tags from file.
 /// Will return empty tags when there are no tags.
-pub fn read_tags(track: &Track) -> Option<Tag> {
+pub fn read_tags(track: &Track, verbose: bool) -> Option<Tag> {
     match Tag::read_from_path(&track.path) {
         Ok(tag) => Some(tag),
         Err(Error {
@@ -244,8 +244,10 @@ pub fn read_tags(track: &Track) -> Option<Tag> {
         }
         Err(error) => {
             eprintln!("\n{}", format!("Failed to read tags for: {track}\n{error}").red());
-            if let Some(ref partial_tags) = error.partial_tag {
-                print_tag_data(partial_tags);
+            if verbose {
+                if let Some(ref partial_tags) = error.partial_tag {
+                    print_tag_data(partial_tags);
+                }
             }
             error.partial_tag
         }

@@ -241,14 +241,14 @@ impl TrackRenamer {
                 };
 
             if needs_processing {
-                let mut tag_result = utils::read_tags(track);
+                let mut tag_result = utils::read_tags(track, self.config.verbose || self.config.debug);
                 if tag_result.is_none() && self.config.convert_failed && track.format == FileFormat::Mp3 {
                     println!("Converting MP3 to AIF...");
                     match track.convert_mp3_to_aif() {
                         Ok(aif_track) => {
                             self.stats.converted += 1;
                             *track = aif_track;
-                            tag_result = utils::read_tags(track);
+                            tag_result = utils::read_tags(track, self.config.verbose || self.config.debug);
                         }
                         Err(e) => {
                             eprintln!("{e}");
@@ -312,6 +312,7 @@ impl TrackRenamer {
                         .entry(formatted_name.to_lowercase())
                         .or_default()
                         .push(track.clone());
+
                     continue;
                 }
 
@@ -413,7 +414,7 @@ impl TrackRenamer {
     /// Print running index
     fn print_running_index(total_tracks: usize, number: usize, max_index_width: usize) {
         print!("\r{number:>max_index_width$}/{total_tracks}");
-        io::stdout().flush().unwrap();
+        io::stdout().flush().expect("Failed to flush stdout");
     }
 
     /// Count and print the total number of each file extension in the file list.
@@ -557,7 +558,7 @@ mod tests {
     fn test_no_tags() {
         run_test_on_files(&NO_TAGS_DIR, |temp_file| {
             let track = Track::try_from_path(&temp_file).expect("Failed to create Track for temp file");
-            let tags = utils::read_tags(&track).expect("Tags should be present");
+            let tags = utils::read_tags(&track, true).expect("Tags should be present");
             assert!(tags.artist().is_none());
             assert!(tags.title().is_none());
             fs::remove_file(temp_file).expect("Failed to remove temp file");
@@ -568,7 +569,7 @@ mod tests {
     fn test_basic_tags() {
         run_test_on_files(&BASIC_TAGS_DIR, |temp_file| {
             let track = Track::try_from_path(&temp_file).expect("Failed to create Track for temp file");
-            let tags = utils::read_tags(&track).expect("Tags should be present");
+            let tags = utils::read_tags(&track, true).expect("Tags should be present");
             assert!(!tags.artist().unwrap().is_empty());
             assert!(!tags.title().unwrap().is_empty());
             fs::remove_file(temp_file).expect("Failed to remove temp file");
@@ -579,7 +580,7 @@ mod tests {
     fn test_extended_tags() {
         run_test_on_files(&EXTENDED_TAGS_DIR, |temp_file| {
             let track = Track::try_from_path(&temp_file).expect("Failed to create Track for temp file");
-            let tags = utils::read_tags(&track).expect("Tags should be present");
+            let tags = utils::read_tags(&track, true).expect("Tags should be present");
             assert!(!tags.artist().unwrap().is_empty());
             assert!(!tags.title().unwrap().is_empty());
             fs::remove_file(temp_file).expect("Failed to remove temp file");
