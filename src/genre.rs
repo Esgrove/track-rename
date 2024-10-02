@@ -335,7 +335,7 @@ static REGEX_SUBSTITUTES: LazyLock<[(Regex, &'static str); 5]> = LazyLock::new(|
 });
 
 /// Map various genres to the correct version
-static REGEX_MAPPINGS: LazyLock<[(Regex, &'static str); 40]> = LazyLock::new(|| {
+static REGEX_MAPPINGS: LazyLock<[(Regex, &'static str); 41]> = LazyLock::new(|| {
     [
         (Regex::new(r"(?i)\br\s*[&'n]*\s*b\b").unwrap(), "R&B"),
         (Regex::new(r"(?i)\bother\b").unwrap(), ""),
@@ -352,6 +352,7 @@ static REGEX_MAPPINGS: LazyLock<[(Regex, &'static str); 40]> = LazyLock::new(|| 
         (Regex::new(r"(?i)\bRap & Hip-Hop\b").unwrap(), "Hip-Hop"),
         (Regex::new(r"(?i)^Rap$").unwrap(), "Hip-Hop"),
         (Regex::new(r"(?i)\bNu Disco / Disco\b").unwrap(), "Disco Nu"),
+        (Regex::new(r"(?i)\bSoul / Funk / Disco\b").unwrap(), "Funk"),
         (Regex::new(r"(?i)\bFunk / Soul\b").unwrap(), "Soul"),
         (Regex::new(r"(?i)\bSoul / Funk\b").unwrap(), "Soul"),
         (Regex::new(r"(?i)\bAfro beats\b").unwrap(), "Afrobeats"),
