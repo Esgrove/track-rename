@@ -30,11 +30,16 @@ impl AutoTags {
         }
 
         // Parse BPM
-        let bpm_str = std::str::from_utf8(&data[2..9])
+        let bpm_str: String = std::str::from_utf8(&data[2..9])
             .map_err(|_| anyhow!("Failed to parse BPM string as UTF-8"))?
             .trim_end_matches('\x00')
-            .trim();
-        let bpm: f32 = bpm_str.parse().map_err(|_| anyhow!("Failed to parse BPM as f32"))?;
+            .trim()
+            .chars()
+            .filter(|c| c.is_numeric() || *c == '.')
+            .collect();
+        let bpm: f32 = bpm_str
+            .parse()
+            .map_err(|_| anyhow!("Failed to parse BPM as f32: {bpm_str:?}"))?;
 
         // Parse Auto Gain
         let auto_gain_str = std::str::from_utf8(&data[9..16])
@@ -70,7 +75,7 @@ impl Display for AutoTags {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "BPM: {:.3}, Auto Gain: {:.3} dB, Gain: {:.3} dB",
+            "BPM: {:.2}, Auto Gain: {:.3} dB, Gain: {:.3} dB",
             self.bpm, self.auto_gain, self.gain
         )
     }
