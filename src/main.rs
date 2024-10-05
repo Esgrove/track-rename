@@ -3,9 +3,8 @@ mod statistics;
 mod track_renamer;
 
 use std::env;
-use std::path::PathBuf;
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use clap::Parser;
 
 use crate::track_renamer::TrackRenamer;
@@ -72,20 +71,8 @@ pub struct RenamerArgs {
 fn main() -> Result<()> {
     env::set_var("RUST_BACKTRACE", "1");
     let args = RenamerArgs::parse();
-    let input_path = args.path.clone().unwrap_or_default().trim().to_string();
-    let filepath = if input_path.is_empty() {
-        env::current_dir().context("Failed to get current working directory")?
-    } else {
-        PathBuf::from(input_path)
-    };
-    if !filepath.exists() {
-        anyhow::bail!(
-            "Input path does not exist or is not accessible: '{}'",
-            dunce::simplified(&filepath).display()
-        );
-    }
 
-    let absolute_input_path = dunce::canonicalize(filepath)?;
+    let absolute_input_path = track_rename::utils::resolve_input_path(&args.path)?;
 
     TrackRenamer::new(absolute_input_path, &args).run()
 }

@@ -16,6 +16,25 @@ use unicode_normalization::UnicodeNormalization;
 
 use crate::track::Track;
 
+/// Resolve optional input path or otherwise use current working dir.
+pub fn resolve_input_path(path: &Option<String>) -> anyhow::Result<PathBuf> {
+    let input_path = path.clone().unwrap_or_default().trim().to_string();
+    let filepath = if input_path.is_empty() {
+        env::current_dir().context("Failed to get current working directory")?
+    } else {
+        PathBuf::from(input_path)
+    };
+    if !filepath.exists() {
+        anyhow::bail!(
+            "Input path does not exist or is not accessible: '{}'",
+            dunce::simplified(&filepath).display()
+        );
+    }
+
+    let absolute_input_path = dunce::canonicalize(filepath)?;
+    Ok(absolute_input_path)
+}
+
 /// Format bool value as a coloured string.
 pub fn colorize_bool(value: bool) -> ColoredString {
     if value {
