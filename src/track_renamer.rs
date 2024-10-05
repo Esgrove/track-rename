@@ -30,9 +30,9 @@ pub struct TrackRenamer {
     root: PathBuf,
     config: Config,
     state: State,
-    tracks: Vec<Track>,
-    total_tracks: usize,
     stats: Statistics,
+    tracks: Vec<Track>,
+    tracks_count: usize,
 }
 
 impl TrackRenamer {
@@ -99,12 +99,12 @@ impl TrackRenamer {
             track.number = number + 1;
         });
 
-        self.total_tracks = track_list.len();
+        self.tracks_count = track_list.len();
         self.tracks = track_list;
 
         if self.config.verbose {
-            if self.total_tracks < 100 {
-                let index_width: usize = self.total_tracks.to_string().chars().count();
+            if self.tracks_count < 100 {
+                let index_width: usize = self.tracks_count.to_string().chars().count();
                 for track in &self.tracks {
                     println!("{:>width$}: {}", track.number, track, width = index_width);
                 }
@@ -142,13 +142,13 @@ impl TrackRenamer {
 
     // Format tags and rename files if needed.
     pub fn process_tracks(&mut self) -> Result<()> {
-        if self.total_tracks == 0 {
+        if self.tracks_count == 0 {
             println!("{}", "No tracks to process".green());
             return Ok(());
-        } else if self.total_tracks == 1 {
+        } else if self.tracks_count == 1 {
             println!("{}", "Processing 1 track...".bold());
         } else {
-            println!("{}", format!("Processing {} tracks...", self.total_tracks).bold());
+            println!("{}", format!("Processing {} tracks...", self.tracks_count).bold());
         }
 
         let dryrun_header = if self.config.print_only {
@@ -159,7 +159,7 @@ impl TrackRenamer {
         };
         let fix_tags_header = format!("Fix tags{dryrun_header}:").blue().bold();
         let rename_file_header = format!("Rename file{dryrun_header}:").cyan().bold();
-        let max_index_width: usize = self.total_tracks.to_string().chars().count();
+        let max_index_width: usize = self.tracks_count.to_string().chars().count();
 
         let mut failed_files: Vec<String> = Vec::new();
         let mut processed_files: HashMap<String, Vec<Track>> = HashMap::new();
@@ -199,7 +199,7 @@ impl TrackRenamer {
                 checked_genre_mappings.insert(track.directory.clone());
             }
 
-            Self::print_running_index(self.total_tracks, track.number, max_index_width);
+            Self::print_running_index(self.tracks_count, track.number, max_index_width);
 
             // Skip filenames in user configs exclude list
             if self
@@ -209,7 +209,7 @@ impl TrackRenamer {
                 .any(|excluded_file| excluded_file == track)
             {
                 if self.config.verbose {
-                    track.show(self.total_tracks, max_index_width);
+                    track.show(self.tracks_count, max_index_width);
                     let message = format!("Skipping track in exclude list: {track}");
                     println!("{}", message.yellow());
                     utils::print_divider(&message);
@@ -220,7 +220,7 @@ impl TrackRenamer {
             // File might have been deleted between gathering files and now,
             // for example when handling duplicates.
             if !track.path.exists() {
-                track.show(self.total_tracks, max_index_width);
+                track.show(self.tracks_count, max_index_width);
                 let message = format!("Track no longer exists: {track}");
                 utils::print_error(&message);
                 utils::print_divider(&message);
@@ -275,7 +275,7 @@ impl TrackRenamer {
                 let tags_changed = track.tags.changed();
                 if tags_changed || self.config.write_all_tags {
                     if tags_changed {
-                        track.show(self.total_tracks, max_index_width);
+                        track.show(self.tracks_count, max_index_width);
                         self.stats.tags += 1;
                         println!("{fix_tags_header}");
                         track.tags.show_diff();
@@ -331,7 +331,7 @@ impl TrackRenamer {
                     if !formatted_path.is_file() || self.config.overwrite_existing || capitalization_change_only {
                         // Rename files if the flag was given or if tags were not changed
                         if self.config.rename_files || !track.tags_updated {
-                            track.show(self.total_tracks, max_index_width);
+                            track.show(self.tracks_count, max_index_width);
                             println!("{rename_file_header}");
                             utils::print_stacked_diff(&track.filename(), &formatted_file_name);
                             self.stats.to_rename += 1;
@@ -365,7 +365,7 @@ impl TrackRenamer {
                         }
                     } else if formatted_path != track.path {
                         // A file with the formatted name already exists
-                        track.show(self.total_tracks, max_index_width);
+                        track.show(self.tracks_count, max_index_width);
                         println!("{}", "Duplicate:".bright_red().bold());
                         println!("Rename:   {original_path_string}");
                         println!("Existing: {formatted_path_string}");
