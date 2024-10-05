@@ -37,32 +37,39 @@ impl AutoTags {
             .chars()
             .filter(|c| c.is_numeric() || *c == '.')
             .collect();
+
         let bpm: f32 = bpm_str
             .parse()
-            .map_err(|_| anyhow!("Failed to parse BPM as f32: {bpm_str:?}"))?;
+            .map_err(|e| anyhow!("Failed to parse BPM as f32: {e} {bpm_str:?}"))?;
 
         // Parse Auto Gain
-        let auto_gain_str = std::str::from_utf8(&data[9..16])
+        let auto_gain_str: String = std::str::from_utf8(&data[9..16])
             .map_err(|_| anyhow!("Failed to parse Auto Gain string as UTF-8"))?
             .replace('\x00', "")
             .trim()
-            .to_string();
+            .chars()
+            .filter(|c| c.is_numeric() || *c == '.' || *c == '-')
+            .collect();
 
         let auto_gain: f32 = auto_gain_str
+            .trim_end_matches('.')
             .parse()
-            .map_err(|e| anyhow!("Failed to parse Auto Gain as f32: {e}"))?;
+            .map_err(|e| anyhow!("Failed to parse Auto Gain as f32: {e} {auto_gain_str:?}"))?;
 
         // Parse Gain dB (only if data is long enough)
         let gain: f32 = if data.len() >= 22 {
-            let gain_str = std::str::from_utf8(&data[16..22])
+            let gain_str: String = std::str::from_utf8(&data[16..22])
                 .map_err(|_| anyhow!("Failed to parse Gain dB string as UTF-8"))?
                 .replace('\x00', "")
                 .trim()
-                .to_string();
+                .chars()
+                .filter(|c| c.is_numeric() || *c == '.' || *c == '-')
+                .collect();
 
             gain_str
+                .trim_end_matches('.')
                 .parse()
-                .map_err(|e| anyhow!("Failed to parse Gain dB as f32: {e}"))?
+                .map_err(|e| anyhow!("Failed to parse Gain dB as f32: {e} {gain_str:?}"))?
         } else {
             0.0
         };
