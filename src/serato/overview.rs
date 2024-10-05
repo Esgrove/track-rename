@@ -113,7 +113,6 @@ impl Overview {
 
 impl Display for Overview {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(f, "Overview:")?;
         match self.draw_waveform() {
             Ok(view) => {
                 write!(f, "{view}")

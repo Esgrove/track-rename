@@ -11,7 +11,6 @@ use colored::Colorize;
 use id3::{Tag, TagLike};
 use itertools::Itertools;
 use rayon::prelude::*;
-use walkdir::WalkDir;
 
 use crate::config::Config;
 use crate::statistics::Statistics;
@@ -128,13 +127,7 @@ impl TrackRenamer {
             );
         }
 
-        let mut track_list: Vec<Track> = WalkDir::new(&self.root)
-            .into_iter()
-            .par_bridge()
-            .filter_map(std::result::Result::ok)
-            .filter(|e| e.path().is_file())
-            .filter_map(|entry| Track::try_from_path(entry.path()))
-            .collect();
+        let mut track_list = utils::collect_tracks(&self.root);
 
         if self.config.sort_files {
             // Sort by filename, ignoring parent dir

@@ -21,11 +21,11 @@ use crate::utils;
 
 #[derive(Debug, Clone, Default)]
 pub struct SeratoData {
-    pub analysis: AnalysisVersion,
-    pub autotags: AutoTags,
-    pub beatgrid: BeatGrid,
+    pub analysis: Option<AnalysisVersion>,
+    pub autotags: Option<AutoTags>,
+    pub beatgrid: Option<BeatGrid>,
     pub markers: Vec<Markers>,
-    pub overview: Overview,
+    pub overview: Option<Overview>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
@@ -46,19 +46,19 @@ impl SeratoData {
                     match tag {
                         SeratoTag::Analysis => match AnalysisVersion::parse(&object.data) {
                             Ok(data) => {
-                                serato_data.analysis = data;
+                                serato_data.analysis = Some(data);
                             }
                             Err(error) => utils::print_error(format!("Error: {error}").as_str()),
                         },
                         SeratoTag::Autotags => match AutoTags::parse(&object.data) {
                             Ok(data) => {
-                                serato_data.autotags = data;
+                                serato_data.autotags = Some(data);
                             }
                             Err(error) => utils::print_error(format!("Error: {error}").as_str()),
                         },
                         SeratoTag::BeatGrid => match BeatGrid::parse(&object.data) {
                             Ok(data) => {
-                                serato_data.beatgrid = data;
+                                serato_data.beatgrid = Some(data);
                             }
                             Err(error) => utils::print_error(format!("Error: {error}").as_str()),
                         },
@@ -70,7 +70,7 @@ impl SeratoData {
                         },
                         SeratoTag::Overview => match Overview::parse(&object.data) {
                             Ok(data) => {
-                                serato_data.overview = data;
+                                serato_data.overview = Some(data);
                             }
                             Err(error) => utils::print_error(format!("Error: {error}").as_str()),
                         },
@@ -131,13 +131,35 @@ pub fn print_serato_tags(file_tags: &Tag) {
 impl Display for SeratoData {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f, "{}", "Serato tags:".cyan())?;
-        writeln!(f, "{}", self.autotags)?;
-        writeln!(f, "{}", self.analysis)?;
-        writeln!(f, "{}", self.beatgrid)?;
-        write!(f, "{}", self.overview)?;
-        for marker in &self.markers {
-            writeln!(f, "{marker}")?;
+        if let Some(autotags) = &self.autotags {
+            writeln!(f, "{}: {}", SeratoTag::Autotags, autotags)?;
+        } else {
+            writeln!(f, "{}: None", SeratoTag::Autotags)?;
         }
+        if let Some(analysis) = &self.analysis {
+            writeln!(f, "{}: {}", SeratoTag::Analysis, analysis)?;
+        } else {
+            writeln!(f, "{}: None", SeratoTag::Analysis)?;
+        }
+        if let Some(beatgrid) = &self.beatgrid {
+            writeln!(f, "{}: {}", SeratoTag::BeatGrid, beatgrid)?;
+        } else {
+            writeln!(f, "{}: None", SeratoTag::BeatGrid)?;
+        }
+        if let Some(overview) = &self.overview {
+            write!(f, "{}:\n{}", SeratoTag::Overview, overview)?;
+        } else {
+            writeln!(f, "{}: None", SeratoTag::Overview)?;
+        }
+        if self.markers.is_empty() {
+            writeln!(f, "{}: None", SeratoTag::Markers)?;
+        } else {
+            writeln!(f, "{}:", SeratoTag::Markers)?;
+            for marker in &self.markers {
+                writeln!(f, "  {marker}")?;
+            }
+        }
+
         Ok(())
     }
 }

@@ -11,28 +11,21 @@ use colored::{ColoredString, Colorize};
 use difference::{Changeset, Difference};
 use id3::{Error, ErrorKind, Tag};
 use itertools::Itertools;
+use rayon::prelude::*;
 use sha2::{Digest, Sha256};
 use unicode_normalization::UnicodeNormalization;
+use walkdir::WalkDir;
 
 use crate::track::Track;
 
-/// Resolve optional input path or otherwise use current working dir.
-pub fn resolve_input_path(path: &Option<String>) -> anyhow::Result<PathBuf> {
-    let input_path = path.clone().unwrap_or_default().trim().to_string();
-    let filepath = if input_path.is_empty() {
-        env::current_dir().context("Failed to get current working directory")?
-    } else {
-        PathBuf::from(input_path)
-    };
-    if !filepath.exists() {
-        anyhow::bail!(
-            "Input path does not exist or is not accessible: '{}'",
-            dunce::simplified(&filepath).display()
-        );
-    }
-
-    let absolute_input_path = dunce::canonicalize(filepath)?;
-    Ok(absolute_input_path)
+pub fn collect_tracks(root: &Path) -> Vec<Track> {
+    WalkDir::new(root)
+        .into_iter()
+        .par_bridge()
+        .filter_map(std::result::Result::ok)
+        .filter(|e| e.path().is_file())
+        .filter_map(|entry| Track::try_from_path(entry.path()))
+        .collect()
 }
 
 /// Format bool value as a coloured string.
@@ -284,6 +277,25 @@ pub fn rename_track(path: &Path, new_path: &Path, test_mode: bool) -> anyhow::Re
         }
     }
     Ok(())
+}
+
+/// Resolve optional input path or otherwise use current working dir.
+pub fn resolve_input_path(path: &Option<String>) -> anyhow::Result<PathBuf> {
+    let input_path = path.clone().unwrap_or_default().trim().to_string();
+    let filepath = if input_path.is_empty() {
+        env::current_dir().context("Failed to get current working directory")?
+    } else {
+        PathBuf::from(input_path)
+    };
+    if !filepath.exists() {
+        anyhow::bail!(
+            "Input path does not exist or is not accessible: '{}'",
+            dunce::simplified(&filepath).display()
+        );
+    }
+
+    let absolute_input_path = dunce::canonicalize(filepath)?;
+    Ok(absolute_input_path)
 }
 
 /// Write a txt log file for failed tracks to current working directory.

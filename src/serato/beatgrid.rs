@@ -54,12 +54,19 @@ impl BeatGrid {
     /// |   `04` |   `04` | `00 00 00 04` | `uint32_t`         | Beats till next marker
     ///
     pub fn parse(data: &[u8]) -> Result<Self> {
-        if data.len() < 11 {
+        if data.len() < 6 {
             return Err(anyhow!("Data is too short to contain valid beatgrid information"));
         }
 
         let num_markers_bytes = [data[2], data[3], data[4], data[5]];
         let num_markers = u32::from_be_bytes(num_markers_bytes);
+        if num_markers == 0 {
+            return Ok(Self::default());
+        }
+
+        if data.len() < 11 {
+            return Err(anyhow!("Data is too short to contain valid beatgrid information"));
+        }
 
         let mut markers = Vec::new();
         let mut offset = 6;
@@ -95,7 +102,9 @@ impl BeatGrid {
 
 impl Display for BeatGrid {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if self.num_markers == 1 {
+        if self.num_markers == 0 {
+            write!(f, "Empty")
+        } else if self.num_markers == 1 {
             write!(f, "Beatgrid {}", self.markers[0])
         } else {
             writeln!(f, "Beatgrid ({}):", self.num_markers)?;

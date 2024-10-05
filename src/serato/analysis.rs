@@ -36,6 +36,6 @@ impl AnalysisVersion {
 
 impl Display for AnalysisVersion {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Version: {}.{}", self.major_version, self.minor_version)
+        write!(f, "Version {}.{}", self.major_version, self.minor_version)
     }
 }
