@@ -9,6 +9,7 @@ readme = "README.md"
 repository = "https://github.com/Esgrove/track-rename"
 keywords = ["cli", "music", "audio", "rename"]
 categories = ["command-line-utilities"]
+default-run = "trackrename"
 
 [dependencies]
 anyhow = { version = "1.0.89", features = ["backtrace"] }
@@ -38,6 +39,10 @@ walkdir = "2.5.0"
 [[bin]]
 name = "trackrename"
 path = "src/main.rs"
+
+[[bin]]
+name = "trackprint"
+path = "src/bin/trackprint.rs"
 
 [profile.dev]
 incremental = true

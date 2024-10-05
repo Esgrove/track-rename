@@ -58,6 +58,11 @@ See the [track-rename.toml](./track-rename.toml) template for more details and s
 cargo test
 ```
 
+### TODO
+
+- Refactor track renamer functions
+- Support other tag / filetypes as well
+
 ## Python version
 
 Uses [pytaglib](https://github.com/supermihi/pytaglib) for tag handling.
