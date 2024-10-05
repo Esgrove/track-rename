@@ -12,10 +12,13 @@ if [ -z "$(command -v cargo)" ]; then
     print_error_and_exit "Cargo not found in path. Maybe install rustup?"
 fi
 
-cargo install --path "$REPO_ROOT"
+print_magenta "Installing binaries..."
+cargo install --force --path "$REPO_ROOT"
+echo ""
 
-executable=$(get_rust_executable_name)
-if [ -z "$(command -v "$executable")" ]; then
-    print_error_and_exit "Binary $executable not found. Is the Cargo install directory in path?"
-fi
-echo "$($executable --version) from $(which "$executable")"
+for executable in $(get_rust_executable_names); do
+    if [ -z "$(command -v "$executable")" ]; then
+        print_error_and_exit "Binary not found. Is the Cargo install directory in path?"
+    fi
+    echo "$($executable --version) from $(which "$executable")"
+done

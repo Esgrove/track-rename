@@ -61,6 +61,17 @@ print_usage_and_exit() {
     exit "${2:-1}"
 }
 
+# Get all Rust executable names from Cargo.toml
+get_rust_executable_names() {
+    local executables
+    executables=$(awk -F'=' '/\[\[bin\]\]/,/name/ {if($1 ~ /name/) print $2}' Cargo.toml | tr -d ' "')
+    # If no names found under [[bin]], get the package name
+    if [ ${#executables[@]} -eq 0 ]; then
+        executables=($(awk -F'=' '/\[package\]/,/name/ {if($1 ~ /name/) print $2}' Cargo.toml | tr -d ' "'))
+    fi
+    echo "$executables"
+}
+
 # Get the Rust executable name from Cargo.toml
 get_rust_executable_name() {
     local executable

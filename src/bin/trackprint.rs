@@ -8,7 +8,7 @@ use track_rename::track::Track;
 use track_rename::{serato, utils};
 
 #[derive(Parser)]
-#[command(author, about = "Print tag data", version)]
+#[command(author, version, about = "Print tag data", name = "trackprint")]
 pub struct Args {
     /// Optional input directory or audio file
     path: Option<String>,
