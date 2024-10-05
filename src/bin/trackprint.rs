@@ -13,21 +13,9 @@ pub struct Args {
     /// Optional input directory or audio file
     path: Option<String>,
 
-    /// Convert failed files to AIFF using ffmpeg
-    #[arg(short, long)]
-    convert: bool,
-
-    /// Collect and save genre statistics
-    #[arg(short, long)]
-    genre: bool,
-
     /// Enable debug prints
     #[arg(short, long)]
     debug: bool,
-
-    /// Log files that can't be read
-    #[arg(short, long)]
-    log: bool,
 
     /// Verbose output
     #[arg(short, long)]
