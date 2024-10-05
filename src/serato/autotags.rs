@@ -75,7 +75,7 @@ impl Display for AutoTags {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "BPM: {:.2}, Auto Gain: {:.3} dB, Gain: {:.3} dB",
+            "BPM: {:.3}, Auto Gain: {:.3} dB, Gain: {:.3} dB",
             self.bpm, self.auto_gain, self.gain
         )
     }
