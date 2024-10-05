@@ -18,6 +18,7 @@ use walkdir::WalkDir;
 
 use crate::track::Track;
 
+/// Recursively collect all tracks from given root path.
 pub fn collect_tracks(root: &Path) -> Vec<Track> {
     WalkDir::new(root)
         .into_iter()
@@ -44,10 +45,13 @@ pub fn color_diff(old: &str, new: &str, stacked: bool) -> (String, String) {
     let mut new_diff = String::new();
 
     if stacked {
-        // Find the starting index of the first matching sequence.
+        // Find the starting index of the first matching sequence for a nicer visual alignment.
+        // For example:
+        // Constantine - Onde As Satisfaction (Club Tool).aif
+        //      Darude - Onde As Satisfaction (Constantine Club Tool).aif
         for diff in &changeset.diffs {
             if let Difference::Same(ref x) = diff {
-                if x.chars().all(char::is_whitespace) {
+                if x.chars().all(char::is_whitespace) || x.chars().count() < 2 {
                     continue;
                 }
 
@@ -79,16 +83,16 @@ pub fn color_diff(old: &str, new: &str, stacked: bool) -> (String, String) {
             }
             Difference::Add(ref x) => {
                 if x.chars().all(char::is_whitespace) {
-                    new_diff.push_str(&x.to_string().on_green().to_string());
+                    new_diff.push_str(&x.on_green().to_string());
                 } else {
-                    new_diff.push_str(&x.to_string().green().to_string());
+                    new_diff.push_str(&x.green().to_string());
                 }
             }
             Difference::Rem(ref x) => {
                 if x.chars().all(char::is_whitespace) {
-                    old_diff.push_str(&x.to_string().on_red().to_string());
+                    old_diff.push_str(&x.on_red().to_string());
                 } else {
-                    old_diff.push_str(&x.to_string().red().to_string());
+                    old_diff.push_str(&x.red().to_string());
                 }
             }
         }
@@ -233,6 +237,11 @@ pub fn print_divider(text: &str) {
     println!("{}", "-".repeat(text.chars().count()));
 }
 
+/// Print error message with red color.
+pub fn print_error(message: &str) {
+    eprintln!("{}", message.red());
+}
+
 /// Print all tag data.
 pub fn print_tag_data(file_tags: &Tag) {
     println!("\n{}", format!("Tags ({}):", file_tags.version()).cyan().bold());
@@ -311,16 +320,11 @@ pub fn write_log_for_failed_files(paths: &[String]) -> anyhow::Result<()> {
 
 /// Get filename string for given Path.
 pub fn get_filename_from_path(path: &Path) -> anyhow::Result<String> {
-    let file_name = path
+    Ok(path
         .file_name()
         .context("Failed to get zip file name")?
         .to_string_lossy()
-        .replace('\u{FFFD}', "");
-    Ok(file_name)
-}
-
-pub fn print_error(message: &str) {
-    eprintln!("{}", message.red());
+        .replace('\u{FFFD}', ""))
 }
 
 #[cfg(test)]
