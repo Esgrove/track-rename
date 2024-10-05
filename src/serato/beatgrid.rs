@@ -5,14 +5,12 @@ use anyhow::anyhow;
 use anyhow::Result;
 
 #[derive(Debug, Clone, Default)]
-#[allow(dead_code)]
 pub struct BeatGrid {
     pub num_markers: u32,
     pub markers: Vec<BeatGridMarker>,
 }
 
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub enum BeatGridMarker {
     Terminal { position: f32, bpm: f32 },
     NonTerminal { position: f32, beats_till_next: u32 },
