@@ -8,6 +8,7 @@ use byteorder::{BigEndian, ReadBytesExt};
 use colored::{ColoredString, Colorize};
 
 #[derive(Debug, Clone)]
+/// Cue points, saved loops, track color, and BPM lock status
 pub enum Markers {
     BpmLock(BpmLock),
     Color(Color),

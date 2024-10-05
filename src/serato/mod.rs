@@ -20,6 +20,7 @@ use crate::serato::overview::Overview;
 use crate::utils;
 
 #[derive(Debug, Clone, Default)]
+/// Contains all Serato custom tag data in the file.
 pub struct SeratoData {
     pub analysis: Option<AnalysisVersion>,
     pub autotags: Option<AutoTags>,
@@ -29,17 +30,26 @@ pub struct SeratoData {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+/// Serato tag types.
 pub enum SeratoTag {
+    /// Serato analysis version number
     Analysis,
+    /// BPM, auto gain, and manual gain values
     Autotags,
+    /// Beatgrid markers
     BeatGrid,
+    /// Cue points, loops, track color, and BPM lock status
     Markers,
+    /// Waveform overview data.
     Overview,
 }
 
 impl SeratoData {
-    pub fn parse(file_tags: &Tag) -> Self {
+    /// Parse Serato custom tags from tag data.
+    pub fn parse(file_tags: &Tag) -> Option<Self> {
         let mut serato_data = Self::default();
+        let mut parsed_any = false;
+
         for frame in file_tags.frames() {
             if let Some(object) = frame.content().encapsulated_object() {
                 if let Ok(tag) = SeratoTag::from_str(&object.description) {
@@ -47,30 +57,35 @@ impl SeratoData {
                         SeratoTag::Analysis => match AnalysisVersion::parse(&object.data) {
                             Ok(data) => {
                                 serato_data.analysis = Some(data);
+                                parsed_any = true;
                             }
                             Err(error) => utils::print_error(format!("Error: {error}").as_str()),
                         },
                         SeratoTag::Autotags => match AutoTags::parse(&object.data) {
                             Ok(data) => {
                                 serato_data.autotags = Some(data);
+                                parsed_any = true;
                             }
                             Err(error) => utils::print_error(format!("Error: {error}").as_str()),
                         },
                         SeratoTag::BeatGrid => match BeatGrid::parse(&object.data) {
                             Ok(data) => {
                                 serato_data.beatgrid = Some(data);
+                                parsed_any = true;
                             }
                             Err(error) => utils::print_error(format!("Error: {error}").as_str()),
                         },
                         SeratoTag::Markers => match Markers::parse(&object.data) {
                             Ok(data) => {
                                 serato_data.markers = data;
+                                parsed_any = true;
                             }
                             Err(error) => utils::print_error(format!("Error: {error}").as_str()),
                         },
                         SeratoTag::Overview => match Overview::parse(&object.data) {
                             Ok(data) => {
                                 serato_data.overview = Some(data);
+                                parsed_any = true;
                             }
                             Err(error) => utils::print_error(format!("Error: {error}").as_str()),
                         },
@@ -78,7 +93,11 @@ impl SeratoData {
                 }
             }
         }
-        serato_data
+        if parsed_any {
+            Some(serato_data)
+        } else {
+            None
+        }
     }
 }
 
@@ -123,11 +142,6 @@ impl Display for SeratoTag {
     }
 }
 
-pub fn print_serato_tags(file_tags: &Tag) {
-    let serato_data = SeratoData::parse(file_tags);
-    print!("{serato_data}");
-}
-
 impl Display for SeratoData {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f, "{}", "Serato tags:".cyan())?;
@@ -164,7 +178,24 @@ impl Display for SeratoData {
     }
 }
 
+/// Parse and print Serato tag data if any is present.
+pub fn print_serato_tags(file_tags: &Tag) {
+    if let Some(serato_data) = SeratoData::parse(file_tags) {
+        print!("{serato_data}");
+    }
+}
+
+/// Format duration in milliseconds as `MM:SS:T` to match Serato.
+fn format_position_timestamp(position_in_ms: u32) -> String {
+    let minutes = position_in_ms / 60000;
+    let seconds = (position_in_ms % 60000) / 1000;
+    let tenths = (f64::from(position_in_ms % 1000) / 100.0).round();
+
+    format!("{minutes:02}:{seconds:02}.{tenths}")
+}
+
 #[allow(dead_code)]
+/// Debug function to print bytes as hexadecimal
 fn format_as_byte_string(data: &[u8]) -> String {
     data.iter()
         .map(|byte| format!("{byte:02x}"))
@@ -173,6 +204,7 @@ fn format_as_byte_string(data: &[u8]) -> String {
 }
 
 #[allow(dead_code)]
+/// Debug function to print formatted hexdump
 fn hexdump(buffer: &[u8], ascii: bool) -> String {
     let mut offset = 0;
     let mut result = String::new();
@@ -212,13 +244,4 @@ fn hexdump(buffer: &[u8], ascii: bool) -> String {
         offset += 16;
     }
     result
-}
-
-/// Format duration in milliseconds as `MM:SS:T` to match Serato.
-fn format_position_timestamp(position_in_ms: u32) -> String {
-    let minutes = position_in_ms / 60000;
-    let seconds = (position_in_ms % 60000) / 1000;
-    let tenths = (f64::from(position_in_ms % 1000) / 100.0).round();
-
-    format!("{minutes:02}:{seconds:02}.{tenths}")
 }

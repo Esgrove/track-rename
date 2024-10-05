@@ -7,22 +7,27 @@ use crossterm::terminal;
 
 #[derive(Debug, Clone, Default)]
 /// Contains the waveform overview data.
-/// The overview is build of 16 byte blocks that contain the frequency data for each time slice.
-///
-/// ![Serato Overview](serato-overview-hexdump.png)
-///
-/// | Offset | Length | Raw Value     | Type           | Description
-/// | ------ | ------ | ------------- | -------------- | -----------
-/// |   `00` |   `02` | `01 05`       |                |
-/// |   `02` |   `10` | `01` ... `01` | 16 * `uint8_t` | Frequency information
-/// |    ... |    ... | `01` ... `01` | 16 * `uint8_t` | Frequency information
-/// |  `ef2` |   `10` | `01` ... `01` | 16 * `uint8_t` | Frequency information
-///
+/// It seems the length will always be 240 time slices,
+/// regardless of the track length.
+/// Each time slice is divided into 16 frequency bands,
+/// with the byte value corresponding to the strength of that frequency band.
 pub struct Overview {
     blocks: Vec<[u8; 16]>,
 }
 
 impl Overview {
+    /// Parse the waveform overview.
+    /// The overview is build of 16 byte blocks that contain the frequency data for each time slice.
+    ///
+    /// ![Serato Overview](serato-overview-hexdump.png)
+    ///
+    /// | Offset | Length | Raw Value     | Type           | Description
+    /// | ------ | ------ | ------------- | -------------- | -----------
+    /// |   `00` |   `02` | `01 05`       |                |
+    /// |   `02` |   `10` | `01` ... `01` | 16 * `uint8_t` | Frequency information
+    /// |    ... |    ... | `01` ... `01` | 16 * `uint8_t` | Frequency information
+    /// |  `ef2` |   `10` | `01` ... `01` | 16 * `uint8_t` | Frequency information
+    ///
     pub fn parse(data: &[u8]) -> Result<Self> {
         if data.len() < 2 {
             return Err(anyhow!("Data too short to contain initial bytes"));
