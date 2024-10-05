@@ -1,6 +1,6 @@
 [package]
 name = "track-rename"
-version = "1.23.2"
+version = "1.23.3"
 edition = "2021"
 authors = ["Esgrove <esgrove@outlook.com>"]
 description = "CLI tool for formatting and renaming audio tracks"
@@ -67,4 +67,3 @@ similar_names = "allow"
 struct_excessive_bools = "allow"
 too_many_lines = "allow"
 unreadable_literal = "allow"
-unwrap_used = "allow"
