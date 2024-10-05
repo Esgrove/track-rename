@@ -279,16 +279,14 @@ impl Display for Cue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let seconds = self.position as f32 * 0.001;
         let position = format!("{seconds:>7.3}s");
-        let msg = self.color.format(format!("Cue {}", self.index + 1).as_str());
-        if self.name.is_empty() {
-            write!(
-                f,
-                "{msg}: {:<12} {position}",
-                super::format_position_timestamp(self.position)
-            )
+        let cue = format!("Cue {}", self.index + 1);
+        let text = if self.name.is_empty() {
+            let timestamp = super::format_position_timestamp(self.position);
+            self.color.format(&timestamp)
         } else {
-            write!(f, "{msg}: {:<12} {position}", self.name)
-        }
+            self.color.format(&self.name)
+        };
+        write!(f, "{cue}: {text:<12} {position}")
     }
 }
 
