@@ -259,10 +259,7 @@ pub fn read_tags(track: &Track, verbose: bool) -> Option<Tag> {
         Ok(tag) => Some(tag),
         Err(Error {
             kind: ErrorKind::NoTag, ..
-        }) => {
-            println!("\n{}", format!("No tags: {track}").yellow());
-            Some(Tag::new())
-        }
+        }) => Some(Tag::new()),
         Err(error) => {
             eprintln!("\n{}", format!("Failed to read tags for: {track}\n{error}").red());
             if verbose {
