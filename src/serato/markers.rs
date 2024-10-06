@@ -195,7 +195,12 @@ impl Cue {
         cursor.set_position(cursor.position() + 2);
         let mut name_bytes = Vec::new();
         cursor.read_to_end(&mut name_bytes)?;
-        let name = str::from_utf8(&name_bytes)?.trim_end_matches('\x00').to_string();
+        let name = str::from_utf8(&name_bytes)?.trim_end_matches('\x00').trim();
+        let name = if name.is_empty() {
+            super::format_position_timestamp(position)
+        } else {
+            name.to_string()
+        };
         Ok(Self {
             index,
             position,
@@ -279,14 +284,9 @@ impl Display for Cue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let seconds = self.position as f32 * 0.001;
         let position = format!("{seconds:>7.3}s");
-        let cue = format!("Cue {}", self.index + 1);
-        let text = if self.name.is_empty() {
-            let timestamp = super::format_position_timestamp(self.position);
-            self.color.format(&timestamp)
-        } else {
-            self.color.format(&self.name)
-        };
-        write!(f, "{cue}: {text:<12} {position}")
+        let title = format!("Cue {}", self.index + 1);
+        let text = self.color.format(&self.name);
+        write!(f, "{title}: {text:<12} {position}")
     }
 }
 
@@ -308,6 +308,7 @@ impl Display for Loop {
     }
 }
 
+/// Read bytes until null byte
 fn read_bytes<R: Read>(reader: &mut R) -> io::Result<Vec<u8>> {
     let mut bytes = Vec::new();
     for byte in reader.bytes() {

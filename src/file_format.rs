@@ -4,7 +4,7 @@ use std::str::FromStr;
 use anyhow::{anyhow, Result};
 
 /// Supported audio file formats.
-// TODO: add support for "flac", "m4a", "mp4"
+// TODO: add support for "flac" and "m4a"
 #[derive(Debug, Default, Clone, PartialEq, Ord, PartialOrd, Eq)]
 pub enum FileFormat {
     #[default]
@@ -57,6 +57,8 @@ mod tests {
     #[test]
     fn test_from_str_invalid_format() {
         assert!(FileFormat::from_str("wav").is_err());
+        assert!(FileFormat::from_str("m4a").is_err());
+        assert!(FileFormat::from_str("zip").is_err());
     }
 
     #[test]
