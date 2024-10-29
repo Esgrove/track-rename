@@ -20,6 +20,7 @@ pub struct TrackMetadata {
     pub version: String,
 }
 
+#[must_use]
 pub fn load_state() -> State {
     read_state().into_par_iter().filter(|(path, _)| path.exists()).collect()
 }

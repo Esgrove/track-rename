@@ -6,7 +6,6 @@ mod overview;
 
 use std::fmt::Display;
 use std::str::FromStr;
-use std::{fmt, str};
 
 use anyhow::{anyhow, Result};
 use colored::Colorize;
@@ -46,6 +45,7 @@ pub enum SeratoTag {
 
 impl SeratoData {
     /// Parse Serato custom tags from tag data.
+    #[must_use]
     pub fn parse(file_tags: &Tag) -> Option<Self> {
         let mut serato_data = Self::default();
         let mut parsed_any = false;
@@ -143,7 +143,7 @@ impl Display for SeratoTag {
 }
 
 impl Display for SeratoData {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         writeln!(f, "{}", "Serato tags:".cyan())?;
         if let Some(autotags) = &self.autotags {
             writeln!(f, "{}: {}", SeratoTag::Autotags, autotags)?;

@@ -1,10 +1,8 @@
 use std::cmp::Ordering;
-use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::UNIX_EPOCH;
-use std::{env, fs, io};
 
 use anyhow::Context;
 use colored::{ColoredString, Colorize};
@@ -30,6 +28,7 @@ pub fn collect_tracks(root: &Path) -> Vec<Track> {
 }
 
 /// Format bool value as a coloured string.
+#[must_use]
 pub fn colorize_bool(value: bool) -> ColoredString {
     if value {
         "true".green()
@@ -103,15 +102,17 @@ pub fn color_diff(old: &str, new: &str, stacked: bool) -> (String, String) {
 
 /// Ask user to confirm action.
 /// Note: everything except `n` is a yes.
+#[must_use]
 pub fn confirm() -> bool {
     print!("Proceed (y/n)? ");
-    io::stdout().flush().expect("Failed to flush stdout");
+    std::io::stdout().flush().expect("Failed to flush stdout");
     let mut ans = String::new();
-    io::stdin().read_line(&mut ans).expect("Failed to read line");
+    std::io::stdin().read_line(&mut ans).expect("Failed to read line");
     ans.trim().to_lowercase() != "n"
 }
 
 /// Check if the given path contains the sub path.
+#[must_use]
 pub fn contains_subpath(main_path: &Path, subpath: &Path) -> bool {
     let main_components: Vec<_> = main_path.components().collect();
     let sub_components: Vec<_> = subpath.components().collect();
@@ -140,20 +141,21 @@ pub fn contains_subpath(main_path: &Path, subpath: &Path) -> bool {
 
 /// Calculate SHA256 hash for the given file.
 pub fn compute_file_hash(path: &Path) -> anyhow::Result<String> {
-    let mut file = fs::File::open(path)?;
+    let mut file = std::fs::File::open(path)?;
     let mut hasher = Sha256::new();
-    io::copy(&mut file, &mut hasher)?;
+    std::io::copy(&mut file, &mut hasher)?;
     Ok(format!("{:x}", hasher.finalize()))
 }
 
 /// Check ffmpeg is found in PATH.
+#[must_use]
 pub fn ffmpeg_available() -> bool {
     Command::new("ffmpeg").arg("-version").output().is_ok()
 }
 
 /// Get file modified time as seconds since unix epoch.
 pub fn get_file_modified_time(path: &Path) -> anyhow::Result<u64> {
-    let metadata = fs::metadata(path)?;
+    let metadata = std::fs::metadata(path)?;
     let modified_time = metadata.modified()?;
     let duration = modified_time
         .duration_since(UNIX_EPOCH)
@@ -163,8 +165,9 @@ pub fn get_file_modified_time(path: &Path) -> anyhow::Result<u64> {
 
 /// Convert the given path to be relative to the current working directory.
 /// Returns the original path if the relative path cannot be created.
+#[must_use]
 pub fn get_relative_path_from_current_working_directory(path: &Path) -> PathBuf {
-    env::current_dir().map_or_else(
+    std::env::current_dir().map_or_else(
         |_| path.to_path_buf(),
         |current_dir| path.strip_prefix(&current_dir).unwrap_or(path).to_path_buf(),
     )
@@ -172,6 +175,7 @@ pub fn get_relative_path_from_current_working_directory(path: &Path) -> PathBuf 
 
 /// Convert filename to artist and title tags.
 /// Expects filename to be in format 'artist - title'.
+#[must_use]
 pub fn get_tags_from_filename(filename: &str) -> Option<(String, String)> {
     if !filename.contains(" - ") {
         eprintln!(
@@ -196,6 +200,7 @@ pub fn get_tags_from_filename(filename: &str) -> Option<(String, String)> {
 }
 
 /// Normalize unicode.
+#[must_use]
 pub fn normalize_str(input: &str) -> String {
     input.nfc().collect::<String>()
 }
@@ -215,6 +220,7 @@ pub fn path_to_string(path: &Path) -> String {
 }
 
 /// Get the relative path and convert to string with invalid unicode handling.
+#[must_use]
 pub fn path_to_string_relative(path: &Path) -> String {
     path_to_string(&get_relative_path_from_current_working_directory(path))
 }
@@ -254,6 +260,7 @@ pub fn print_tag_data(file_tags: &Tag) {
 
 /// Try to read tags from file.
 /// Will return empty tags when there are no tags.
+#[must_use]
 pub fn read_tags(track: &Track, verbose: bool) -> Option<Tag> {
     match Tag::read_from_path(&track.path) {
         Ok(tag) => Some(tag),
@@ -274,7 +281,7 @@ pub fn read_tags(track: &Track, verbose: bool) -> Option<Tag> {
 
 /// Rename track from given path to new path.
 pub fn rename_track(path: &Path, new_path: &Path, test_mode: bool) -> anyhow::Result<()> {
-    if let Err(error) = fs::rename(path, new_path) {
+    if let Err(error) = std::fs::rename(path, new_path) {
         let message = format!("Failed to rename file: {error}");
         if test_mode {
             panic!("{}", message);
@@ -289,7 +296,7 @@ pub fn rename_track(path: &Path, new_path: &Path, test_mode: bool) -> anyhow::Re
 pub fn resolve_input_path(path: &Option<String>) -> anyhow::Result<PathBuf> {
     let input_path = path.clone().unwrap_or_default().trim().to_string();
     let filepath = if input_path.is_empty() {
-        env::current_dir().context("Failed to get current working directory")?
+        std::env::current_dir().context("Failed to get current working directory")?
     } else {
         PathBuf::from(input_path)
     };
@@ -307,7 +314,7 @@ pub fn resolve_input_path(path: &Option<String>) -> anyhow::Result<PathBuf> {
 /// Write a txt log file for failed tracks to current working directory.
 pub fn write_log_for_failed_files(paths: &[String]) -> anyhow::Result<()> {
     let filepath = Path::new("track-rename-failed.txt");
-    let mut file = File::create(filepath).context("Failed to create output file")?;
+    let mut file = std::fs::File::create(filepath).context("Failed to create output file")?;
     for path in paths {
         writeln!(file, "{path}")?;
     }

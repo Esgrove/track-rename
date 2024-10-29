@@ -91,6 +91,7 @@ impl Track {
         })
     }
 
+    #[must_use]
     pub fn try_from_path(path: &Path) -> Option<Self> {
         let extension = path.extension().and_then(|e| e.to_str()).unwrap_or_default().trim();
         if extension.is_empty() {
@@ -125,6 +126,7 @@ impl Track {
     }
 
     /// Get the original file name including the file extension.
+    #[must_use]
     pub fn filename(&self) -> String {
         format!("{}.{}", self.name, self.extension)
     }
@@ -160,6 +162,7 @@ impl Track {
     }
 
     /// Return formatted file name without the file extension.
+    #[must_use]
     pub fn formatted_filename(&self) -> String {
         let (file_artist, file_title) =
             formatting::format_filename(&self.tags.formatted_artist, &self.tags.formatted_title);
@@ -173,11 +176,13 @@ impl Track {
     }
 
     /// Return formatted file name with the file extension.
+    #[must_use]
     pub fn formatted_filename_with_extension(&self) -> String {
         format!("{}.{}", self.formatted_filename(), self.format)
     }
 
     /// Return the full path with new filename.
+    #[must_use]
     pub fn path_with_new_name(&self, filename: &str) -> PathBuf {
         dunce::simplified(&self.root.join(filename)).to_path_buf()
     }

@@ -495,7 +495,7 @@ impl TrackRenamer {
     }
 
     /// Write a txt log file for failed tracks to current working directory.
-    fn write_genre_log(genres: &[(String, usize)]) -> anyhow::Result<()> {
+    fn write_genre_log(genres: &[(String, usize)]) -> Result<()> {
         let filepath = Path::new("genres.txt");
         let mut file = File::create(filepath).context("Failed to create output file")?;
         for (genre, _) in genres {

@@ -54,7 +54,7 @@ static REGEX_SUBSTITUTES: LazyLock<[(Regex, &'static str); 12]> = LazyLock::new(
         // Replace various opening bracket types with "("
         (Regex::new(r"[\[{]+").unwrap(), "("),
         // Replace various closing bracket types with ")"
-        (Regex::new(r"[\]}]+").unwrap(), ")"),
+        (Regex::new(r"[]}]+").unwrap(), ")"),
         // Collapse multiple exclamation marks into one
         (Regex::new(r"!{2,}").unwrap(), "!"),
         // Collapse multiple periods into a single period
@@ -166,7 +166,7 @@ static REGEX_NAME_SUBSTITUTES: LazyLock<[(Regex, &'static str); 43]> = LazyLock:
 static REGEX_FILENAME_SUBSTITUTES: LazyLock<[(Regex, &str); 2]> = LazyLock::new(|| {
     [
         // Replace characters that are not allowed in filenames with a hyphen
-        (Regex::new(r"([\\/<>|:\*\?])").unwrap(), "-"),
+        (Regex::new(r"([\\/<>|:*?])").unwrap(), "-"),
         // Collapse multiple spaces into a single space
         (Regex::new(r"\s+").unwrap(), " "),
     ]
@@ -361,7 +361,7 @@ fn move_feat_from_title_to_artist(artist: &mut String, title: &mut String) {
         let feat_artists: Vec<String> = feat
             .split(&['&', ',', '+'][..])
             .map(str::trim)
-            .map(std::string::ToString::to_string)
+            .map(ToString::to_string)
             .collect();
 
         for feat_artist in &feat_artists {

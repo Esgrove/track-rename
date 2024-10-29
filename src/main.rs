@@ -2,8 +2,6 @@ mod config;
 mod statistics;
 mod track_renamer;
 
-use std::env;
-
 use anyhow::Result;
 use clap::Parser;
 
@@ -69,7 +67,8 @@ pub struct RenamerArgs {
 }
 
 fn main() -> Result<()> {
-    env::set_var("RUST_BACKTRACE", "1");
+    std::env::set_var("RUST_BACKTRACE", "1");
+
     let args = RenamerArgs::parse();
 
     let absolute_input_path = track_rename::utils::resolve_input_path(&args.path)?;

@@ -20,6 +20,7 @@ pub struct TrackTags {
 }
 
 impl TrackTags {
+    #[must_use]
     pub fn new(name: String, artist: String, title: String, album: String, genre: String) -> Self {
         Self {
             current_name: name,
@@ -33,6 +34,7 @@ impl TrackTags {
 
     /// Try to read tags such as artist and title from tags.
     /// Fallback to parsing them from filename if tags are empty.
+    #[must_use]
     pub fn parse_tag_data(track: &Track, tag: &Tag) -> Self {
         let mut artist = String::new();
         let mut title = String::new();
@@ -79,6 +81,7 @@ impl TrackTags {
 
     /// Returns true if any of the formatted tag fields differ from their current value,
     /// or artist and/or title tag is missing.
+    #[must_use]
     pub fn changed(&self) -> bool {
         self.current_name != self.formatted_name
             || self.current_artist != self.formatted_artist
