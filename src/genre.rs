@@ -386,7 +386,7 @@ static REGEX_MAPPINGS: LazyLock<[(Regex, &'static str); 42]> = LazyLock::new(|| 
 
 static RE_HOUSE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[^,]* House$").unwrap());
 
-/// Format genre string
+/// Format genre string.
 pub fn format_genre(genre: &str) -> String {
     let mut formatted_genre = genre.trim().to_string();
     if formatted_genre.chars().count() < 3 {
@@ -414,6 +414,7 @@ pub fn format_genre(genre: &str) -> String {
 }
 
 /// Reorder house genres to start with "House".
+///
 /// For example, "Tech House" -> "House Tech".
 fn reorder_house_genres(genre: &mut String) {
     if RE_HOUSE.is_match(genre) {
@@ -432,6 +433,7 @@ mod tests {
     fn test_rnb() {
         assert_eq!(format_genre(" Rnb   "), "R&B");
         assert_eq!(format_genre("R'n'B"), "R&B");
+        assert_eq!(format_genre("R&B"), "R&B");
     }
 
     #[test]
@@ -445,10 +447,13 @@ mod tests {
 
     #[test]
     fn test_genre_mappings() {
-        assert_eq!(format_genre("Hip-Hop 90's"), "Hip-Hop 90s");
-        assert_eq!(format_genre("Hip-Hop 80's"), "Hip-Hop 80s");
         assert_eq!(format_genre(" other "), "");
         assert_eq!(format_genre("Other"), "");
+        assert_eq!(format_genre("Funk 80's"), "Funk 80s");
+        assert_eq!(format_genre("Hip-Hop 80's"), "Hip-Hop 80s");
+        assert_eq!(format_genre("Hip-Hop 90's"), "Hip-Hop 90s");
+        assert_eq!(format_genre("90's"), "90s");
+        assert_eq!(format_genre("70's"), "70s");
     }
 
     #[test]
