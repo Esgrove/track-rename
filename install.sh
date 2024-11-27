@@ -13,6 +13,7 @@ if [ -z "$(command -v cargo)" ]; then
 fi
 
 print_magenta "Installing binaries..."
+cd "$REPO_ROOT"
 cargo install --force --path "$REPO_ROOT"
 echo ""
 
