@@ -86,7 +86,7 @@ mod tests {
         state.insert(
             test_path.clone(),
             TrackMetadata {
-                modified: 123456789,
+                modified: 123_456_789,
                 version: "test_version".to_string(),
             },
         );
@@ -113,7 +113,7 @@ mod tests {
         assert!(state.is_empty());
 
         let test_data = TrackMetadata {
-            modified: 1716068288,
+            modified: 1_716_068_288,
             version: "1.0.0".to_string(),
         };
 
