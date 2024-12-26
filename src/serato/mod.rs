@@ -18,8 +18,8 @@ use crate::serato::markers::Markers;
 use crate::serato::overview::Overview;
 use crate::utils;
 
-#[derive(Debug, Clone, Default)]
 /// Contains all Serato custom tag data in the file.
+#[derive(Debug, Clone, Default)]
 pub struct SeratoData {
     pub analysis: Option<AnalysisVersion>,
     pub autotags: Option<AutoTags>,
@@ -28,8 +28,8 @@ pub struct SeratoData {
     pub overview: Option<Overview>,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 /// Serato tag types.
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub enum SeratoTag {
     /// Serato analysis version number
     Analysis,
@@ -59,35 +59,35 @@ impl SeratoData {
                                 serato_data.analysis = Some(data);
                                 parsed_any = true;
                             }
-                            Err(error) => utils::print_error(format!("Error: {error}").as_str()),
+                            Err(error) => utils::print_error(&error.to_string()),
                         },
                         SeratoTag::Autotags => match AutoTags::parse(&object.data) {
                             Ok(data) => {
                                 serato_data.autotags = Some(data);
                                 parsed_any = true;
                             }
-                            Err(error) => utils::print_error(format!("Error: {error}").as_str()),
+                            Err(error) => utils::print_error(&error.to_string()),
                         },
                         SeratoTag::BeatGrid => match BeatGrid::parse(&object.data) {
                             Ok(data) => {
                                 serato_data.beatgrid = Some(data);
                                 parsed_any = true;
                             }
-                            Err(error) => utils::print_error(format!("Error: {error}").as_str()),
+                            Err(error) => utils::print_error(&error.to_string()),
                         },
                         SeratoTag::Markers => match Markers::parse(&object.data) {
                             Ok(data) => {
                                 serato_data.markers = data;
                                 parsed_any = true;
                             }
-                            Err(error) => utils::print_error(format!("Error: {error}").as_str()),
+                            Err(error) => utils::print_error(&error.to_string()),
                         },
                         SeratoTag::Overview => match Overview::parse(&object.data) {
                             Ok(data) => {
                                 serato_data.overview = Some(data);
                                 parsed_any = true;
                             }
-                            Err(error) => utils::print_error(format!("Error: {error}").as_str()),
+                            Err(error) => utils::print_error(&error.to_string()),
                         },
                     }
                 }
@@ -144,7 +144,7 @@ impl Display for SeratoTag {
 
 impl Display for SeratoData {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        writeln!(f, "{}", "Serato tags:".cyan())?;
+        writeln!(f, "{}", "Serato tags:".cyan().bold())?;
         if let Some(autotags) = &self.autotags {
             writeln!(f, "{}: {}", SeratoTag::Autotags, autotags)?;
         } else {
@@ -203,8 +203,8 @@ fn format_as_byte_string(data: &[u8]) -> String {
         .join(" ")
 }
 
-#[allow(dead_code)]
 /// Debug function to print formatted hexdump
+#[allow(dead_code)]
 fn hexdump(buffer: &[u8], ascii: bool) -> String {
     let mut offset = 0;
     let mut result = String::new();
@@ -219,14 +219,12 @@ fn hexdump(buffer: &[u8], ascii: bool) -> String {
         for byte in line {
             result.push_str(&format!("{byte:02x} "));
         }
-
         // Add padding if the line is less than 16 bytes
         if line.len() < 16 {
             for _ in 0..(16 - line.len()) {
                 result.push_str("   ");
             }
         }
-
         if ascii {
             // Format the ASCII representation
             result.push_str(" |");
@@ -240,7 +238,6 @@ fn hexdump(buffer: &[u8], ascii: bool) -> String {
             result.push('|');
         }
         result.push('\n');
-
         offset += 16;
     }
     result

@@ -245,7 +245,7 @@ pub fn print_divider(text: &str) {
 
 /// Print error message with red color.
 pub fn print_error(message: &str) {
-    eprintln!("{}", message.red());
+    eprintln!("Error: {}", message.red());
 }
 
 /// Print all tag data.

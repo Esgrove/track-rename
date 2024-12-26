@@ -5,7 +5,8 @@ use regex::Regex;
 
 use crate::formatting;
 
-// Map folder names to default genre for that folder
+// Map folder names to default genre for that folder.
+// If the genre tag is empty, can apply default genre tag.
 pub static GENRE_MAPPINGS: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(|| {
     HashMap::from([
         ("DISCO 1", "Disco"),

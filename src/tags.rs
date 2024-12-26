@@ -33,6 +33,7 @@ impl TrackTags {
     }
 
     /// Try to read tags such as artist and title from tags.
+    ///
     /// Fallback to parsing them from filename if tags are empty.
     #[must_use]
     pub fn parse_tag_data(track: &Track, tag: &Tag) -> Self {
@@ -91,6 +92,7 @@ impl TrackTags {
     }
 
     /// Print coloured diff for changes in tags.
+    ///
     /// Prints nothing if there are no changes.
     pub fn show_diff(&self) {
         if self.current_name != self.formatted_name {
