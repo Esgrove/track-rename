@@ -3,6 +3,7 @@ use std::fmt::Display;
 
 use anyhow::anyhow;
 use anyhow::Result;
+use colored::Colorize;
 use crossterm::terminal;
 
 #[derive(Debug, Clone, Default)]
@@ -18,8 +19,6 @@ pub struct Overview {
 impl Overview {
     /// Parse the waveform overview.
     /// The overview is build of 16 byte blocks that contain the frequency data for each time slice.
-    ///
-    /// ![Serato Overview](serato-overview-hexdump.png)
     ///
     /// | Offset | Length | Raw Value     | Type           | Description
     /// | ------ | ------ | ------------- | -------------- | -----------
@@ -46,23 +45,25 @@ impl Overview {
         Ok(Self { blocks: frequency_info })
     }
 
+    /// Convert waveform overview to a minimized text representation for terminal display.
     fn draw_waveform(&self) -> Result<String> {
         let (terminal_width, _) = terminal::size().map_err(|e| anyhow!("Failed to get terminal size: {}", e))?;
         let width = self.blocks.len();
 
         let mut waveform = String::new();
 
-        // Calculate average for each consecutive four values to reduce height to 4
-        let new_height = 4;
-        let mut averaged_blocks: Vec<Vec<u8>> = vec![vec![0; new_height]; width];
+        // Calculate average for consecutive values to reduce height from original 16 to specified height
+        let height = 8;
+        let ratio = 16 / height;
+        let mut averaged_blocks: Vec<Vec<u8>> = vec![vec![0; height]; width];
 
         for (x, column) in averaged_blocks.iter_mut().enumerate().take(width) {
-            for (y, value) in column.iter_mut().enumerate().take(new_height) {
-                let avg: u16 = self.blocks[x][4 * y..4 * y + 4]
+            for (y, value) in column.iter_mut().enumerate().take(height) {
+                let avg: u16 = self.blocks[x][ratio * y..ratio * y + ratio]
                     .iter()
                     .map(|&v| u16::from(v))
                     .sum::<u16>()
-                    / new_height as u16;
+                    / height as u16;
                 *value = avg as u8;
             }
         }
@@ -74,7 +75,7 @@ impl Overview {
             // Downsample by two, 240 -> 120
             (0..width / 2)
                 .map(|i| {
-                    (0..new_height)
+                    (0..height)
                         .map(|y| {
                             ((u16::from(averaged_blocks[2 * i][y]) + u16::from(averaged_blocks[2 * i + 1][y])) / 2)
                                 as u8
@@ -86,7 +87,7 @@ impl Overview {
             // Downsample by three, 240 -> 80
             (0..width / 3)
                 .map(|i| {
-                    (0..new_height)
+                    (0..height)
                         .map(|y| {
                             ((u16::from(averaged_blocks[3 * i][y])
                                 + u16::from(averaged_blocks[3 * i + 1][y])
@@ -98,16 +99,36 @@ impl Overview {
                 .collect()
         };
 
+        let max_value = resampled_blocks
+            .iter()
+            .flat_map(|row| row.iter())
+            .copied()
+            .max()
+            .unwrap_or(1);
+
+        // Normalize values to range 0.0 - 1.0
+        let normalized_blocks: Vec<Vec<f32>> = resampled_blocks
+            .iter()
+            .map(|row| {
+                row.iter()
+                    .map(|&value| f32::from(value) / f32::from(max_value))
+                    .collect()
+            })
+            .collect();
+
         // Iterate in reverse so first values of the vertical block go to the bottom of the waveform
-        for y in (0..new_height).rev() {
-            for block in &resampled_blocks {
+        for y in (0..height).rev() {
+            for block in &normalized_blocks {
                 #[allow(clippy::match_on_vec_items)]
-                let symbol = match block[y] {
-                    0..=24 => '░',
-                    25..=50 => '▒',
-                    _ => '█',
+                let (symbol, color) = match block[y] {
+                    value if value <= 0.15 => ('░', "blue"),
+                    value if value <= 0.3 => ('░', "cyan"),
+                    value if value <= 0.6 => ('▒', "green"),
+                    value if value <= 0.8 => ('▒', "yellow"),
+                    _ => ('█', "magenta"),
                 };
-                waveform.push(symbol);
+                let formatted = symbol.to_string().color(color).to_string();
+                waveform.push_str(&formatted);
             }
             waveform.push('\n');
         }
