@@ -237,7 +237,7 @@ pub fn path_to_string(path: &Path) -> String {
     path.to_str().map_or_else(
         || {
             let string = path.to_string_lossy().to_string().replace('\u{FFFD}', "");
-            eprintln!("{}", "Path contains invalid unicode".red());
+            eprintln!("{}", "Path contains invalid unicode:".red());
             eprintln!("{path:?}");
             eprintln!("{string}");
             string
@@ -285,8 +285,12 @@ pub fn print_tag_data(file_tags: &Tag) {
         .for_each(|string| println!("  {string}"));
 }
 
-/// Try to read tags from file.
-/// Will return empty tags when there are no tags.
+/// Try to read tag data from file.
+///
+/// Returns empty tags when there is no tag data.
+/// If the tag reading fails,
+/// returns the partial tag data that was read succesfully before the error occured,
+/// or `None` if no tag data could be read.
 #[must_use]
 pub fn read_tags(track: &Track, verbose: bool) -> Option<Tag> {
     match Tag::read_from_path(&track.path) {

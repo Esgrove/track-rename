@@ -37,6 +37,7 @@ fn main() -> Result<()> {
     for track in tracks {
         println!("{}", track.to_string().bold().magenta());
         if let Some(tags) = utils::read_tags(&track, args.verbose || args.debug) {
+            // Don't print empty tags
             if tags.frames().count() > 0 {
                 utils::print_tag_data(&tags);
                 serato::print_serato_tags(&tags);
