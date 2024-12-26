@@ -10,7 +10,6 @@ use difference::{Changeset, Difference};
 use id3::{Error, ErrorKind, Tag};
 use itertools::Itertools;
 use rayon::prelude::*;
-use sha2::{Digest, Sha256};
 use unicode_normalization::UnicodeNormalization;
 use walkdir::WalkDir;
 
@@ -137,14 +136,6 @@ pub fn contains_subpath(main_path: &Path, subpath: &Path) -> bool {
         }
     }
     false
-}
-
-/// Calculate SHA256 hash for the given file.
-pub fn compute_file_hash(path: &Path) -> anyhow::Result<String> {
-    let mut file = std::fs::File::open(path)?;
-    let mut hasher = Sha256::new();
-    std::io::copy(&mut file, &mut hasher)?;
-    Ok(format!("{:x}", hasher.finalize()))
 }
 
 /// Check ffmpeg is found in PATH.

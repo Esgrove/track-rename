@@ -29,7 +29,6 @@ rayon = "1.10.0"
 regex = "1.11.1"
 serde = { version = "1.0.216", features = ["derive"] }
 serde_json = "1.0.134"
-sha2 = "0.10.8"
 titlecase = "3.3.0"
 toml = "0.8.19"
 trash = "5.2.1"
