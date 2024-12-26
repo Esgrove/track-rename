@@ -15,7 +15,7 @@ use walkdir::WalkDir;
 
 use crate::track::Track;
 
-/// Recursively collect all tracks from given root path.
+/// Recursively collect all supported audio tracks from given root path.
 pub fn collect_tracks(root: &Path) -> Vec<Track> {
     WalkDir::new(root)
         .into_iter()
@@ -45,8 +45,11 @@ pub fn color_diff(old: &str, new: &str, stacked: bool) -> (String, String) {
     if stacked {
         // Find the starting index of the first matching sequence for a nicer visual alignment.
         // For example:
-        // Constantine - Onde As Satisfaction (Club Tool).aif
-        //      Darude - Onde As Satisfaction (Constantine Club Tool).aif
+        //   Constantine - Onde As Satisfaction (Club Tool).aif
+        //        Darude - Onde As Satisfaction (Constantine Club Tool).aif
+        // Instead of:
+        //   Constantine - Onde As Satisfaction (Club Tool).aif
+        //   Darude - Onde As Satisfaction (Constantine Club Tool).aif
         for diff in &changeset.diffs {
             if let Difference::Same(ref x) = diff {
                 if x.chars().all(char::is_whitespace) || x.chars().count() < 2 {
@@ -100,7 +103,8 @@ pub fn color_diff(old: &str, new: &str, stacked: bool) -> (String, String) {
 }
 
 /// Ask user to confirm action.
-/// Note: everything except `n` is a yes.
+///
+/// Note: everything except `n` or `N` is a yes.
 #[must_use]
 pub fn confirm() -> bool {
     print!("Proceed (y/n)? ");
@@ -110,12 +114,44 @@ pub fn confirm() -> bool {
     ans.trim().to_lowercase() != "n"
 }
 
-/// Check if the given path contains the sub path.
+/// Check if the given path contains the subpath.
+///
+/// Checks if `subpath` is a part of `path`,
+/// starting from the first matching path component in `path`.
+/// Returns `true` if `subpath` exists within `path` and `false` otherwise.
+///
+/// # Examples
+///
+/// ```
+/// # use std::path::Path;
+/// # use track_rename::utils::contains_subpath;
+/// let main_path = Path::new("/a/b/c/d");
+/// let subpath = Path::new("b/c");
+/// // `b/c` is a subpath of `/a/b/c/d`
+/// assert!(contains_subpath(main_path, subpath));
+///
+/// let subpath = Path::new("c/d");
+/// // `c/d` is a subpath of `/a/b/c/d`
+/// assert!(contains_subpath(main_path, subpath));
+///
+/// let subpath = Path::new("x/y");
+/// // `x/y` is not a subpath of `/a/b/c/d`
+/// assert!(!contains_subpath(main_path, subpath));
+///
+/// let subpath = Path::new("b/c/x");
+/// // `b/c/x` is not a subpath of `/a/b/c/d`
+/// assert!(!contains_subpath(main_path, subpath));
+///
+/// let subpath = Path::new("/a/b/c/d/e");
+/// // `/a/b/c/d/e` is longer than `/a/b/c/d`
+/// assert!(!contains_subpath(main_path, subpath));
+/// ```
 #[must_use]
-pub fn contains_subpath(main_path: &Path, subpath: &Path) -> bool {
-    let main_components: Vec<_> = main_path.components().collect();
+pub fn contains_subpath(path: &Path, subpath: &Path) -> bool {
+    let main_components: Vec<_> = path.components().collect();
     let sub_components: Vec<_> = subpath.components().collect();
 
+    // Sanity check
     if sub_components.len() > main_components.len() {
         return false;
     }
