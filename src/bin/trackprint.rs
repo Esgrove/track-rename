@@ -36,13 +36,10 @@ fn main() -> Result<()> {
 
     for track in tracks {
         println!("{}", track.to_string().bold().magenta());
-        match utils::read_tags(&track, args.verbose || args.debug) {
-            None => {}
-            Some(tags) => {
-                if tags.frames().count() > 0 {
-                    utils::print_tag_data(&tags);
-                    serato::print_serato_tags(&tags);
-                }
+        if let Some(tags) = utils::read_tags(&track, args.verbose || args.debug) {
+            if tags.frames().count() > 0 {
+                utils::print_tag_data(&tags);
+                serato::print_serato_tags(&tags);
             }
         }
     }
