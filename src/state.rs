@@ -4,7 +4,8 @@ use std::path::PathBuf;
 use anyhow::{anyhow, Context};
 use dashmap::DashMap;
 use rayon::prelude::*;
-use serde::{Deserialize, Serialize};
+
+use crate::track::TrackMetadata;
 
 const STATE_FILE_DIR: &str = "track-rename";
 #[cfg(not(test))]
@@ -13,12 +14,6 @@ const STATE_FILE_NAME: &str = "state.json";
 const STATE_FILE_NAME: &str = "test_state.json";
 
 pub type State = DashMap<PathBuf, TrackMetadata>;
-
-#[derive(Debug, Clone, Default, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
-pub struct TrackMetadata {
-    pub modified: u64,
-    pub version: String,
-}
 
 #[must_use]
 pub fn load_state() -> State {

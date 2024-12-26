@@ -8,11 +8,11 @@ use std::sync::LazyLock;
 use anyhow::Context;
 use colored::Colorize;
 use id3::Tag;
+use serde::{Deserialize, Serialize};
 use unicode_normalization::UnicodeNormalization;
 
 use crate::file_format::FileFormat;
 use crate::genre::GENRE_MAPPINGS;
-use crate::state::TrackMetadata;
 use crate::tags::TrackTags;
 use crate::utils;
 use crate::utils::{get_file_modified_time, path_to_string, path_to_string_relative};
@@ -51,6 +51,15 @@ pub struct Track {
     pub not_processed: bool,
     /// True if track info has been displayed in the terminal
     printed: bool,
+}
+
+/// File metadata for Track.
+#[derive(Debug, Clone, Default, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
+pub struct TrackMetadata {
+    /// Last modified timestamp provided by the OS.
+    pub modified: u64,
+    /// The track-rename library version this file was last processed with.
+    pub version: String,
 }
 
 impl Track {
@@ -296,11 +305,11 @@ impl Track {
             .collect::<String>())
     }
 
+    /// Read file metadata for track.
     fn read_metadata(path: &Path) -> anyhow::Result<TrackMetadata> {
         if !path.exists() {
             #[cfg(test)]
             return Ok(TrackMetadata::default());
-
             #[cfg(not(test))]
             anyhow::bail!("File does not exist: {}", path.display());
         }
