@@ -20,7 +20,8 @@ use crate::{formatting, genre};
 
 // Other audio file extensions that should trigger a warning message,
 const OTHER_FILE_EXTENSIONS: [&str; 3] = ["wav", "flac", "m4a"];
-const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub static DJ_MUSIC_PATH: LazyLock<PathBuf> = LazyLock::new(|| ["Dropbox", "DJ MUSIC"].iter().collect());
 

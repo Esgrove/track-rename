@@ -19,7 +19,6 @@ use crate::RenamerArgs;
 use track_rename::file_format::FileFormat;
 use track_rename::genre::GENRE_MAPPINGS;
 use track_rename::serato;
-use track_rename::state;
 use track_rename::state::State;
 use track_rename::track::{Track, DJ_MUSIC_PATH};
 use track_rename::utils;
@@ -41,7 +40,7 @@ impl TrackRenamer {
         Self {
             root: path,
             config: Config::from_args(args),
-            state: state::load_state(),
+            state: State::load(),
             ..Default::default()
         }
     }
