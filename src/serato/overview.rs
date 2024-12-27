@@ -121,10 +121,10 @@ impl Overview {
             for block in &normalized_blocks {
                 #[allow(clippy::match_on_vec_items)]
                 let (symbol, color) = match block[y] {
-                    value if value <= 0.15 => ('░', "blue"),
-                    value if value <= 0.3 => ('░', "cyan"),
-                    value if value <= 0.6 => ('▒', "green"),
-                    value if value <= 0.8 => ('▒', "yellow"),
+                    value if value <= 0.05 => ('░', "blue"),
+                    value if value <= 0.25 => ('░', "cyan"),
+                    value if value <= 0.5 => ('▒', "green"),
+                    value if value <= 0.75 => ('▒', "yellow"),
                     _ => ('█', "magenta"),
                 };
                 let formatted = symbol.to_string().color(color).to_string();
