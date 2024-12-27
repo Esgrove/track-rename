@@ -70,7 +70,6 @@ fn main() -> Result<()> {
     std::env::set_var("RUST_BACKTRACE", "1");
 
     let args = RenamerArgs::parse();
-
     let absolute_input_path = track_rename::utils::resolve_input_path(&args.path)?;
 
     TrackRenamer::new(absolute_input_path, &args).run()

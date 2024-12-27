@@ -32,6 +32,12 @@ pub struct TrackRenamer {
     stats: Statistics,
     tracks: Vec<Track>,
     tracks_count: usize,
+    failed_files: Vec<String>,
+    processed_files: HashMap<String, Vec<Track>>,
+    genres: HashMap<String, usize>,
+    tag_versions: HashMap<String, usize>,
+    checked_genre_mappings: HashSet<String>,
+    current_path: PathBuf,
 }
 
 impl TrackRenamer {
@@ -91,6 +97,7 @@ impl TrackRenamer {
             anyhow::bail!("no supported audio files found");
         }
 
+        // Assign track numbers for nice print output
         track_list.par_iter_mut().enumerate().for_each(|(number, track)| {
             track.number = number + 1;
         });
@@ -157,20 +164,15 @@ impl TrackRenamer {
         let rename_file_header = format!("Rename file{dryrun_header}:").cyan().bold();
         let max_index_width: usize = self.tracks_count.to_string().chars().count();
 
-        let mut failed_files: Vec<String> = Vec::new();
-        let mut processed_files: HashMap<String, Vec<Track>> = HashMap::new();
-        let mut genres: HashMap<String, usize> = HashMap::new();
-        let mut tag_versions: HashMap<String, usize> = HashMap::new();
-        let mut checked_genre_mappings: HashSet<String> = HashSet::new();
-        let mut current_path = self.root.clone();
+        self.current_path = self.root.clone();
 
         let start_instant = Instant::now();
         for track in &mut self.tracks {
             if !self.config.sort_files {
                 // Print current directory when iterating in directory order
-                if current_path != track.root {
-                    current_path.clone_from(&track.root);
-                    let path = utils::path_to_string_relative(&current_path);
+                if self.current_path != track.root {
+                    self.current_path.clone_from(&track.root);
+                    let path = utils::path_to_string_relative(&self.current_path);
                     if !path.is_empty() {
                         println!("\n{}", path.magenta());
                     }
@@ -178,7 +180,7 @@ impl TrackRenamer {
             }
 
             // If this is a DJ MUSIC subdirectory, check genre mappings
-            if !checked_genre_mappings.contains(track.directory.as_str())
+            if !self.checked_genre_mappings.contains(track.directory.as_str())
                 && utils::contains_subpath(&track.root, DJ_MUSIC_PATH.as_path())
             {
                 if !GENRE_MAPPINGS.contains_key(track.directory.as_str()) {
@@ -192,7 +194,7 @@ impl TrackRenamer {
                         format!("WARNING: Empty genre mapping for: {}", track.directory).yellow()
                     );
                 }
-                checked_genre_mappings.insert(track.directory.clone());
+                self.checked_genre_mappings.insert(track.directory.clone());
             }
 
             Self::print_running_index(self.tracks_count, track.number, max_index_width);
@@ -247,13 +249,13 @@ impl TrackRenamer {
                 let Some(mut file_tags) = tag_result else {
                     self.stats.failed += 1;
                     if self.config.log_failures {
-                        failed_files.push(utils::path_to_string(&track.path));
+                        self.failed_files.push(utils::path_to_string(&track.path));
                     }
                     continue;
                 };
 
                 // Store id3 tag version count
-                *tag_versions.entry(file_tags.version().to_string()).or_insert(0) += 1;
+                *self.tag_versions.entry(file_tags.version().to_string()).or_insert(0) += 1;
 
                 if self.config.debug && self.config.verbose {
                     utils::print_tag_data(&file_tags);
@@ -294,11 +296,11 @@ impl TrackRenamer {
 
                 // Store unique genre count
                 if !track.tags.formatted_genre.is_empty() {
-                    *genres.entry(track.tags.formatted_genre.clone()).or_insert(0) += 1;
+                    *self.genres.entry(track.tags.formatted_genre.clone()).or_insert(0) += 1;
                 }
 
                 if self.config.tags_only {
-                    processed_files
+                    self.processed_files
                         .entry(formatted_name.to_lowercase())
                         .or_default()
                         .push(track.clone());
@@ -369,12 +371,12 @@ impl TrackRenamer {
                         self.stats.duplicates += 1;
                     }
                 }
-                processed_files
+                self.processed_files
                     .entry(formatted_name.to_lowercase())
                     .or_default()
                     .push(track.clone());
             } else {
-                processed_files
+                self.processed_files
                     .entry(track.name.to_string())
                     .or_default()
                     .push(track.clone());
@@ -387,21 +389,22 @@ impl TrackRenamer {
             println!("Time taken: {:.3}s", duration.as_secs_f64());
         }
         println!("{}", self.stats);
-        if self.config.log_failures && !failed_files.is_empty() {
-            utils::write_log_for_failed_files(&failed_files)?;
+        if self.config.log_failures && !self.failed_files.is_empty() {
+            utils::write_log_for_failed_files(&self.failed_files)?;
         }
         if self.config.verbose {
-            Self::print_tag_version_counts(tag_versions);
+            self.print_tag_version_counts();
         }
         if self.config.genre_statistics {
-            println!("{}", format!("Genres ({}):", genres.len()).cyan().bold());
-            let mut genre_list: Vec<(String, usize)> =
-                genres.into_iter().sorted_unstable_by(|a, b| b.1.cmp(&a.1)).collect();
+            println!("{}", format!("Genres ({}):", self.genres.len()).cyan().bold());
+            let mut genre_list: Vec<(&String, &usize)> =
+                self.genres.iter().sorted_unstable_by(|a, b| b.1.cmp(a.1)).collect();
+
             Self::print_top_genres(&genre_list);
             genre_list.sort_unstable();
             Self::write_genre_log(&genre_list)?;
         }
-        Self::print_all_duplicates(processed_files);
+        self.print_all_duplicates();
 
         Ok(())
     }
@@ -453,12 +456,19 @@ impl TrackRenamer {
     }
 
     /// Print all paths for duplicate tracks with the same name.
-    fn print_all_duplicates(processed_files: HashMap<String, Vec<Track>>) {
+    fn print_all_duplicates(&self) {
         // Get all tracks with multiple paths for the same name.
         // Convert to vector so names can be sorted.
-        let mut duplicate_tracks: Vec<(String, Vec<Track>)> = processed_files
-            .into_iter()
-            .filter(|(_, tracks)| tracks.len() > 1)
+        let mut duplicate_tracks: Vec<(&String, Vec<&Track>)> = self
+            .processed_files
+            .iter()
+            .filter_map(|(name, tracks)| {
+                if tracks.len() > 1 {
+                    Some((name, tracks.iter().collect()))
+                } else {
+                    None
+                }
+            })
             .collect();
 
         if duplicate_tracks.is_empty() {
@@ -471,7 +481,7 @@ impl TrackRenamer {
             "{}",
             format!("Duplicates ({}):", duplicate_tracks.len()).magenta().bold()
         );
-        for (_, tracks) in &duplicate_tracks {
+        for (_, tracks) in duplicate_tracks {
             println!("{}", tracks[0].name.yellow());
             for track in tracks {
                 println!("  {track}");
@@ -479,23 +489,23 @@ impl TrackRenamer {
         }
     }
 
-    fn print_tag_version_counts(tag_versions: HashMap<String, usize>) {
+    fn print_tag_version_counts(&self) {
         println!("{}", "Tag versions:".cyan().bold());
-        let total: usize = tag_versions.values().sum();
-        tag_versions
-            .into_iter()
-            .sorted_unstable_by(|a, b| b.1.cmp(&a.1))
+        let total: usize = self.tag_versions.values().sum();
+        self.tag_versions
+            .iter()
+            .sorted_unstable_by(|a, b| b.1.cmp(a.1))
             .map(|(tag, count)| {
                 format!(
                     "{tag}   {count:>width$} ({:.1}%)",
-                    count as f64 / total as f64 * 100.0,
+                    *count as f64 / total as f64 * 100.0,
                     width = total.to_string().chars().count()
                 )
             })
             .for_each(|string| println!("{string}"));
     }
 
-    fn print_top_genres(genre_list: &[(String, usize)]) {
+    fn print_top_genres(genre_list: &[(&String, &usize)]) {
         let max_length = genre_list
             .iter()
             .take(20)
@@ -509,7 +519,7 @@ impl TrackRenamer {
     }
 
     /// Write a txt log file for failed tracks to current working directory.
-    fn write_genre_log(genres: &[(String, usize)]) -> Result<()> {
+    fn write_genre_log(genres: &[(&String, &usize)]) -> Result<()> {
         let filepath = Path::new("genres.txt");
         let mut file = File::create(filepath).context("Failed to create output file")?;
         for (genre, _) in genres {
