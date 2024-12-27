@@ -70,10 +70,6 @@ impl TrackRenamer {
         self.gather_files()?;
         self.process_tracks()?;
         self.update_state();
-        if self.config.debug {
-            println!("State: {}", self.state.len());
-        }
-        state::save_state(&self.state)?;
         Ok(())
     }
 
@@ -429,13 +425,31 @@ impl TrackRenamer {
             .for_each(|(format, count)| println!("{format}: {count}"));
     }
 
-    fn update_state(&self) {
-        self.tracks
+    /// Insert processed tracks and save state.
+    fn update_state(&self) -> anyhow::Result<()> {
+        let (added_count, updated_count) = self
+            .tracks
             .par_iter()
             .filter(|track| !track.not_processed)
-            .for_each(|track| {
-                self.state.insert(track.path.clone(), track.metadata.clone());
-            });
+            .map(|track| {
+                if self.state.insert(track.path.clone(), track.metadata.clone()).is_some() {
+                    (0, 1)
+                } else {
+                    (1, 0)
+                }
+            })
+            .reduce(|| (0, 0), |acc, item| (acc.0 + item.0, acc.1 + item.1));
+
+        if self.config.debug || self.config.verbose {
+            println!(
+                "State updated: {} new tracks added, {} existing tracks updated. Total: {}",
+                added_count,
+                updated_count,
+                self.state.len()
+            );
+        }
+
+        self.state.save()
     }
 
     /// Print all paths for duplicate tracks with the same name.
