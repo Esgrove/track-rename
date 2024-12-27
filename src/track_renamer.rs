@@ -68,7 +68,8 @@ impl TrackRenamer {
 
         self.gather_files()?;
         self.process_tracks()?;
-        self.update_state();
+        self.update_state()?;
+
         Ok(())
     }
 

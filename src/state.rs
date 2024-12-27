@@ -1,7 +1,7 @@
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::sync::LazyLock;
 
-use anyhow::{anyhow, Context};
 use dashmap::DashMap;
 use rayon::prelude::*;
 
@@ -14,7 +14,14 @@ const STATE_FILE_NAME: &str = "state.json";
 #[cfg(test)]
 const STATE_FILE_NAME: &str = "test_state.json";
 
-/// Maintain a map of processed tracks.
+static STATE_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
+    dirs::data_dir()
+        .expect("Failed to get data directory path")
+        .join(STATE_FILE_DIR)
+        .join(STATE_FILE_NAME)
+});
+
+/// Maintain a map of processed tracks between program runs.
 ///
 /// Enables skipping tracks that have already been processed with the same program version,
 /// in case they have not been modified since then.
@@ -37,10 +44,10 @@ impl State {
 
     /// Save the current state to a file.
     pub fn save(&self) -> anyhow::Result<()> {
-        let path = Self::state_path()?;
-        fs::create_dir_all(path.parent().expect("Failed to get state parent path"))?;
+        let parent_dir = Self::state_path().parent().expect("Failed to get state parent path");
+        fs::create_dir_all(parent_dir)?;
         let data = serde_json::to_string(&self.inner)?;
-        fs::write(path, data)?;
+        fs::write(Self::state_path(), data)?;
         Ok(())
     }
 
@@ -52,7 +59,6 @@ impl State {
         self.inner.insert(path, metadata)
     }
 
-    /// Get an entry in the state.
     #[must_use]
     pub fn get(&self, path: &PathBuf) -> Option<TrackMetadata> {
         self.inner.get(path).map(|entry| entry.clone())
@@ -68,37 +74,43 @@ impl State {
         self.inner.is_empty()
     }
 
-    #[must_use]
+    /// Remove outdated entries from state.
+    ///
+    /// Removes entries that do not exist on disk anymore or the version does not match current version.
+    /// Returns the number of elements removed.
+    #[allow(clippy::must_use_candidate)]
     pub fn clean(&self) -> usize {
         let start_count = self.inner.len();
 
-        self.inner.retain(|key, value| value.version == VERSION || key.exists());
+        self.inner.retain(|key, value| key.exists() && value.version == VERSION);
 
         let end_count = self.inner.len();
 
         start_count.saturating_sub(end_count)
     }
 
-    /// Private helper to get the path to the state file.
-    fn state_path() -> anyhow::Result<PathBuf> {
-        let data_dir = dirs::data_dir().context("Failed to get data directory path")?;
-        Ok(data_dir.join(STATE_FILE_DIR).join(STATE_FILE_NAME))
-    }
-
     fn read_state() -> DashMap<PathBuf, TrackMetadata> {
-        Self::get_state_path()
-            .and_then(|file_path| fs::read_to_string(file_path).map_err(anyhow::Error::from))
-            .and_then(|contents| serde_json::from_str(&contents).map_err(anyhow::Error::from))
-            .unwrap_or_default()
+        Self::get_state_path().map_or_else(DashMap::new, |file_path| match fs::read_to_string(file_path) {
+            Ok(contents) => match serde_json::from_str(&contents) {
+                Ok(map) => map,
+                Err(err) => {
+                    eprintln!("Failed to parse state file: {err}");
+                    DashMap::new()
+                }
+            },
+            Err(err) => {
+                eprintln!("Failed to read state file: {err}");
+                DashMap::new()
+            }
+        })
     }
 
-    fn get_state_path() -> anyhow::Result<PathBuf> {
-        let state_path = Self::state_path()?;
-        if state_path.exists() {
-            Ok(state_path)
-        } else {
-            Err(anyhow!("State file not found: {}", state_path.display()))
-        }
+    fn get_state_path() -> Option<&'static Path> {
+        Self::state_path().exists().then(Self::state_path)
+    }
+
+    fn state_path() -> &'static Path {
+        STATE_PATH.as_path()
     }
 }
 
@@ -122,7 +134,7 @@ mod tests {
     #[test]
     fn test_state() {
         // Everything is tested in a single test case since otherwise tests can fail as they all touch the same file.
-        let state_path = setup_test_env();
+        setup_test_env();
 
         let test_path: PathBuf = ["tests", "files", "basic_tags", "Basic Tags - Song - 16-44.aif"]
             .iter()
