@@ -399,12 +399,12 @@ mod tests {
 
     #[test]
     fn test_track_with_special_characters() {
-        let path = Path::new("/Users/akseli/Räntä & Benjamin Mùll - Sippa På En Tequila (Ö Remix).mp3");
+        let path = Path::new("/Users/esgrove/Räntä & Benjamin Mùll - Sippa På En Tequila (Ö Remix).mp3");
         let track = Track::new(path).expect("Failed to create track");
         assert_eq!(track.name, "Räntä & Benjamin Mùll - Sippa På En Tequila (Ö Remix)");
         assert_eq!(track.extension, "mp3");
         assert_eq!(track.format, FileFormat::Mp3);
-        assert_eq!(track.root, PathBuf::from("/Users/akseli"));
+        assert_eq!(track.root, PathBuf::from("/Users/esgrove"));
         assert_eq!(
             track.filename(),
             "Räntä & Benjamin Mùll - Sippa På En Tequila (Ö Remix).mp3"
@@ -412,9 +412,9 @@ mod tests {
         assert_eq!(
             track.path.to_str().expect("Failed to convert track path to string"),
             if cfg!(target_os = "windows") {
-                "/Users/akseli\\Räntä & Benjamin Mùll - Sippa På En Tequila (Ö Remix).mp3"
+                "/Users/esgrove\\Räntä & Benjamin Mùll - Sippa På En Tequila (Ö Remix).mp3"
             } else {
-                "/Users/akseli/Räntä & Benjamin Mùll - Sippa På En Tequila (Ö Remix).mp3"
+                "/Users/esgrove/Räntä & Benjamin Mùll - Sippa På En Tequila (Ö Remix).mp3"
             }
         );
     }
