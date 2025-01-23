@@ -22,7 +22,7 @@ dashmap = { version = "6.1.0", features = ["serde", "rayon", "inline"] }
 difference = "2.0.0"
 dirs = "6.0.0"
 dunce = "1.0.5"
-id3 = "1.16.0"
+id3 = "1.16.1"
 itertools = "0.14.0"
 rand = "0.8.5"
 rayon = "1.10.0"
