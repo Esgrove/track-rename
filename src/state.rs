@@ -91,13 +91,10 @@ impl State {
 
     fn read_state() -> DashMap<PathBuf, TrackMetadata> {
         Self::get_state_path().map_or_else(DashMap::new, |file_path| match fs::read_to_string(file_path) {
-            Ok(contents) => match serde_json::from_str(&contents) {
-                Ok(map) => map,
-                Err(err) => {
-                    eprintln!("Failed to parse state file: {err}");
-                    DashMap::new()
-                }
-            },
+            Ok(contents) => serde_json::from_str(&contents).unwrap_or_else(|err| {
+                eprintln!("Failed to parse state file: {err}");
+                DashMap::new()
+            }),
             Err(err) => {
                 eprintln!("Failed to read state file: {err}");
                 DashMap::new()

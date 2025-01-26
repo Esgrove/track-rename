@@ -292,6 +292,7 @@ pub static GENRE_MAPPINGS: LazyLock<HashMap<&'static str, &'static str>> = LazyL
         ("POP 1", "Pop"),
         ("POP 80s SYNTH", "Pop 80s"),
         ("POP 80s", "Pop 80s"),
+        ("POP 90s EURODANCE", "House Eurodance"),
         ("POP 90s", "Pop 90s"),
         ("POP CHILL 1", "Pop"),
         ("POP CHILL HITAAT", "Pop"),
@@ -327,7 +328,7 @@ static REGEX_SUBSTITUTES: LazyLock<[(Regex, &'static str); 5]> = LazyLock::new(|
         // Replace various opening bracket types with "("
         (Regex::new(r"[\[{]+").unwrap(), "("),
         // Replace various closing bracket types with ")"
-        (Regex::new(r"[\]}]+").unwrap(), ")"),
+        (Regex::new(r"[]}]+").unwrap(), ")"),
         // Collapse multiple consecutive opening parentheses into one
         (Regex::new(r"\(\s*\){2,}").unwrap(), "("),
         // Collapse multiple consecutive closing parentheses into one

@@ -429,7 +429,7 @@ impl TrackRenamer {
     }
 
     /// Insert processed tracks and save state.
-    fn update_state(&self) -> anyhow::Result<()> {
+    fn update_state(&self) -> Result<()> {
         let (added_count, updated_count) = self
             .tracks
             .par_iter()
