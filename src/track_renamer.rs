@@ -571,7 +571,8 @@ mod tests {
     use std::path::PathBuf;
     use std::sync::LazyLock;
 
-    use rand::{distributions::Alphanumeric, Rng};
+    use rand::distr::Alphanumeric;
+    use rand::Rng;
 
     static NO_TAGS_DIR: LazyLock<PathBuf> = LazyLock::new(|| ["tests", "files", "no_tags"].iter().collect());
     static BASIC_TAGS_DIR: LazyLock<PathBuf> = LazyLock::new(|| ["tests", "files", "basic_tags"].iter().collect());
@@ -661,7 +662,7 @@ mod tests {
     fn temp_test_file(path: &Path) -> Option<PathBuf> {
         let file_stem = path.file_stem()?.to_owned();
         let extension = path.extension()?.to_owned();
-        let random_string: String = rand::thread_rng()
+        let random_string: String = rand::rng()
             .sample_iter(&Alphanumeric)
             .take(10)
             .map(char::from)
