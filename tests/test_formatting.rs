@@ -495,6 +495,12 @@ static REMOVE_BPM_AND_KEY_TEST_DATA: &[FormattingTestData] = &[
         title: "People (Trayze Remix) (113 4b)",
         correct_title: "People (Trayze Remix)",
     },
+    FormattingTestData {
+        artist: "Donna Summer",
+        correct_artist: "Donna Summer",
+        title: "Hot Stuff [The Reflex Revision] 120bpm",
+        correct_title: "Hot Stuff (The Reflex Revision)",
+    },
 ];
 
 static WHITESPACE_TEST_DATA: &[FormattingTestData] = &[
