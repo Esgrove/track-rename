@@ -501,6 +501,18 @@ static REMOVE_BPM_AND_KEY_TEST_DATA: &[FormattingTestData] = &[
         title: "Hot Stuff [The Reflex Revision] 120bpm",
         correct_title: "Hot Stuff (The Reflex Revision)",
     },
+    FormattingTestData {
+        artist: "The Jam",
+        correct_artist: "The Jam",
+        title: "Town Called Malice [The Reflex Revision] 102bpm ",
+        correct_title: "Town Called Malice (The Reflex Revision)",
+    },
+    FormattingTestData {
+        artist: "The Jam",
+        correct_artist: "The Jam",
+        title: "Town Called Malice [The Reflex Revision] 2023 Update 102bpm ",
+        correct_title: "Town Called Malice (The Reflex Revision) (2023 Update)",
+    },
 ];
 
 static WHITESPACE_TEST_DATA: &[FormattingTestData] = &[

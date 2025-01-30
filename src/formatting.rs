@@ -188,10 +188,10 @@ static RE_BPM_WITH_KEY: LazyLock<Regex> =
 
 // Matches BPM followed by two or three letters (likely denoting key or mode),
 // formatted within parentheses at the end of a string
-static RE_BPM_WITH_TEXT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\b\d{2,3}bpm\)$").unwrap());
+static RE_BPM_WITH_TEXT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\b\d{2,3}bpm\b").unwrap());
 static RE_BPM_WITH_TEXT_PARENTHESES: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\s\(\d{2,3}\s?[a-zA-Z]{2,3}\)$").unwrap());
-static RE_BPM_WITH_EXTRA_TEXT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\b\d{2,3}\s?[a-zA-Z]{2,3}\)$").unwrap());
+static RE_BPM_WITH_EXTRA_TEXT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\b\d{2,3}\s?[a-zA-Z]{2,3}$").unwrap());
 
 // Matches any text within parentheses that contains a dash, separating it into two groups
 static RE_DASH_IN_PARENTHESES: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\((.*?) - (.*?)\)").unwrap());
