@@ -655,7 +655,7 @@ mod tests {
     fn not_hidden_file(path: &Path) -> bool {
         path.file_name()
             .and_then(|name| name.to_str())
-            .map_or(true, |s| !s.starts_with('.'))
+            .is_none_or(|s| !s.starts_with('.'))
     }
 
     /// Create a new temporary file with an added random string in the name
