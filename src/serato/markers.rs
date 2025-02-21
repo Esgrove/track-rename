@@ -2,8 +2,8 @@ use std::fmt::Display;
 use std::io::{Cursor, Read};
 use std::{fmt, io, str};
 
-use anyhow::{anyhow, Context, Result};
-use base64::{engine::general_purpose, Engine as _};
+use anyhow::{Context, Result, anyhow};
+use base64::{Engine as _, engine::general_purpose};
 use byteorder::{BigEndian, ReadBytesExt};
 use colored::{ColoredString, Colorize};
 

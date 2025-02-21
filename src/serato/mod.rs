@@ -7,7 +7,7 @@ mod overview;
 use std::fmt::Display;
 use std::str::FromStr;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use colored::Colorize;
 use id3::Tag;
 
@@ -93,11 +93,7 @@ impl SeratoData {
                 }
             }
         }
-        if parsed_any {
-            Some(serato_data)
-        } else {
-            None
-        }
+        if parsed_any { Some(serato_data) } else { None }
     }
 }
 

@@ -1,5 +1,3 @@
-use std::env;
-
 use anyhow::Result;
 use clap::Parser;
 use colored::Colorize;
@@ -23,7 +21,6 @@ pub struct Args {
 }
 
 fn main() -> Result<()> {
-    env::set_var("RUST_BACKTRACE", "1");
     let args = Args::parse();
 
     let absolute_input_path = utils::resolve_input_path(&args.path)?;

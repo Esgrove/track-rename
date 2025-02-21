@@ -1,8 +1,8 @@
 use std::fmt;
 use std::fmt::Display;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use colored::Colorize;
 use crossterm::terminal;
 

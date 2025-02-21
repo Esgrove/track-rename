@@ -1,7 +1,7 @@
 use std::fmt::Display;
 use std::str::FromStr;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 
 /// Supported audio file formats.
 // TODO: add support for "flac" and "m4a"

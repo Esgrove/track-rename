@@ -1,8 +1,8 @@
 use std::fmt;
 use std::fmt::Display;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 
 #[derive(Debug, Clone, Default)]
 pub struct AnalysisVersion {

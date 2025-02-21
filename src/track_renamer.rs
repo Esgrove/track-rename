@@ -12,15 +12,15 @@ use id3::{Tag, TagLike};
 use itertools::Itertools;
 use rayon::prelude::*;
 
+use crate::RenamerArgs;
 use crate::config::Config;
 use crate::statistics::Statistics;
-use crate::RenamerArgs;
 
 use track_rename::file_format::FileFormat;
 use track_rename::genre::GENRE_MAPPINGS;
 use track_rename::serato;
 use track_rename::state::State;
-use track_rename::track::{Track, DJ_MUSIC_PATH};
+use track_rename::track::{DJ_MUSIC_PATH, Track};
 use track_rename::utils;
 
 /// Audio track tag and filename formatting.
@@ -571,8 +571,8 @@ mod tests {
     use std::path::PathBuf;
     use std::sync::LazyLock;
 
-    use rand::distr::Alphanumeric;
     use rand::Rng;
+    use rand::distr::Alphanumeric;
 
     static NO_TAGS_DIR: LazyLock<PathBuf> = LazyLock::new(|| ["tests", "files", "no_tags"].iter().collect());
     static BASIC_TAGS_DIR: LazyLock<PathBuf> = LazyLock::new(|| ["tests", "files", "basic_tags"].iter().collect());

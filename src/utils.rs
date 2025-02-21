@@ -29,11 +29,7 @@ pub fn collect_tracks(root: &Path) -> Vec<Track> {
 /// Format bool value as a coloured string.
 #[must_use]
 pub fn colorize_bool(value: bool) -> ColoredString {
-    if value {
-        "true".green()
-    } else {
-        "false".yellow()
-    }
+    if value { "true".green() } else { "false".yellow() }
 }
 
 /// Create a coloured diff for the given strings.
@@ -51,7 +47,7 @@ pub fn color_diff(old: &str, new: &str, stacked: bool) -> (String, String) {
         //   Constantine - Onde As Satisfaction (Club Tool).aif
         //   Darude - Onde As Satisfaction (Constantine Club Tool).aif
         for diff in &changeset.diffs {
-            if let Difference::Same(ref x) = diff {
+            if let Difference::Same(x) = diff {
                 if x.chars().all(char::is_whitespace) || x.chars().count() < 2 {
                     continue;
                 }

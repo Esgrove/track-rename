@@ -1,7 +1,7 @@
 [package]
 name = "track-rename"
-version = "1.27.0"
-edition = "2021"
+version = "1.27.1"
+edition = "2024"
 authors = ["Esgrove <esgrove@outlook.com>"]
 description = "CLI tool for formatting and renaming audio tracks"
 license = "MIT"
@@ -10,6 +10,7 @@ repository = "https://github.com/Esgrove/track-rename"
 keywords = ["cli", "music", "audio", "rename"]
 categories = ["command-line-utilities"]
 default-run = "trackrename"
+rust-version = "1.85"
 
 [dependencies]
 anyhow = { version = "1.0.96", features = ["backtrace"] }
