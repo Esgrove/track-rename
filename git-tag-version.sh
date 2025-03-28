@@ -24,7 +24,8 @@ OPTIONS: All options are optional
         Push tags to remote.
 
     --verbose
-        Display commands being executed."
+        Display commands being executed.
+"
 
 DRYRUN=false
 PUSH=false
@@ -32,8 +33,7 @@ FORCE=false
 while [ $# -gt 0 ]; do
     case "$1" in
         -h | --help)
-            print "$USAGE"
-            exit 1
+            print_usage_and_exit
             ;;
         -d | --dryrun)
             DRYRUN=true
