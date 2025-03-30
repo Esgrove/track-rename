@@ -513,6 +513,12 @@ static REMOVE_BPM_AND_KEY_TEST_DATA: &[FormattingTestData] = &[
         title: "Town Called Malice [The Reflex Revision] 2023 Update 102bpm ",
         correct_title: "Town Called Malice (The Reflex Revision) (2023 Update)",
     },
+    FormattingTestData {
+        artist: "Ivy Lab",
+        correct_artist: "Ivy Lab",
+        title: "650 CC",
+        correct_title: "650 CC",
+    },
 ];
 
 static WHITESPACE_TEST_DATA: &[FormattingTestData] = &[

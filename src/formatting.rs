@@ -178,20 +178,26 @@ static RE_FEAT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\bfeat\. .*?( -|
 static RE_TEXT_AFTER_PARENTHESES: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\)\s(.*?)\s\(").unwrap());
 
 // Matches BPM information inside parentheses at the end of a string,
-// allowing for decimal BPMs or BPM with a trailing "a"
+// with BPM in range 50–180 and an optional decimal.
 static RE_BPM_IN_PARENTHESES: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r" \((\d{2,3}(\.\d)?|\d{2,3} \d{1,2}a)\)$").unwrap());
+    LazyLock::new(|| Regex::new(r" \(((?:5[0-9]|6[0-9]|7[0-9]|8[0-9]|9[0-9]|1[0-7][0-9]|180)(?:\.\d)?)\)$").unwrap());
 
 // Matches BPM with an optional key, formatted within parentheses at the end of a string
-static RE_BPM_WITH_KEY: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"\s\(\d{1,3}(?:\s\d{1,2})?\s?[a-zA-Z]\)$").unwrap());
+static RE_BPM_WITH_KEY: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\s\(((?:5[0-9]|6[0-9]|7[0-9]|8[0-9]|9[0-9]|1[0-6][0-9]|17[0-9])(?:\s(1[0-2]|[1-9]))?[a-zA-Z])\)$")
+        .unwrap()
+});
 
 // Matches BPM followed by two or three letters (likely denoting key or mode),
 // formatted within parentheses at the end of a string
-static RE_BPM_WITH_TEXT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\b\d{2,3}bpm\b").unwrap());
-static RE_BPM_WITH_TEXT_PARENTHESES: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"\s\(\d{2,3}\s?[a-zA-Z]{2,3}\)$").unwrap());
-static RE_BPM_WITH_EXTRA_TEXT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\b\d{2,3}\s?[a-zA-Z]{2,3}$").unwrap());
+static RE_BPM_WITH_TEXT: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\b(?:5[0-9]|6[0-9]|7[0-9]|8[0-9]|9[0-9]|1[0-6][0-9]|17[0-9])bpm\b").unwrap());
+static RE_BPM_WITH_TEXT_PARENTHESES: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\s\((?:5[0-9]|6[0-9]|7[0-9]|8[0-9]|9[0-9]|1[0-6][0-9]|17[0-9])\s?[a-zA-Z]{2,3}\)$").unwrap()
+});
+static RE_BPM_WITH_EXTRA_TEXT: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\b(?:5[0-9]|6[0-9]|7[0-9]|8[0-9]|9[0-9]|1[0-6][0-9]|17[0-9])\s?[a-zA-Z]{2,3}$").unwrap()
+});
 
 // Matches any text within parentheses that contains a dash, separating it into two groups
 static RE_DASH_IN_PARENTHESES: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\((.*?) - (.*?)\)").unwrap());
@@ -535,8 +541,10 @@ fn remove_bpm_in_parentheses_from_end(text: &mut String) {
             break;
         }
     }
-
-    *text = result;
+    result = result.trim().to_string();
+    if !result.is_empty() {
+        *text = result;
+    }
 }
 
 fn wrap_text_after_parentheses(text: &mut String) {
@@ -668,6 +676,36 @@ mod tests {
             let mut input_string = input.to_string();
             wrap_text_after_parentheses(&mut input_string);
             assert_eq!(input_string, expected);
+        }
+    }
+}
+
+#[cfg(test)]
+mod bpm_tests {
+    use super::RE_BPM_WITH_KEY;
+
+    #[test]
+    fn valid_bpm_with_key() {
+        let valid_cases = [" (50 1A)", "Song (99 12b)", "Something (120 5A)", "Test (100 11a)"];
+        for case in valid_cases {
+            assert!(RE_BPM_WITH_KEY.is_match(case), "Should match: {case}");
+        }
+    }
+
+    #[test]
+    fn invalid_bpm_with_key() {
+        let invalid_cases = [
+            " (1 A)",      // below 50
+            " (200 A)",    // above 179
+            " (100 5 A)",  // extra number
+            " (abc G)",    // not a number
+            " (60)",       // missing letters
+            " (60  )",     // only number and space
+            " (100 ABCD)", // too many letters
+            " (100)",      // no key
+        ];
+        for case in invalid_cases {
+            assert!(!RE_BPM_WITH_KEY.is_match(case), "Should not match: {case}");
         }
     }
 }
