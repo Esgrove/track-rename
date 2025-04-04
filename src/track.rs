@@ -129,7 +129,7 @@ impl Track {
                         )
                         .bright_yellow()
                     );
-                };
+                }
             }
         }
         None

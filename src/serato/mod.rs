@@ -5,6 +5,7 @@ mod markers;
 mod overview;
 
 use std::fmt::Display;
+use std::fmt::Write as _;
 use std::str::FromStr;
 
 use anyhow::{Result, anyhow};
@@ -209,11 +210,11 @@ fn hexdump(buffer: &[u8], ascii: bool) -> String {
         let line = &buffer[offset..end];
 
         // Format the offset
-        result.push_str(&format!("    {offset:08x}  "));
+        let _ = write!(result, "    {offset:08x}  ");
 
         // Format the hexadecimal values
         for byte in line {
-            result.push_str(&format!("{byte:02x} "));
+            let _ = write!(result, "{byte:02x} ");
         }
         // Add padding if the line is less than 16 bytes
         if line.len() < 16 {
