@@ -30,12 +30,6 @@ repos:
       - id: ruff-format
         name: python ruff format
 
-  - repo: https://github.com/pycqa/isort
-    rev: "6.0.1"
-    hooks:
-      - id: isort
-        name: python isort
-
   - repo: local
     hooks:
       - id: rust-fmt
