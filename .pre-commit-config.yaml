@@ -22,7 +22,7 @@ repos:
       - id: trailing-whitespace
 
   - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: "v0.8.1"
+    rev: "v0.11.7"
     hooks:
       - id: ruff
         name: python ruff lint
@@ -31,7 +31,7 @@ repos:
         name: python ruff format
 
   - repo: https://github.com/pycqa/isort
-    rev: "5.13.2"
+    rev: "6.0.1"
     hooks:
       - id: isort
         name: python isort
