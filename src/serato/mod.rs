@@ -191,8 +191,8 @@ fn format_position_timestamp(position_in_ms: u32) -> String {
     format!("{minutes:02}:{seconds:02}.{tenths}")
 }
 
-#[allow(dead_code)]
 /// Debug function to print bytes as hexadecimal
+#[allow(dead_code)]
 fn format_as_byte_string(data: &[u8]) -> String {
     data.iter()
         .map(|byte| format!("{byte:02x}"))
