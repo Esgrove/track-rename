@@ -1,4 +1,5 @@
 use std::fmt::Display;
+use std::io::BufRead;
 use std::io::{Cursor, Read};
 use std::{fmt, io, str};
 
@@ -63,30 +64,26 @@ pub struct Loop {
 
 impl Markers {
     pub fn parse(data: &[u8]) -> Result<Vec<Self>> {
-        let b64data_start = 2;
-        let b64data_end = data
+        let b64_data_start = 2;
+        let b64_data_end = data
             .iter()
             .position(|&x| x == b'\x00')
             .ok_or_else(|| anyhow!("No null terminator found"))?;
-        let b64data = &data[b64data_start..b64data_end];
+        let b64data = &data[b64_data_start..b64_data_end];
 
         // Remove linefeed characters
-        let b64data: Vec<u8> = b64data.iter().copied().filter(|&x| x != b'\n').collect();
+        let mut b64_data_cleaned = Vec::with_capacity(b64data.len());
+        b64_data_cleaned.extend(b64data.iter().filter(|&&b| b != b'\n'));
 
-        // Calculate padding
-        let padding = match b64data.len() % 4 {
-            1 => b"A==".to_vec(),
-            2 => b"==".to_vec(),
-            3 => b"=".to_vec(),
-            _ => Vec::new(),
-        };
-
-        // Concatenate base64 data with padding
-        let mut b64data_padded = b64data;
-        b64data_padded.extend_from_slice(&padding);
+        match b64_data_cleaned.len() % 4 {
+            1 => b64_data_cleaned.extend_from_slice(b"A=="),
+            2 => b64_data_cleaned.extend_from_slice(b"=="),
+            3 => b64_data_cleaned.extend_from_slice(b"="),
+            _ => {}
+        }
 
         let payload = general_purpose::STANDARD
-            .decode(&b64data_padded)
+            .decode(&b64_data_cleaned)
             .context("Failed to decode base64 data")?;
 
         let mut cursor = Cursor::new(payload);
@@ -99,7 +96,7 @@ impl Markers {
         while let Ok(entry_name_bytes) = read_bytes(&mut cursor) {
             let entry_name = String::from_utf8(entry_name_bytes)?;
             let name = entry_name.trim();
-            if name.is_empty() {
+            if name.is_empty() && cursor.position() as usize == cursor.get_ref().len() {
                 break;
             }
             let entry_len = cursor.read_u32::<BigEndian>()?;
@@ -308,15 +305,12 @@ impl Display for Loop {
     }
 }
 
-/// Read bytes until null byte
-fn read_bytes<R: Read>(reader: &mut R) -> io::Result<Vec<u8>> {
-    let mut bytes = Vec::new();
-    for byte in reader.bytes() {
-        let byte = byte?;
-        if byte == b'\x00' {
-            break;
-        }
-        bytes.push(byte);
+/// Read bytes until null byte (0x00), excluding the terminator.
+fn read_bytes<R: BufRead>(reader: &mut R) -> io::Result<Vec<u8>> {
+    let mut buffer = Vec::new();
+    reader.read_until(b'\x00', &mut buffer)?;
+    if buffer.last() == Some(&b'\x00') {
+        buffer.pop();
     }
-    Ok(bytes)
+    Ok(buffer)
 }
