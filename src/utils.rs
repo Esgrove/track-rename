@@ -229,6 +229,7 @@ pub fn normalize_str(input: &str) -> String {
 }
 
 /// Convert a path to string with invalid Unicode handling.
+#[allow(clippy::unnecessary_debug_formatting)]
 pub fn path_to_string(path: &Path) -> String {
     path.to_str().map_or_else(
         || {

@@ -77,8 +77,10 @@ impl Overview {
                 .map(|i| {
                     (0..height)
                         .map(|y| {
-                            ((u16::from(averaged_blocks[2 * i][y]) + u16::from(averaged_blocks[2 * i + 1][y])) / 2)
-                                as u8
+                            u16::midpoint(
+                                u16::from(averaged_blocks[2 * i][y]),
+                                u16::from(averaged_blocks[2 * i + 1][y]),
+                            ) as u8
                         })
                         .collect()
                 })
