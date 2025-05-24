@@ -1080,7 +1080,7 @@ checksum = "bfb942dfe1d8e29a7ee7fcbde5bd2b9a25fb89aa70caea2eba3bee836ff41076"
 
 [[package]]
 name = "track-rename"
-version = "1.28.1"
+version = "1.28.2"
 dependencies = [
  "anyhow",
  "base64",
