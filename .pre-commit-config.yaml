@@ -1,7 +1,7 @@
 exclude: ^(.idea|.vscode)/
 fail_fast: false
 default_language_version:
-  python: python3.11
+  python: python3.13
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -22,11 +22,11 @@ repos:
       - id: trailing-whitespace
 
   - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: "v0.11.7"
+    rev: "v0.12.1"
     hooks:
       - id: ruff
         name: python ruff lint
-        args: [--fix, --exit-non-zero-on-fix]
+        args: [ --fix, --exit-non-zero-on-fix ]
       - id: ruff-format
         name: python ruff format
 
@@ -37,7 +37,7 @@ repos:
         description: Run cargo fmt on files included in the commit.
         entry: cargo fmt
         pass_filenames: false
-        types: [file, rust]
+        types: [ file, rust ]
         language: system
 
       - id: rust-clippy
@@ -45,5 +45,5 @@ repos:
         description: Run cargo clippy on files included in the commit.
         entry: cargo clippy
         pass_filenames: false
-        types: [file, rust]
+        types: [ file, rust ]
         language: system

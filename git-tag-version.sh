@@ -28,6 +28,7 @@ while [ $# -gt 0 ]; do
             ;;
         -d | --dryrun)
             DRYRUN=true
+            export DRYRUN
             ;;
         -f | --force)
             FORCE=true
