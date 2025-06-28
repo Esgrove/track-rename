@@ -121,7 +121,6 @@ impl Overview {
         // Iterate in reverse so first values of the vertical block go to the bottom of the waveform
         for y in (0..height).rev() {
             for block in &normalized_blocks {
-                #[allow(clippy::match_on_vec_items)]
                 let (symbol, color) = match block[y] {
                     value if value <= 0.05 => ('░', "blue"),
                     value if value <= 0.25 => ('░', "cyan"),
