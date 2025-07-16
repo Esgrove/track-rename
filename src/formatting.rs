@@ -212,14 +212,16 @@ static RE_WWW: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)^www\.").unwr
 
 static RE_CHARS_AND_DOTS: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)^([a-z]\.)+([a-z])?$").unwrap());
 
+const FILE_EXTENSIONS: [&str; 5] = [".mp3", ".flac", ".aif", ".aiff", ".m4a"];
+
 /// Return formatted artist and title string.
 pub fn format_tags_for_artist_and_title(artist: &str, title: &str) -> (String, String) {
     let mut formatted_artist = artist.to_string();
     let mut formatted_title = title.to_string();
 
     // Remove an extra file extension from the end
-    let extensions = [".mp3", ".flac", ".aif", ".aiff", ".m4a"];
-    for ext in &extensions {
+
+    for ext in &FILE_EXTENSIONS {
         if formatted_artist.to_lowercase().ends_with(ext) {
             formatted_artist = formatted_artist[0..formatted_artist.len() - ext.len()].to_string();
         }
