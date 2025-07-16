@@ -269,6 +269,7 @@ impl TrackRenamer {
                         "\n{}",
                         format!("Formatted name should never be empty: {}", track.path.display()).red()
                     );
+                    continue;
                 }
                 let tags_changed = track.tags.changed();
                 if tags_changed || self.config.write_all_tags {
