@@ -2,8 +2,12 @@ mod config;
 mod statistics;
 mod track_renamer;
 
+use std::path::PathBuf;
+
 use anyhow::Result;
+use clap::CommandFactory;
 use clap::Parser;
+use clap_complete::Shell;
 
 use crate::track_renamer::TrackRenamer;
 
@@ -11,7 +15,8 @@ use crate::track_renamer::TrackRenamer;
 #[command(author, about, version)]
 pub struct RenamerArgs {
     /// Optional input directory or audio file to format
-    path: Option<String>,
+    #[arg(value_hint = clap::ValueHint::AnyPath)]
+    path: Option<PathBuf>,
 
     /// Resave tags for all files with ID3v2.4
     #[arg(short, long)]
@@ -61,6 +66,10 @@ pub struct RenamerArgs {
     #[arg(short, long)]
     tags_only: bool,
 
+    /// Generate shell completion
+    #[arg(short = 'l', long)]
+    completion: Option<Shell>,
+
     /// Verbose output
     #[arg(short, long)]
     verbose: bool,
@@ -68,7 +77,11 @@ pub struct RenamerArgs {
 
 fn main() -> Result<()> {
     let args = RenamerArgs::parse();
-    let absolute_input_path = track_rename::utils::resolve_input_path(&args.path)?;
-
-    TrackRenamer::new(absolute_input_path, &args).run()
+    let absolute_input_path = track_rename::utils::resolve_input_path(args.path.as_deref())?;
+    args.completion.as_ref().map_or_else(
+        || TrackRenamer::new(absolute_input_path, &args).run(),
+        |shell| {
+            track_rename::utils::generate_shell_completion(*shell, RenamerArgs::command(), true, env!("CARGO_BIN_NAME"))
+        },
+    )
 }

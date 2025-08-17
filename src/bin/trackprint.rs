@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use anyhow::Result;
 use clap::Parser;
 use colored::Colorize;
@@ -9,7 +11,8 @@ use track_rename::{serato, utils};
 #[command(author, version, about = "Print tag data", name = "trackprint")]
 pub struct Args {
     /// Optional input directory or audio file
-    path: Option<String>,
+    #[arg(value_hint = clap::ValueHint::AnyPath)]
+    path: Option<PathBuf>,
 
     /// Enable debug prints
     #[arg(short, long)]
@@ -23,7 +26,7 @@ pub struct Args {
 fn main() -> Result<()> {
     let args = Args::parse();
 
-    let absolute_input_path = utils::resolve_input_path(&args.path)?;
+    let absolute_input_path = utils::resolve_input_path(args.path.as_deref())?;
 
     let tracks = if absolute_input_path.is_file() {
         Track::try_from_path(&absolute_input_path).map_or_else(Vec::new, |track| vec![track])
@@ -38,6 +41,8 @@ fn main() -> Result<()> {
             if tags.frames().count() > 0 {
                 utils::print_tag_data(&tags);
                 serato::print_serato_tags(&tags);
+            } else {
+                println!("{}", "Empty tags".yellow());
             }
         }
     }
