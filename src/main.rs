@@ -67,7 +67,7 @@ pub struct RenamerArgs {
     tags_only: bool,
 
     /// Generate shell completion
-    #[arg(short = 'l', long)]
+    #[arg(short = 'e', long, value_name = "SHELL")]
     completion: Option<Shell>,
 
     /// Verbose output
