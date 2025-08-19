@@ -5,8 +5,8 @@ use regex::Regex;
 
 use crate::formatting;
 
-// Map folder names to default genre for that folder.
-// If the genre tag is empty, can apply default genre tag.
+/// Map folder names to default genre for that folder.
+/// If the genre tag is empty, can apply default genre tag.
 pub static GENRE_MAPPINGS: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(|| {
     HashMap::from([
         ("DISCO 1", "Disco"),
@@ -400,7 +400,7 @@ static REGEX_MAPPINGS: LazyLock<[(Regex, &'static str); 42]> = LazyLock::new(|| 
 
 static RE_HOUSE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[^,]* House$").unwrap());
 
-/// Format genre string.
+/// Format genre tag.
 pub fn format_genre(genre: &str) -> String {
     let mut formatted_genre = genre.trim().to_string();
     if formatted_genre.chars().count() < 3 {
