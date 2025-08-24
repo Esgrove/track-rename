@@ -16,7 +16,7 @@ rust-version = "1.87"
 anyhow = { version = "1.0.99", features = ["backtrace"] }
 base64 = "0.22.1"
 byteorder = "1.5.0"
-clap = { version = "4.5.47", features = ["derive"] }
+clap = { version = "4.5.48", features = ["derive"] }
 clap_complete = "4.5.58"
 colored = "3.0.0"
 crossterm = "0.29.0"
@@ -58,7 +58,7 @@ unsafe_code = "forbid"
 
 [lints.clippy]
 # https://rust-lang.github.io/rust-clippy/master/index.html
-unwrap_used = "allow"
+unwrap_used = "deny"
 enum_glob_use = "deny"
 nursery = { level = "warn", priority = -1 }
 pedantic = { level = "warn", priority = -1 }
