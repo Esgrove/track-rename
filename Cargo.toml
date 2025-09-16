@@ -17,7 +17,7 @@ anyhow = { version = "1.0.99", features = ["backtrace"] }
 base64 = "0.22.1"
 byteorder = "1.5.0"
 clap = { version = "4.5.47", features = ["derive"] }
-clap_complete = "4.5.57"
+clap_complete = "4.5.58"
 colored = "3.0.0"
 crossterm = "0.29.0"
 dashmap = { version = "6.1.0", features = ["serde", "rayon", "inline"] }
