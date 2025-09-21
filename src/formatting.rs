@@ -52,166 +52,312 @@ static TITLE_SUBSTITUTES: [(&str, &str); 18] = [
 static REGEX_SUBSTITUTES: LazyLock<[(Regex, &'static str); 12]> = LazyLock::new(|| {
     [
         // Replace various opening bracket types with "("
-        (Regex::new(r"[\[{]+").unwrap(), "("),
+        (
+            Regex::new(r"[\[{]+").expect("Failed to compile opening brackets regex"),
+            "(",
+        ),
         // Replace various closing bracket types with ")"
-        (Regex::new(r"[]}]+").unwrap(), ")"),
+        (
+            Regex::new(r"[]}]+").expect("Failed to compile closing brackets regex"),
+            ")",
+        ),
         // Collapse multiple exclamation marks into one
-        (Regex::new(r"!{2,}").unwrap(), "!"),
+        (
+            Regex::new(r"!{2,}").expect("Failed to compile exclamation marks regex"),
+            "!",
+        ),
         // Collapse multiple periods into a single period
-        (Regex::new(r"\.{2,}").unwrap(), "."),
+        (Regex::new(r"\.{2,}").expect("Failed to compile periods regex"), "."),
         // Remove empty parentheses
-        (Regex::new(r"\(\s*?\)").unwrap(), ""),
+        (
+            Regex::new(r"\(\s*?\)").expect("Failed to compile empty parentheses regex"),
+            "",
+        ),
         // Ensure a space before an opening parenthesis
-        (Regex::new(r"(\S)\(").unwrap(), "$1 ("),
+        (
+            Regex::new(r"(\S)\(").expect("Failed to compile space before parenthesis regex"),
+            "$1 (",
+        ),
         // Ensure a space after a closing parenthesis
-        (Regex::new(r"\)([A-Za-z0-9])").unwrap(), ") $1"),
+        (
+            Regex::new(r"\)([A-Za-z0-9])").expect("Failed to compile space after parenthesis regex"),
+            ") $1",
+        ),
         // Collapse multiple consecutive opening parentheses into one
-        (Regex::new(r"\(\s*\){2,}").unwrap(), "("),
+        (
+            Regex::new(r"\(\s*\){2,}").expect("Failed to compile consecutive opening parentheses regex"),
+            "(",
+        ),
         // Collapse multiple consecutive closing parentheses into one
-        (Regex::new(r"\)\s*\){2,}").unwrap(), ")"),
+        (
+            Regex::new(r"\)\s*\){2,}").expect("Failed to compile consecutive closing parentheses regex"),
+            ")",
+        ),
         // Transforms underscore-wrapped text into single-quoted text
-        (Regex::new(r"\s_(.*?)_\s").unwrap(), " '$1' "),
+        (
+            Regex::new(r"\s_(.*?)_\s").expect("Failed to compile underscore text regex"),
+            " '$1' ",
+        ),
         // Remove asterisks after a word boundary
-        (Regex::new(r"\s\*+\b").unwrap(), ""),
+        (Regex::new(r"\s\*+\b").expect("Failed to compile asterisks regex"), ""),
         // Collapses multiple spaces into a single space
-        (Regex::new(r"\s+").unwrap(), " "),
+        (
+            Regex::new(r"\s+").expect("Failed to compile multiple spaces regex"),
+            " ",
+        ),
     ]
 });
 static REGEX_NAME_SUBSTITUTES: LazyLock<[(Regex, &'static str); 43]> = LazyLock::new(|| {
     [
         // Matches "12 Inch" or "12Inch" with optional space, case-insensitive
-        (Regex::new(r"(?i)\b12\s?inch\b").unwrap(), "12''"),
+        (
+            Regex::new(r"(?i)\b12\s?inch\b").expect("Failed to compile 12 inch regex"),
+            "12''",
+        ),
         // Matches "12in" or "12 in" with optional space, case-insensitive
-        (Regex::new(r"(?i)\b12\s?in\b").unwrap(), "12''"),
+        (
+            Regex::new(r"(?i)\b12\s?in\b").expect("Failed to compile 12 in regex"),
+            "12''",
+        ),
         // Matches "7 Inch" or "7Inch" with optional space, case-insensitive
-        (Regex::new(r"(?i)\b7\s?inch\b").unwrap(), "7''"),
+        (
+            Regex::new(r"(?i)\b7\s?inch\b").expect("Failed to compile 7 inch regex"),
+            "7''",
+        ),
         // Matches "7in" or "7 in" with optional space, case-insensitive
-        (Regex::new(r"(?i)\b7\s?in\b").unwrap(), "7''"),
+        (
+            Regex::new(r"(?i)\b7\s?in\b").expect("Failed to compile 7 in regex"),
+            "7''",
+        ),
         // Standardize various forms of "featuring" to "feat."
-        (Regex::new(r"(?i)\b(?:feat\.?|ft\.?|featuring)\b").unwrap(), "feat."),
-        (Regex::new(r"(?i)\(\s*(?:feat\.?|ft\.?|featuring)\b").unwrap(), "(feat."),
+        (
+            Regex::new(r"(?i)\b(?:feat\.?|ft\.?|featuring)\b").expect("Failed to compile featuring regex"),
+            "feat.",
+        ),
+        (
+            Regex::new(r"(?i)\(\s*(?:feat\.?|ft\.?|featuring)\b")
+                .expect("Failed to compile parentheses featuring regex"),
+            "(feat.",
+        ),
         // Standardize "w/" to "feat."
-        (Regex::new(r"(?i)\sW/").unwrap(), " feat. "),
+        (Regex::new(r"(?i)\sW/").expect("Failed to compile w/ regex"), " feat. "),
         // Standardize Remix
-        (Regex::new(r"(?i)\(Rmx\)").unwrap(), "(Remix)"),
-        (Regex::new(r"(?i)\bRmx\b").unwrap(), "Remix"),
+        (
+            Regex::new(r"(?i)\(Rmx\)").expect("Failed to compile rmx parentheses regex"),
+            "(Remix)",
+        ),
+        (
+            Regex::new(r"(?i)\bRmx\b").expect("Failed to compile rmx regex"),
+            "Remix",
+        ),
         // Remove trademark symbols
-        (Regex::new(r"[®™]").unwrap(), ""),
+        (Regex::new(r"[®™]").expect("Failed to compile trademark regex"), ""),
         // Correct name for "Missy Elliott"
         (
-            Regex::new(r"(?i)\bMissy Elliot\b|\bMissy Elliot$").unwrap(),
+            Regex::new(r"(?i)\bMissy Elliot\b|\bMissy Elliot$").expect("Failed to compile Missy Elliott regex"),
             "Missy Elliott",
         ),
         // Correct name for "Gang Starr"
-        (Regex::new(r"(?i)\bGangstarr\b|\bGangstarr$").unwrap(), "Gang Starr"),
+        (
+            Regex::new(r"(?i)\bGangstarr\b|\bGangstarr$").expect("Failed to compile Gang Starr regex"),
+            "Gang Starr",
+        ),
         // Fix capitalization for SZA
-        (Regex::new(r"(?i)\bSza\b").unwrap(), "SZA"),
+        (Regex::new(r"(?i)\bSza\b").expect("Failed to compile SZA regex"), "SZA"),
         // Fix spelling for "You're"
-        (Regex::new(r"(?i)\bYoure\b").unwrap(), "You're"),
+        (
+            Regex::new(r"(?i)\bYoure\b").expect("Failed to compile You're regex"),
+            "You're",
+        ),
         // Fix spelling for "I'm"
-        (Regex::new(r"(?i)\bIm\b").unwrap(), "I'm"),
+        (Regex::new(r"(?i)\bIm\b").expect("Failed to compile I'm regex"), "I'm"),
         // Fix spelling for "You've"
-        (Regex::new(r"(?i)\bYouve\b").unwrap(), "You've"),
+        (
+            Regex::new(r"(?i)\bYouve\b").expect("Failed to compile You've regex"),
+            "You've",
+        ),
         // Fix spelling for "Can't"
-        (Regex::new(r"(?i)\bCant\b").unwrap(), "Can't"),
+        (
+            Regex::new(r"(?i)\bCant\b").expect("Failed to compile Can't regex"),
+            "Can't",
+        ),
         // Fix spelling for "Won't"
-        (Regex::new(r"(?i)\bWont\b").unwrap(), "Won't"),
+        (
+            Regex::new(r"(?i)\bWont\b").expect("Failed to compile Won't regex"),
+            "Won't",
+        ),
         // Fix spelling for "Don't"
-        (Regex::new(r"(?i)\bDont\b").unwrap(), "Don't"),
+        (
+            Regex::new(r"(?i)\bDont\b").expect("Failed to compile Don't regex"),
+            "Don't",
+        ),
         // Fix capitalization for "DJ"
-        (Regex::new(r"(?i)\bDj\b").unwrap(), "DJ"),
+        (Regex::new(r"(?i)\bDj\b").expect("Failed to compile DJ regex"), "DJ"),
         // Ensure one whitespace after "feat."
-        (Regex::new(r"\bfeat\.([A-Za-z0-9])").unwrap(), "feat. $1"),
-        (Regex::new(r"(?i)\b(dirty!)\b").unwrap(), "(Dirty)"),
+        (
+            Regex::new(r"\bfeat\.([A-Za-z0-9])").expect("Failed to compile feat space regex"),
+            "feat. $1",
+        ),
+        (
+            Regex::new(r"(?i)\b(dirty!)\b").expect("Failed to compile dirty regex"),
+            "(Dirty)",
+        ),
         // Removes "Original Mix" with case-insensitivity
-        (Regex::new(r"(?i)\(Original Mix\)").unwrap(), ""),
+        (
+            Regex::new(r"(?i)\(Original Mix\)").expect("Failed to compile original mix regex"),
+            "",
+        ),
         // Removes "DJCity" with case-insensitivity
-        (Regex::new(r"(?i)\bdjcity\b").unwrap(), ""),
-        (Regex::new(r"(?i)\bintro - clean\b").unwrap(), "Clean Intro"),
-        (Regex::new(r"(?i)\bintro - dirty\b").unwrap(), "Dirty Intro"),
-        (Regex::new(r"(?i)\(clean - intro\)").unwrap(), "(Clean Intro)"),
-        (Regex::new(r"(?i)\(dirty - intro\)").unwrap(), "(Dirty Intro)"),
-        (Regex::new(r"(?i)\bIntro[:\s/+\-&]*outro\b").unwrap(), "Intro"),
-        (Regex::new(r"(?i)\bAca In\b").unwrap(), "Acapella Intro"),
         (
-            Regex::new(r"(?i)\bAca intro[:\s/+\-&]*aca outro\b").unwrap(),
+            Regex::new(r"(?i)\bdjcity\b").expect("Failed to compile djcity regex"),
+            "",
+        ),
+        (
+            Regex::new(r"(?i)\bintro - clean\b").expect("Failed to compile intro clean regex"),
+            "Clean Intro",
+        ),
+        (
+            Regex::new(r"(?i)\bintro - dirty\b").expect("Failed to compile intro dirty regex"),
+            "Dirty Intro",
+        ),
+        (
+            Regex::new(r"(?i)\(clean - intro\)").expect("Failed to compile clean intro parentheses regex"),
+            "(Clean Intro)",
+        ),
+        (
+            Regex::new(r"(?i)\(dirty - intro\)").expect("Failed to compile dirty intro parentheses regex"),
+            "(Dirty Intro)",
+        ),
+        (
+            Regex::new(r"(?i)\bIntro[:\s/+\-&]*outro\b").expect("Failed to compile intro outro regex"),
+            "Intro",
+        ),
+        (
+            Regex::new(r"(?i)\bAca In\b").expect("Failed to compile aca in regex"),
+            "Acapella Intro",
+        ),
+        (
+            Regex::new(r"(?i)\bAca intro[:\s/+\-&]*aca outro\b").expect("Failed to compile aca intro outro regex"),
             "Acapella In-Out",
         ),
         (
-            Regex::new(r"(?i)\bAcapella Intro[:\s/+\-&]*aca out\b").unwrap(),
-            "Acapella In-Out",
-        ),
-        (Regex::new(r"(?i)\bAca Out\b").unwrap(), "Acapella Out"),
-        (Regex::new(r"(?i)\bAcap-In\b").unwrap(), "Acapella Intro"),
-        (Regex::new(r"(?i)\bAcap - diy\b").unwrap(), "Acapella DIY"),
-        (Regex::new(r"(?i)\bAcap in[:\s/+\-&]*out\b").unwrap(), "Acapella In-Out"),
-        (Regex::new(r"(?i)\bAcap\b").unwrap(), "Acapella"),
-        (
-            Regex::new(r"(?i)\bAcapella[\s/+\-]*In[:\s/+\-&]*Out\b").unwrap(),
-            "Acapella In-Out",
-        ),
-        (Regex::new(r"(?i)\bAcapella[\s/+\-]*In\b").unwrap(), "Acapella Intro"),
-        (
-            Regex::new(r"(?i)\bAcapella Intro[:\s/+\-&]*Out\b").unwrap(),
+            Regex::new(r"(?i)\bAcapella Intro[:\s/+\-&]*aca out\b")
+                .expect("Failed to compile acapella intro out regex"),
             "Acapella In-Out",
         ),
         (
-            Regex::new(r"(?i)\bAcapella-Intro[:\s/+\-&]*Out\b").unwrap(),
+            Regex::new(r"(?i)\bAca Out\b").expect("Failed to compile aca out regex"),
+            "Acapella Out",
+        ),
+        (
+            Regex::new(r"(?i)\bAcap-In\b").expect("Failed to compile acap in regex"),
+            "Acapella Intro",
+        ),
+        (
+            Regex::new(r"(?i)\bAcap - diy\b").expect("Failed to compile acap diy regex"),
+            "Acapella DIY",
+        ),
+        (
+            Regex::new(r"(?i)\bAcap in[:\s/+\-&]*out\b").expect("Failed to compile acap in out regex"),
             "Acapella In-Out",
         ),
-        (Regex::new(r"(?i)\bAcapella-Intro\b").unwrap(), "Acapella Intro"),
-        (Regex::new(r"(?i)\bAcapella-out\b").unwrap(), "Acapella Out"),
+        (
+            Regex::new(r"(?i)\bAcap\b").expect("Failed to compile acap regex"),
+            "Acapella",
+        ),
+        (
+            Regex::new(r"(?i)\bAcapella[\s/+\-]*In[:\s/+\-&]*Out\b").expect("Failed to compile acapella in out regex"),
+            "Acapella In-Out",
+        ),
+        (
+            Regex::new(r"(?i)\bAcapella[\s/+\-]*In\b").expect("Failed to compile acapella in regex"),
+            "Acapella Intro",
+        ),
+        (
+            Regex::new(r"(?i)\bAcapella Intro[:\s/+\-&]*Out\b").expect("Failed to compile acapella intro out regex"),
+            "Acapella In-Out",
+        ),
+        (
+            Regex::new(r"(?i)\bAcapella-Intro[:\s/+\-&]*Out\b")
+                .expect("Failed to compile acapella intro out dash regex"),
+            "Acapella In-Out",
+        ),
+        (
+            Regex::new(r"(?i)\bAcapella-Intro\b").expect("Failed to compile acapella intro dash regex"),
+            "Acapella Intro",
+        ),
+        (
+            Regex::new(r"(?i)\bAcapella-out\b").expect("Failed to compile acapella out dash regex"),
+            "Acapella Out",
+        ),
     ]
 });
 static REGEX_FILENAME_SUBSTITUTES: LazyLock<[(Regex, &str); 2]> = LazyLock::new(|| {
     [
         // Replace characters that are not allowed in filenames with a hyphen
-        (Regex::new(r"([\\/<>|:*?])").unwrap(), "-"),
+        (
+            Regex::new(r"([\\/<>|:*?])").expect("Failed to compile filename chars regex"),
+            "-",
+        ),
         // Collapse multiple spaces into a single space
-        (Regex::new(r"\s+").unwrap(), " "),
+        (
+            Regex::new(r"\s+").expect("Failed to compile filename spaces regex"),
+            " ",
+        ),
     ]
 });
 // Matches "feat." followed by any text until a dash, parenthesis, or end of string
-static RE_FEAT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\bfeat\. .*?( -|\(|\)|$)").unwrap());
+static RE_FEAT: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\bfeat\. .*?( -|\(|\)|$)").expect("Failed to compile feat regex"));
 
 // Matches text after a closing parenthesis until the next opening parenthesis
-static RE_TEXT_AFTER_PARENTHESES: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\)\s(.*?)\s\(").unwrap());
+static RE_TEXT_AFTER_PARENTHESES: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\)\s(.*?)\s\(").expect("Failed to compile text after parentheses regex"));
 
 // Matches BPM information inside parentheses at the end of a string,
 // with BPM in range 50–180 and an optional decimal.
-static RE_BPM_IN_PARENTHESES: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r" \(((?:5[0-9]|6[0-9]|7[0-9]|8[0-9]|9[0-9]|1[0-7][0-9]|180)(?:\.\d)?)\)$").unwrap());
+static RE_BPM_IN_PARENTHESES: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r" \(((?:5[0-9]|6[0-9]|7[0-9]|8[0-9]|9[0-9]|1[0-7][0-9]|180)(?:\.\d)?)\)$")
+        .expect("Failed to compile BPM in parentheses regex")
+});
 
 // Matches BPM with an optional key, formatted within parentheses at the end of a string
 static RE_BPM_WITH_KEY: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"\s\(((?:5[0-9]|6[0-9]|7[0-9]|8[0-9]|9[0-9]|1[0-6][0-9]|17[0-9])(?:\s(1[0-2]|[1-9]))?[a-zA-Z])\)$")
-        .unwrap()
+        .expect("Failed to compile BPM with key regex")
 });
 
 // Matches BPM followed by two or three letters (likely denoting key or mode),
 // formatted within parentheses at the end of a string
-static RE_BPM_WITH_TEXT: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"\b(?:5[0-9]|6[0-9]|7[0-9]|8[0-9]|9[0-9]|1[0-6][0-9]|17[0-9])bpm\b").unwrap());
+static RE_BPM_WITH_TEXT: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\b(?:5[0-9]|6[0-9]|7[0-9]|8[0-9]|9[0-9]|1[0-6][0-9]|17[0-9])bpm\b")
+        .expect("Failed to compile BPM with text regex")
+});
 static RE_BPM_WITH_TEXT_PARENTHESES: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"\s\((?:5[0-9]|6[0-9]|7[0-9]|8[0-9]|9[0-9]|1[0-6][0-9]|17[0-9])\s?[a-zA-Z]{2,3}\)$").unwrap()
+    Regex::new(r"\s\((?:5[0-9]|6[0-9]|7[0-9]|8[0-9]|9[0-9]|1[0-6][0-9]|17[0-9])\s?[a-zA-Z]{2,3}\)$")
+        .expect("Failed to compile BPM with text parentheses regex")
 });
 static RE_BPM_WITH_EXTRA_TEXT: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"\b(?:5[0-9]|6[0-9]|7[0-9]|8[0-9]|9[0-9]|1[0-6][0-9]|17[0-9])\s?[a-zA-Z]{2,3}$").unwrap()
+    Regex::new(r"\b(?:5[0-9]|6[0-9]|7[0-9]|8[0-9]|9[0-9]|1[0-6][0-9]|17[0-9])\s?[a-zA-Z]{2,3}$")
+        .expect("Failed to compile BPM with extra text regex")
 });
 
 // Matches any text within parentheses that contains a dash, separating it into two groups
-static RE_DASH_IN_PARENTHESES: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\((.*?) - (.*?)\)").unwrap());
+static RE_DASH_IN_PARENTHESES: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\((.*?) - (.*?)\)").expect("Failed to compile dash in parentheses regex"));
 
 // Matches variations on "and" in feat artist names
-static RE_FEAT_AND: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i),?\s+and\s+").unwrap());
+static RE_FEAT_AND: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i),?\s+and\s+").expect("Failed to compile feat and regex"));
 
 // Collapse multiple spaces into a single space
-static RE_MULTIPLE_SPACES: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\s{2,}").unwrap());
+static RE_MULTIPLE_SPACES: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\s{2,}").expect("Failed to compile multiple spaces regex"));
 
-static RE_WWW: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)^www\.").unwrap());
+static RE_WWW: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)^www\.").expect("Failed to compile www regex"));
 
-static RE_CHARS_AND_DOTS: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)^([a-z]\.)+([a-z])?$").unwrap());
-
+static RE_CHARS_AND_DOTS: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)^([a-z]\.)+([a-z])?$").expect("Failed to compile chars and dots regex"));
 const FILE_EXTENSIONS: [&str; 5] = [".mp3", ".flac", ".aif", ".aiff", ".m4a"];
 
 /// Return formatted artist and title string.
@@ -487,7 +633,7 @@ fn fix_nested_parentheses(text: &mut String) {
                 // If the stack is not empty, pop an element from the stack
                 if stack.pop().is_some() {
                     // Add the closing parenthesis only if the stack is empty or the top element is not '('
-                    if stack.is_empty() || *stack.last().unwrap() != '(' {
+                    if stack.is_empty() || stack.last().is_none_or(|&c| c != '(') {
                         result.push(char);
                     }
                 }

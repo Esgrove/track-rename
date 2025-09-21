@@ -338,68 +338,206 @@ static COMMON_SUBSTITUTES: [(&str, &str); 7] = [
 static REGEX_SUBSTITUTES: LazyLock<[(Regex, &'static str); 5]> = LazyLock::new(|| {
     [
         // Replace various opening bracket types with "("
-        (Regex::new(r"[\[{]+").unwrap(), "("),
+        (
+            Regex::new(r"[\[{]+").expect("Failed to compile opening brackets regex"),
+            "(",
+        ),
         // Replace various closing bracket types with ")"
-        (Regex::new(r"[]}]+").unwrap(), ")"),
+        (
+            Regex::new(r"[]}]+").expect("Failed to compile closing brackets regex"),
+            ")",
+        ),
         // Collapse multiple consecutive opening parentheses into one
-        (Regex::new(r"\(\s*\){2,}").unwrap(), "("),
+        (
+            Regex::new(r"\(\s*\){2,}").expect("Failed to compile consecutive opening parentheses regex"),
+            "(",
+        ),
         // Collapse multiple consecutive closing parentheses into one
-        (Regex::new(r"\)\s*\){2,}").unwrap(), ")"),
+        (
+            Regex::new(r"\)\s*\){2,}").expect("Failed to compile consecutive closing parentheses regex"),
+            ")",
+        ),
         // Collapse multiple spaces into a single space
-        (Regex::new(r"\s{2,}").unwrap(), " "),
+        (
+            Regex::new(r"\s{2,}").expect("Failed to compile multiple spaces regex"),
+            " ",
+        ),
     ]
 });
 
 /// Map various genres to the correct version
 static REGEX_MAPPINGS: LazyLock<[(Regex, &'static str); 42]> = LazyLock::new(|| {
     [
-        (Regex::new(r"(?i)\br\s*[&'n]*\s*b\b").unwrap(), "R&B"),
-        (Regex::new(r"(?i)\bother\b").unwrap(), ""),
-        (Regex::new(r"(?i)\bAccapella\b").unwrap(), "Acapella"),
-        (Regex::new(r"(?i)\bHip Hop\b").unwrap(), "Hip-Hop"),
-        (Regex::new(r"(?i)\bHip / Hop\b").unwrap(), "Hip-Hop"),
-        (Regex::new(r"(?i)\bHip-Hop 90's\b").unwrap(), "Hip-Hop 90s"),
-        (Regex::new(r"(?i)\bHip-Hop 80's\b").unwrap(), "Hip-Hop 80s"),
-        (Regex::new(r"(?i)\bHip-Hop 90$").unwrap(), "Hip-Hop 90s"),
-        (Regex::new(r"(?i)\bHip-Hop 80$").unwrap(), "Hip-Hop 80s"),
-        (Regex::new(r"(?i)\b90's Hip-Hop\b").unwrap(), "Hip-Hop 90s"),
-        (Regex::new(r"(?i)\b80's Hip-Hop\b").unwrap(), "Hip-Hop 80s"),
-        (Regex::new(r"(?i)\bHip-Hop / Rap\b").unwrap(), "Hip-Hop"),
-        (Regex::new(r"(?i)\bRap & Hip-Hop\b").unwrap(), "Hip-Hop"),
-        (Regex::new(r"(?i)^Rap$").unwrap(), "Hip-Hop"),
-        (Regex::new(r"(?i)\bNu Disco / Disco\b").unwrap(), "Disco Nu"),
-        (Regex::new(r"(?i)\bSoul / Funk / Disco\b").unwrap(), "Funk"),
-        (Regex::new(r"(?i)\bFunk / Soul\b").unwrap(), "Soul"),
-        (Regex::new(r"(?i)\bSoul / Funk\b").unwrap(), "Soul"),
-        (Regex::new(r"(?i)\bAfro beats\b").unwrap(), "Afrobeats"),
-        (Regex::new(r"(?i)\bblend\b").unwrap(), "Mashup"),
-        (Regex::new(r"(?i)\bDrum 'n' Bass\b").unwrap(), "Drum & Bass"),
-        (Regex::new(r"(?i)\bD'n'B\b").unwrap(), "Drum & Bass"),
-        (Regex::new(r"(?i)\bD&B\b").unwrap(), "Drum & Bass"),
-        (Regex::new(r"(?i)\bDisco, Funk\b").unwrap(), "Disco"),
-        (Regex::new(r"(?i)\bDisco Funk\b").unwrap(), "Disco"),
-        (Regex::new(r"(?i)\bFunk / Boogie\b").unwrap(), "Funk Boogie"),
-        (Regex::new(r"(?i)\bHouse / Funk\b").unwrap(), "House"),
-        (Regex::new(r"(?i)\bHousemusic\b").unwrap(), "House"),
-        (Regex::new(r"(?i)^House, Deep House\b").unwrap(), "House Deep"),
-        (Regex::new(r"(?i)^West Coast$").unwrap(), "Hip-Hop West Coast"),
-        (Regex::new(r"(?i)^West Coast, Hip-Hop$").unwrap(), "Hip-Hop West Coast"),
-        (Regex::new(r"(?i)^Dance, Electro Pop$").unwrap(), "Dance"),
-        (Regex::new(r"(?i)^90s X Golden Era$").unwrap(), "Hip-Hop 90s"),
-        (Regex::new(r"(?i)\bB-more\b").unwrap(), "Baltimore Club"),
-        (Regex::new(r"(?i)\bBmore\b").unwrap(), "Baltimore Club"),
-        (Regex::new(r"(?i)\bBreaks, Funk\b").unwrap(), "Funk Breaks"),
-        (Regex::new(r"(?i)\bClassic House\b").unwrap(), "House Old School"),
-        (Regex::new(r"(?i)\bHouse Classic\b").unwrap(), "House Old School"),
-        (Regex::new(r"(?i)^Italo$").unwrap(), "Disco Italo"),
-        (Regex::new(r"(?i)\b70's\b").unwrap(), "70s"),
-        (Regex::new(r"(?i)\b80's\b").unwrap(), "80s"),
-        (Regex::new(r"(?i)\b90's\b").unwrap(), "90s"),
+        (
+            Regex::new(r"(?i)\br\s*[&'n]*\s*b\b").expect("Failed to compile R&B regex"),
+            "R&B",
+        ),
+        (Regex::new(r"(?i)\bother\b").expect("Failed to compile other regex"), ""),
+        (
+            Regex::new(r"(?i)\bAccapella\b").expect("Failed to compile Acapella regex"),
+            "Acapella",
+        ),
+        (
+            Regex::new(r"(?i)\bHip Hop\b").expect("Failed to compile Hip Hop regex"),
+            "Hip-Hop",
+        ),
+        (
+            Regex::new(r"(?i)\bHip / Hop\b").expect("Failed to compile Hip / Hop regex"),
+            "Hip-Hop",
+        ),
+        (
+            Regex::new(r"(?i)\bHip-Hop 90's\b").expect("Failed to compile Hip-Hop 90's regex"),
+            "Hip-Hop 90s",
+        ),
+        (
+            Regex::new(r"(?i)\bHip-Hop 80's\b").expect("Failed to compile Hip-Hop 80's regex"),
+            "Hip-Hop 80s",
+        ),
+        (
+            Regex::new(r"(?i)\bHip-Hop 90$").expect("Failed to compile Hip-Hop 90 regex"),
+            "Hip-Hop 90s",
+        ),
+        (
+            Regex::new(r"(?i)\bHip-Hop 80$").expect("Failed to compile Hip-Hop 80 regex"),
+            "Hip-Hop 80s",
+        ),
+        (
+            Regex::new(r"(?i)\b90's Hip-Hop\b").expect("Failed to compile 90's Hip-Hop regex"),
+            "Hip-Hop 90s",
+        ),
+        (
+            Regex::new(r"(?i)\b80's Hip-Hop\b").expect("Failed to compile 80's Hip-Hop regex"),
+            "Hip-Hop 80s",
+        ),
+        (
+            Regex::new(r"(?i)\bHip-Hop / Rap\b").expect("Failed to compile Hip-Hop / Rap regex"),
+            "Hip-Hop",
+        ),
+        (
+            Regex::new(r"(?i)\bRap & Hip-Hop\b").expect("Failed to compile Rap & Hip-Hop regex"),
+            "Hip-Hop",
+        ),
+        (
+            Regex::new(r"(?i)^Rap$").expect("Failed to compile Rap regex"),
+            "Hip-Hop",
+        ),
+        (
+            Regex::new(r"(?i)\bNu Disco / Disco\b").expect("Failed to compile Nu Disco / Disco regex"),
+            "Disco Nu",
+        ),
+        (
+            Regex::new(r"(?i)\bSoul / Funk / Disco\b").expect("Failed to compile Soul / Funk / Disco regex"),
+            "Funk",
+        ),
+        (
+            Regex::new(r"(?i)\bFunk / Soul\b").expect("Failed to compile Funk / Soul regex"),
+            "Soul",
+        ),
+        (
+            Regex::new(r"(?i)\bSoul / Funk\b").expect("Failed to compile Soul / Funk regex"),
+            "Soul",
+        ),
+        (
+            Regex::new(r"(?i)\bAfro beats\b").expect("Failed to compile Afro beats regex"),
+            "Afrobeats",
+        ),
+        (
+            Regex::new(r"(?i)\bblend\b").expect("Failed to compile blend regex"),
+            "Mashup",
+        ),
+        (
+            Regex::new(r"(?i)\bDrum 'n' Bass\b").expect("Failed to compile Drum 'n' Bass regex"),
+            "Drum & Bass",
+        ),
+        (
+            Regex::new(r"(?i)\bD'n'B\b").expect("Failed to compile D'n'B regex"),
+            "Drum & Bass",
+        ),
+        (
+            Regex::new(r"(?i)\bD&B\b").expect("Failed to compile D&B regex"),
+            "Drum & Bass",
+        ),
+        (
+            Regex::new(r"(?i)\bDisco, Funk\b").expect("Failed to compile Disco, Funk regex"),
+            "Disco",
+        ),
+        (
+            Regex::new(r"(?i)\bDisco Funk\b").expect("Failed to compile Disco Funk regex"),
+            "Disco",
+        ),
+        (
+            Regex::new(r"(?i)\bFunk / Boogie\b").expect("Failed to compile Funk / Boogie regex"),
+            "Funk Boogie",
+        ),
+        (
+            Regex::new(r"(?i)\bHouse / Funk\b").expect("Failed to compile House / Funk regex"),
+            "House",
+        ),
+        (
+            Regex::new(r"(?i)\bHousemusic\b").expect("Failed to compile Housemusic regex"),
+            "House",
+        ),
+        (
+            Regex::new(r"(?i)^House, Deep House\b").expect("Failed to compile House, Deep House regex"),
+            "House Deep",
+        ),
+        (
+            Regex::new(r"(?i)^West Coast$").expect("Failed to compile West Coast regex"),
+            "Hip-Hop West Coast",
+        ),
+        (
+            Regex::new(r"(?i)^West Coast, Hip-Hop$").expect("Failed to compile West Coast, Hip-Hop regex"),
+            "Hip-Hop West Coast",
+        ),
+        (
+            Regex::new(r"(?i)^Dance, Electro Pop$").expect("Failed to compile Dance, Electro Pop regex"),
+            "Dance",
+        ),
+        (
+            Regex::new(r"(?i)^90s X Golden Era$").expect("Failed to compile 90s X Golden Era regex"),
+            "Hip-Hop 90s",
+        ),
+        (
+            Regex::new(r"(?i)\bB-more\b").expect("Failed to compile B-more regex"),
+            "Baltimore Club",
+        ),
+        (
+            Regex::new(r"(?i)\bBmore\b").expect("Failed to compile Bmore regex"),
+            "Baltimore Club",
+        ),
+        (
+            Regex::new(r"(?i)\bBreaks, Funk\b").expect("Failed to compile Breaks, Funk regex"),
+            "Funk Breaks",
+        ),
+        (
+            Regex::new(r"(?i)\bClassic House\b").expect("Failed to compile Classic House regex"),
+            "House Old School",
+        ),
+        (
+            Regex::new(r"(?i)\bHouse Classic\b").expect("Failed to compile House Classic regex"),
+            "House Old School",
+        ),
+        (
+            Regex::new(r"(?i)^Italo$").expect("Failed to compile Italo regex"),
+            "Disco Italo",
+        ),
+        (
+            Regex::new(r"(?i)\b70's\b").expect("Failed to compile 70's regex"),
+            "70s",
+        ),
+        (
+            Regex::new(r"(?i)\b80's\b").expect("Failed to compile 80's regex"),
+            "80s",
+        ),
+        (
+            Regex::new(r"(?i)\b90's\b").expect("Failed to compile 90's regex"),
+            "90s",
+        ),
     ]
 });
 
-static RE_HOUSE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[^,]* House$").unwrap());
-
+static RE_HOUSE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^[^,]* House$").expect("Failed to compile house genre regex"));
 /// Format genre tag.
 pub fn format_genre(genre: &str) -> String {
     let mut formatted_genre = genre.trim().to_string();
