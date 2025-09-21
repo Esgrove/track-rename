@@ -47,7 +47,7 @@ impl Overview {
 
     /// Convert waveform overview to a minimized text representation for terminal display.
     fn draw_waveform(&self) -> Result<String> {
-        let (terminal_width, _) = terminal::size().map_err(|e| anyhow!("Failed to get terminal size: {}", e))?;
+        let (terminal_width, _) = terminal::size().map_err(|e| anyhow!("Failed to get terminal size: {e}"))?;
         let width = self.blocks.len();
 
         let mut waveform = String::new();

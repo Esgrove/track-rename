@@ -448,20 +448,20 @@ fn add_missing_opening_parentheses(text: &mut String) {
 }
 
 fn use_parenthesis_for_mix(title: &mut String) {
-    if title.contains(" - ") {
-        if let Some(mut index) = title.find(" - ") {
-            let new_title = title.replacen(" - ", " (", 1);
-            title.clear();
-            title.push_str(&new_title);
-            index += 2;
+    if title.contains(" - ")
+        && let Some(mut index) = title.find(" - ")
+    {
+        let new_title = title.replacen(" - ", " (", 1);
+        title.clear();
+        title.push_str(&new_title);
+        index += 2;
 
-            // Check for " (" after the replaced part
-            if let Some(insert_index) = title[index..].find(" (").map(|i| i + index) {
-                title.insert(insert_index, ')');
-            } else {
-                // Add a closing parenthesis at the end
-                title.push(')');
-            }
+        // Check for " (" after the replaced part
+        if let Some(insert_index) = title[index..].find(" (").map(|i| i + index) {
+            title.insert(insert_index, ')');
+        } else {
+            // Add a closing parenthesis at the end
+            title.push(')');
         }
     }
 }
@@ -475,10 +475,10 @@ fn fix_nested_parentheses(text: &mut String) {
         match char {
             '(' => {
                 // If the stack is not empty and the top element is also '(', add a closing ')' before the new '('
-                if let Some(&last_char) = stack.last() {
-                    if last_char == '(' {
-                        result.push_str(") ");
-                    }
+                if let Some(&last_char) = stack.last()
+                    && last_char == '('
+                {
+                    result.push_str(") ");
                 }
                 stack.push(char);
                 result.push(char);
@@ -513,11 +513,11 @@ fn fix_nested_parentheses(text: &mut String) {
 
 fn extract_feat_from_parentheses(artist: &mut String) {
     let start_pattern = "(feat. ";
-    if let Some(start) = artist.find(start_pattern) {
-        if let Some(end) = artist[start..].find(')') {
-            let feature_part = &artist[start..=(start + end)];
-            *artist = artist.replacen(feature_part, &feature_part[1..feature_part.len() - 1], 1);
-        }
+    if let Some(start) = artist.find(start_pattern)
+        && let Some(end) = artist[start..].find(')')
+    {
+        let feature_part = &artist[start..=(start + end)];
+        *artist = artist.replacen(feature_part, &feature_part[1..feature_part.len() - 1], 1);
     }
 }
 
@@ -566,11 +566,11 @@ fn wrap_text_after_parentheses(text: &mut String) {
         .replace_all(rest, |caps: &Captures| format!(") ({}) (", &caps[1]))
         .to_string();
 
-    if let Some(index) = result.rfind(')') {
-        if index < result.len() - 1 {
-            result.insert(index + 2, '(');
-            result.push(')');
-        }
+    if let Some(index) = result.rfind(')')
+        && index < result.len() - 1
+    {
+        result.insert(index + 2, '(');
+        result.push(')');
     }
 
     *text = format!("{start}{result}");

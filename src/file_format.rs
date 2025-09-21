@@ -19,7 +19,7 @@ impl FromStr for FileFormat {
         match s.to_lowercase().as_str() {
             "mp3" => Ok(Self::Mp3),
             "aif" | "aiff" => Ok(Self::Aif),
-            _ => Err(anyhow!("Unsupported file format: {}", s)),
+            _ => Err(anyhow!("Unsupported file format: {s}")),
         }
     }
 }

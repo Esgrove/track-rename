@@ -89,7 +89,7 @@ impl Markers {
         let mut cursor = Cursor::new(payload);
         let version = (cursor.read_u8()?, cursor.read_u8()?);
         if version != (0x01, 0x01) {
-            return Err(anyhow!("Invalid payload version: {:?}", version));
+            return Err(anyhow!("Invalid payload version: {version:?}"));
         }
 
         let mut entries = Vec::new();
@@ -114,7 +114,7 @@ impl Markers {
             "COLOR" => Ok(Self::Color(Color::load(data)?)),
             "CUE" => Ok(Self::Cue(Cue::load(data)?)),
             "LOOP" => Ok(Self::Loop(Loop::load(data)?)),
-            _ => Err(anyhow!("Unknown entry type: {}", entry_name)),
+            _ => Err(anyhow!("Unknown entry type: {entry_name}")),
         }
     }
 }

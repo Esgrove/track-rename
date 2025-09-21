@@ -52,45 +52,45 @@ impl SeratoData {
         let mut parsed_any = false;
 
         for frame in file_tags.frames() {
-            if let Some(object) = frame.content().encapsulated_object() {
-                if let Ok(tag) = SeratoTag::from_str(&object.description) {
-                    match tag {
-                        SeratoTag::Analysis => match AnalysisVersion::parse(&object.data) {
-                            Ok(data) => {
-                                serato_data.analysis = Some(data);
-                                parsed_any = true;
-                            }
-                            Err(error) => utils::print_error(&error.to_string()),
-                        },
-                        SeratoTag::Autotags => match AutoTags::parse(&object.data) {
-                            Ok(data) => {
-                                serato_data.autotags = Some(data);
-                                parsed_any = true;
-                            }
-                            Err(error) => utils::print_error(&error.to_string()),
-                        },
-                        SeratoTag::BeatGrid => match BeatGrid::parse(&object.data) {
-                            Ok(data) => {
-                                serato_data.beatgrid = Some(data);
-                                parsed_any = true;
-                            }
-                            Err(error) => utils::print_error(&error.to_string()),
-                        },
-                        SeratoTag::Markers => match Markers::parse(&object.data) {
-                            Ok(data) => {
-                                serato_data.markers = data;
-                                parsed_any = true;
-                            }
-                            Err(error) => utils::print_error(&error.to_string()),
-                        },
-                        SeratoTag::Overview => match Overview::parse(&object.data) {
-                            Ok(data) => {
-                                serato_data.overview = Some(data);
-                                parsed_any = true;
-                            }
-                            Err(error) => utils::print_error(&error.to_string()),
-                        },
-                    }
+            if let Some(object) = frame.content().encapsulated_object()
+                && let Ok(tag) = SeratoTag::from_str(&object.description)
+            {
+                match tag {
+                    SeratoTag::Analysis => match AnalysisVersion::parse(&object.data) {
+                        Ok(data) => {
+                            serato_data.analysis = Some(data);
+                            parsed_any = true;
+                        }
+                        Err(error) => utils::print_error(&error.to_string()),
+                    },
+                    SeratoTag::Autotags => match AutoTags::parse(&object.data) {
+                        Ok(data) => {
+                            serato_data.autotags = Some(data);
+                            parsed_any = true;
+                        }
+                        Err(error) => utils::print_error(&error.to_string()),
+                    },
+                    SeratoTag::BeatGrid => match BeatGrid::parse(&object.data) {
+                        Ok(data) => {
+                            serato_data.beatgrid = Some(data);
+                            parsed_any = true;
+                        }
+                        Err(error) => utils::print_error(&error.to_string()),
+                    },
+                    SeratoTag::Markers => match Markers::parse(&object.data) {
+                        Ok(data) => {
+                            serato_data.markers = data;
+                            parsed_any = true;
+                        }
+                        Err(error) => utils::print_error(&error.to_string()),
+                    },
+                    SeratoTag::Overview => match Overview::parse(&object.data) {
+                        Ok(data) => {
+                            serato_data.overview = Some(data);
+                            parsed_any = true;
+                        }
+                        Err(error) => utils::print_error(&error.to_string()),
+                    },
                 }
             }
         }
@@ -108,7 +108,7 @@ impl FromStr for SeratoTag {
             "Serato BeatGrid" => Ok(Self::BeatGrid),
             "Serato Markers2" => Ok(Self::Markers),
             "Serato Overview" => Ok(Self::Overview),
-            _ => Err(anyhow!("Unknown tag description: {}", s)),
+            _ => Err(anyhow!("Unknown tag description: {s}")),
         }
     }
 }

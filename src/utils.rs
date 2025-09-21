@@ -299,10 +299,8 @@ pub fn read_tags(track: &Track, verbose: bool) -> Option<Tag> {
         }) => Some(Tag::new()),
         Err(error) => {
             eprintln!("\n{}", format!("Failed to read tags for: {track}\n{error}").red());
-            if verbose {
-                if let Some(ref partial_tags) = error.partial_tag {
-                    print_tag_data(partial_tags);
-                }
+            if verbose && let Some(ref partial_tags) = error.partial_tag {
+                print_tag_data(partial_tags);
             }
             error.partial_tag
         }
