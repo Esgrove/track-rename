@@ -203,7 +203,7 @@ impl Track {
         Ok(Self {
             name,
             extension: self.format.to_string(),
-            directory: self.directory.to_string(),
+            directory: self.directory.clone(),
             format: self.format.clone(),
             root: self.root.clone(),
             path,
@@ -274,7 +274,7 @@ impl Track {
         let new_track = Self {
             name: self.name.clone(),
             extension: "aif".to_string(),
-            directory: self.directory.to_string(),
+            directory: self.directory.clone(),
             format: FileFormat::Aif,
             root: self.root.clone(),
             path: output_path,

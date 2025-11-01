@@ -675,7 +675,7 @@ fn remove_bpm_in_parentheses_from_end(text: &mut String) {
         return;
     }
 
-    let mut result = (*text).to_string();
+    let mut result = (*text).clone();
     let regexes = [
         &RE_BPM_IN_PARENTHESES,
         &RE_BPM_WITH_TEXT,

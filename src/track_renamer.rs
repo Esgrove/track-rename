@@ -378,7 +378,7 @@ impl TrackRenamer {
                     .push(track.clone());
             } else {
                 self.processed_files
-                    .entry(track.name.to_string())
+                    .entry(track.name.clone())
                     .or_default()
                     .push(track.clone());
             }
