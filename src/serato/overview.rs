@@ -122,11 +122,11 @@ impl Overview {
         for y in (0..height).rev() {
             for block in &normalized_blocks {
                 let (symbol, color) = match block[y] {
-                    value if value <= 0.05 => ('░', "blue"),
-                    value if value <= 0.25 => ('░', "cyan"),
-                    value if value <= 0.5 => ('▒', "green"),
-                    value if value <= 0.75 => ('▒', "yellow"),
-                    _ => ('█', "magenta"),
+                    value if value <= 0.06 => ('░', "blue"),
+                    value if value <= 0.20 => ('░', "cyan"),
+                    value if value <= 0.42 => ('▒', "green"),
+                    value if value <= 0.70 => ('▒', "yellow"),
+                    _ => ('█', "red"),
                 };
                 let formatted = symbol.to_string().color(color).to_string();
                 waveform.push_str(&formatted);
