@@ -572,7 +572,7 @@ mod tests {
     use std::path::PathBuf;
     use std::sync::LazyLock;
 
-    use rand::Rng;
+    use rand::RngExt;
     use rand::distr::Alphanumeric;
 
     static NO_TAGS_DIR: LazyLock<PathBuf> = LazyLock::new(|| ["tests", "files", "no_tags"].iter().collect());

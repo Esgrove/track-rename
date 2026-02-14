@@ -1,6 +1,6 @@
 [package]
 name = "track-rename"
-version = "1.30.3"
+version = "1.31.0"
 edition = "2024"
 authors = ["Esgrove <esgrove@outlook.com>"]
 description = "CLI tool for formatting and renaming audio tracks"
@@ -26,7 +26,7 @@ dirs = "6.0.0"
 dunce = "1.0.5"
 id3 = "1.16.4"
 itertools = "0.14.0"
-rand = "0.9.2"
+rand = "0.10.0"
 rayon = "1.11.0"
 regex = "1.12.3"
 serde = { version = "1.0.228", features = ["derive"] }
