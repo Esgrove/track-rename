@@ -16,7 +16,7 @@ rust-version = "1.89"
 anyhow = { version = "1.0.101", features = ["backtrace"] }
 base64 = "0.22.1"
 byteorder = "1.5.0"
-clap = { version = "4.5.57", features = ["derive"] }
+clap = { version = "4.5.58", features = ["derive"] }
 clap_complete = "4.5.66"
 colored = "3.1.1"
 crossterm = "0.29.0"
