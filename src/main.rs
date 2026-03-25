@@ -5,8 +5,7 @@ mod track_renamer;
 use std::path::PathBuf;
 
 use anyhow::Result;
-use clap::CommandFactory;
-use clap::Parser;
+use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::Shell;
 
 use crate::track_renamer::TrackRenamer;
@@ -14,6 +13,9 @@ use crate::track_renamer::TrackRenamer;
 #[derive(Parser)]
 #[command(author, about, version)]
 pub struct RenamerArgs {
+    #[command(subcommand)]
+    command: Option<RenamerCommand>,
+
     /// Optional input directory or audio file to format
     #[arg(value_hint = clap::ValueHint::AnyPath)]
     path: Option<PathBuf>,
@@ -66,22 +68,47 @@ pub struct RenamerArgs {
     #[arg(short, long)]
     tags_only: bool,
 
-    /// Generate shell completion
-    #[arg(short = 'e', long, value_name = "SHELL")]
-    completion: Option<Shell>,
-
     /// Verbose output
     #[arg(short, long)]
     verbose: bool,
 }
 
+/// Subcommands for trackrename.
+#[derive(Subcommand)]
+enum RenamerCommand {
+    /// Generate shell completion script
+    #[command(name = "completion")]
+    Completion {
+        /// Shell to generate completion for
+        #[arg(value_enum)]
+        shell: Shell,
+
+        /// Install completion script to the shell's completion directory
+        #[arg(short = 'I', long)]
+        install: bool,
+
+        /// Print verbose output
+        #[arg(short, long)]
+        verbose: bool,
+    },
+}
+
 fn main() -> Result<()> {
     let args = RenamerArgs::parse();
+    if let Some(RenamerCommand::Completion {
+        shell,
+        install,
+        verbose,
+    }) = &args.command
+    {
+        return track_rename::utils::generate_shell_completion(
+            *shell,
+            RenamerArgs::command(),
+            *install,
+            *verbose,
+            env!("CARGO_BIN_NAME"),
+        );
+    }
     let absolute_input_path = track_rename::utils::resolve_input_path(args.path.as_deref())?;
-    args.completion.as_ref().map_or_else(
-        || TrackRenamer::new(absolute_input_path, &args).run(),
-        |shell| {
-            track_rename::utils::generate_shell_completion(*shell, RenamerArgs::command(), true, env!("CARGO_BIN_NAME"))
-        },
-    )
+    TrackRenamer::new(absolute_input_path, &args).run()
 }

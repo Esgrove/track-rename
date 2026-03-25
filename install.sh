@@ -23,3 +23,6 @@ for executable in $(get_rust_executable_names); do
     fi
     echo "$($executable --version) from $(which "$executable")"
 done
+
+# Install shell completions
+./completions.sh --silent

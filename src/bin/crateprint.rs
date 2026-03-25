@@ -1,14 +1,18 @@
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
-use clap::Parser;
+use clap::{CommandFactory, Parser, Subcommand};
+use clap_complete::Shell;
 use colored::Colorize;
 
-use track_rename::serato::crate_file::{self, SeratoCrate};
+use track_rename::serato::serato_crate::{self, SeratoCrate};
 
 #[derive(Parser)]
 #[command(author, version, about = "Print Serato crate contents", name = "crateprint")]
 pub struct Args {
+    #[command(subcommand)]
+    command: Option<CrateprintCommand>,
+
     /// Optional path to a .crate file or Serato Subcrates directory.
     /// Defaults to ~/Music/_Serato_/Subcrates
     #[arg(value_hint = clap::ValueHint::AnyPath)]
@@ -23,14 +27,49 @@ pub struct Args {
     verbose: bool,
 }
 
+/// Subcommands for crateprint.
+#[derive(Subcommand)]
+enum CrateprintCommand {
+    /// Generate shell completion script
+    #[command(name = "completion")]
+    Completion {
+        /// Shell to generate completion for
+        #[arg(value_enum)]
+        shell: Shell,
+
+        /// Install completion script to the shell's completion directory
+        #[arg(short = 'I', long)]
+        install: bool,
+
+        /// Print verbose output
+        #[arg(short, long)]
+        verbose: bool,
+    },
+}
+
 fn main() -> Result<()> {
     let args = Args::parse();
+
+    if let Some(CrateprintCommand::Completion {
+        shell,
+        install,
+        verbose,
+    }) = &args.command
+    {
+        return track_rename::utils::generate_shell_completion(
+            *shell,
+            Args::command(),
+            *install,
+            *verbose,
+            env!("CARGO_BIN_NAME"),
+        );
+    }
 
     let input_path = if let Some(p) = &args.path {
         dunce::canonicalize(p)
             .with_context(|| format!("Input path does not exist or is not accessible: '{}'", p.display()))?
     } else {
-        let default = crate_file::default_subcrates_dir()?;
+        let default = serato_crate::default_subcrates_dir()?;
         if !default.exists() {
             anyhow::bail!(
                 "Default Serato Subcrates directory not found: '{}'\nProvide a path as an argument.",
@@ -44,7 +83,7 @@ fn main() -> Result<()> {
         let serato_crate = SeratoCrate::from_file(&input_path)?;
         print_crate(&serato_crate, args.tracks, args.verbose);
     } else if input_path.is_dir() {
-        let crate_paths = crate_file::list_crates(&input_path)?;
+        let crate_paths = serato_crate::list_crates(&input_path)?;
         if crate_paths.is_empty() {
             println!("{}", "No .crate files found.".yellow());
             return Ok(());

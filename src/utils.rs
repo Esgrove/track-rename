@@ -609,12 +609,15 @@ pub fn generate_shell_completion(
     shell: Shell,
     mut command: ClapCommand,
     install: bool,
+    verbose: bool,
     command_name: &str,
 ) -> anyhow::Result<()> {
     if install {
         let out_dir = get_shell_completion_dir(shell, command_name)?;
         let path = clap_complete::generate_to(shell, &mut command, command_name, out_dir)?;
-        println!("Completion file generated to: {}", path.display());
+        if verbose {
+            println!("Completion file generated to: {}", path.display());
+        }
     } else {
         clap_complete::generate(shell, &mut command, command_name, &mut std::io::stdout());
     }

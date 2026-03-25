@@ -1,7 +1,8 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
-use clap::Parser;
+use clap::{CommandFactory, Parser, Subcommand};
+use clap_complete::Shell;
 use colored::Colorize;
 
 use track_rename::track::Track;
@@ -10,6 +11,9 @@ use track_rename::{serato, utils};
 #[derive(Parser)]
 #[command(author, version, about = "Print tag data", name = "trackprint")]
 pub struct Args {
+    #[command(subcommand)]
+    command: Option<TrackprintCommand>,
+
     /// Optional input directory or audio file
     #[arg(value_hint = clap::ValueHint::AnyPath)]
     path: Option<PathBuf>,
@@ -23,8 +27,43 @@ pub struct Args {
     verbose: bool,
 }
 
+/// Subcommands for trackprint.
+#[derive(Subcommand)]
+enum TrackprintCommand {
+    /// Generate shell completion script
+    #[command(name = "completion")]
+    Completion {
+        /// Shell to generate completion for
+        #[arg(value_enum)]
+        shell: Shell,
+
+        /// Install completion script to the shell's completion directory
+        #[arg(short = 'I', long)]
+        install: bool,
+
+        /// Print verbose output
+        #[arg(short, long)]
+        verbose: bool,
+    },
+}
+
 fn main() -> Result<()> {
     let args = Args::parse();
+
+    if let Some(TrackprintCommand::Completion {
+        shell,
+        install,
+        verbose,
+    }) = &args.command
+    {
+        return track_rename::utils::generate_shell_completion(
+            *shell,
+            Args::command(),
+            *install,
+            *verbose,
+            env!("CARGO_BIN_NAME"),
+        );
+    }
 
     let absolute_input_path = utils::resolve_input_path(args.path.as_deref())?;
 
