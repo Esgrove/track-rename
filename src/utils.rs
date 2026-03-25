@@ -17,6 +17,11 @@ use walkdir::WalkDir;
 
 use crate::track::Track;
 
+/// Frames whose first field is a null-terminated Latin1 string that third-party
+/// encoders sometimes write without the null terminator.
+const FIXABLE_FRAMES: &[&str] = &["UFID", "PRIV"];
+const FIXABLE_FRAMES_V2: &[&str] = &["UFI"];
+
 /// Recursively collect all supported audio tracks from given root path.
 pub fn collect_tracks(root: &Path) -> Vec<Track> {
     WalkDir::new(root)
@@ -302,7 +307,7 @@ pub fn read_tags(track: &Track, verbose: bool) -> Option<Tag> {
         Err(Error {
             kind: ErrorKind::NoTag, ..
         }) => Some(Tag::new()),
-        Err(error) if is_malformed_ufid_error(&error) => repair_malformed_ufid(track, error, verbose),
+        Err(error) if is_malformed_frame_error(&error) => repair_malformed_frame(track, error, verbose),
         Err(error) => {
             eprintln!("\n{}", format!("Failed to read tags for: {track}\n{error}").red());
             if verbose && let Some(ref partial_tags) = error.partial_tag {
@@ -313,49 +318,57 @@ pub fn read_tags(track: &Track, verbose: bool) -> Option<Tag> {
     }
 }
 
-/// Check if an id3 error is caused by a malformed UFID frame (missing null terminator).
-fn is_malformed_ufid_error(error: &Error) -> bool {
+/// Check if an id3 error is caused by a missing null delimiter in a frame we
+/// know how to fix (UFID, PRIV, etc.).
+fn is_malformed_frame_error(error: &Error) -> bool {
     matches!(
         &error.kind,
         ErrorKind::FrameParsing(FrameError {
             frame_id,
             kind: FrameErrorKind::DelimiterNotFound { .. },
             ..
-        }) if frame_id == "UFID"
+        }) if FIXABLE_FRAMES.iter().any(|id| id == frame_id)
     )
 }
 
-/// Attempt to repair a file with a malformed UFID frame by patching raw bytes.
+/// Attempt to repair a file with a malformed frame by patching raw bytes.
 ///
-/// Beatport-encoded files often have a UFID frame where the `owner_identifier`
-/// field starts with a spurious `0x03` encoding byte and has no null terminator.
-/// The UFID spec does not use an encoding byte (it is always Latin1), so the
-/// `0x03` is invalid.
+/// Some third-party encoders (Beatport, Google Play, etc.) write frames like
+/// UFID and PRIV without the required null terminator after `owner_identifier`.
 ///
-/// The fix replaces that first content byte with `0x00`, which creates an empty
-/// `owner_identifier` (null-terminated) followed by the Beatport track ID as the
-/// `identifier`.  This is a single-byte in-place change that preserves the frame
-/// size and **all** other tag data — nothing is dropped.
-fn repair_malformed_ufid(track: &Track, error: Error, verbose: bool) -> Option<Tag> {
+/// The fix overwrites the first content byte with `0x00`, which creates an
+/// empty `owner_identifier` (null-terminated) and keeps the remaining bytes as
+/// the data payload.  This is a single-byte in-place change that preserves the
+/// frame size and **all** other tag data — nothing is dropped.
+fn repair_malformed_frame(track: &Track, error: Error, verbose: bool) -> Option<Tag> {
+    let frame_id = match &error.kind {
+        ErrorKind::FrameParsing(fe) => fe.frame_id.clone(),
+        _ => String::from("unknown"),
+    };
+
     eprintln!(
         "\n{}",
         format!(
-            "Malformed UFID frame in: {track}\n  {}\n  Attempting to fix...",
+            "Malformed {frame_id} frame in: {track}\n  {}\n  Attempting to fix...",
             error.description
         )
         .yellow()
     );
 
-    match fix_ufid_frame_raw(&track.path) {
-        Ok(count) => {
+    match fix_malformed_frames_raw(&track.path) {
+        Ok(fixed) => {
             // Re-read the now-fixed file.
             match Tag::read_from_path(&track.path) {
                 Ok(tag) => {
-                    let label = if count == 1 { "frame" } else { "frames" };
-                    eprintln!(
-                        "{}",
-                        format!("  Fixed {count} malformed UFID {label} in: {track}").green()
-                    );
+                    let summary = fixed
+                        .iter()
+                        .map(|(id, n)| {
+                            let label = if *n == 1 { "frame" } else { "frames" };
+                            format!("{n} {id} {label}")
+                        })
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    eprintln!("{}", format!("  Fixed {summary} in: {track}").green());
                     if verbose {
                         print_tag_data(&tag);
                     }
@@ -364,14 +377,17 @@ fn repair_malformed_ufid(track: &Track, error: Error, verbose: bool) -> Option<T
                 Err(reread_err) => {
                     eprintln!(
                         "{}",
-                        format!("  Re-read after UFID fix still failed for: {track}\n  {reread_err}").red()
+                        format!("  Re-read after fix still failed for: {track}\n  {reread_err}").red()
                     );
                     reread_err.partial_tag
                 }
             }
         }
         Err(err) => {
-            eprintln!("{}", format!("  Failed to fix UFID frame in: {track}\n  {err}").red());
+            eprintln!(
+                "{}",
+                format!("  Failed to fix {frame_id} frame in: {track}\n  {err}").red()
+            );
             error.partial_tag
         }
     }
@@ -383,13 +399,13 @@ fn decode_synchsafe(data: &[u8]) -> u32 {
     (u32::from(data[0]) << 21) | (u32::from(data[1]) << 14) | (u32::from(data[2]) << 7) | u32::from(data[3])
 }
 
-/// Patch malformed UFID frames directly in the raw file bytes.
+/// Patch malformed frames directly in the raw file bytes.
 ///
-/// Walks the `ID3v2` tag frame-by-frame looking for UFID frames whose content
-/// has no null terminator.  For each one found, the first content byte (the
-/// spurious encoding byte) is overwritten with `0x00`, creating the missing
-/// delimiter.  Returns the number of frames fixed.
-fn fix_ufid_frame_raw(path: &Path) -> anyhow::Result<usize> {
+/// Walks the `ID3v2` tag frame-by-frame looking for frames (UFID, PRIV, etc.)
+/// whose first null-terminated string field has no null terminator.  For each
+/// one found, the first content byte is overwritten with `0x00`, creating the
+/// missing delimiter.  Returns a list of `(frame_id, count)` pairs.
+fn fix_malformed_frames_raw(path: &Path) -> anyhow::Result<Vec<(String, usize)>> {
     let mut data = std::fs::read(path).with_context(|| format!("Failed to read file: {}", path.display()))?;
 
     anyhow::ensure!(data.len() >= 10, "File too small to contain an ID3v2 tag");
@@ -432,8 +448,12 @@ fn fix_ufid_frame_raw(path: &Path) -> anyhow::Result<usize> {
         offset += ext_size;
     }
 
-    let ufid_id: &[u8] = if version == 2 { b"UFI" } else { b"UFID" };
-    let mut fixed_count: usize = 0;
+    let fixable: Vec<&[u8]> = if version == 2 {
+        FIXABLE_FRAMES_V2.iter().map(|s| s.as_bytes()).collect()
+    } else {
+        FIXABLE_FRAMES.iter().map(|s| s.as_bytes()).collect()
+    };
+    let mut fixed: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
 
     // Walk frames.
     while offset + frame_header_len <= tag_end {
@@ -465,27 +485,30 @@ fn fix_ufid_frame_raw(path: &Path) -> anyhow::Result<usize> {
             break;
         }
 
-        if frame_id == ufid_id && frame_size > 0 {
+        if frame_size > 0 && fixable.contains(&frame_id) {
             let content = &data[content_start..content_end];
 
             // Only fix frames that have no null byte at all (the actual bug).
             if !content.contains(&0x00) {
+                let id_str = String::from_utf8_lossy(frame_id).to_string();
                 // Replace the first byte with 0x00.  This turns the spurious
                 // encoding byte into a null terminator, giving an empty
-                // owner_identifier and keeping the rest as the identifier.
+                // owner_identifier and keeping the rest as the data payload.
                 data[content_start] = 0x00;
-                fixed_count += 1;
+                *fixed.entry(id_str).or_insert(0) += 1;
             }
         }
 
         offset = content_end;
     }
 
-    anyhow::ensure!(fixed_count > 0, "No malformed UFID frames found to fix");
+    anyhow::ensure!(!fixed.is_empty(), "No malformed frames found to fix");
 
     std::fs::write(path, &data).with_context(|| format!("Failed to write patched file: {}", path.display()))?;
 
-    Ok(fixed_count)
+    let mut result: Vec<(String, usize)> = fixed.into_iter().collect();
+    result.sort_by(|a, b| a.0.cmp(&b.0));
+    Ok(result)
 }
 
 /// Rename track from given path to new path.
