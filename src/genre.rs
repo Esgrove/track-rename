@@ -335,7 +335,7 @@ static COMMON_SUBSTITUTES: [(&str, &str); 7] = [
     ("\u{FFFD}", " "),
 ];
 
-static REGEX_SUBSTITUTES: LazyLock<[(Regex, &'static str); 5]> = LazyLock::new(|| {
+static REGEX_SUBSTITUTES: LazyLock<[(Regex, &'static str); 6]> = LazyLock::new(|| {
     [
         // Replace various opening bracket types with "("
         (
@@ -357,6 +357,11 @@ static REGEX_SUBSTITUTES: LazyLock<[(Regex, &'static str); 5]> = LazyLock::new(|
             Regex::new(r"\)\s*\){2,}").expect("Failed to compile consecutive closing parentheses regex"),
             ")",
         ),
+        // Add a space after a comma not already followed by a space
+        (
+            Regex::new(r",(\S)").expect("Failed to compile comma space regex"),
+            ", $1",
+        ),
         // Collapse multiple spaces into a single space
         (
             Regex::new(r"\s{2,}").expect("Failed to compile multiple spaces regex"),
@@ -366,13 +371,20 @@ static REGEX_SUBSTITUTES: LazyLock<[(Regex, &'static str); 5]> = LazyLock::new(|
 });
 
 /// Map various genres to the correct version
-static REGEX_MAPPINGS: LazyLock<[(Regex, &'static str); 42]> = LazyLock::new(|| {
+static REGEX_MAPPINGS: LazyLock<[(Regex, &'static str); 44]> = LazyLock::new(|| {
     [
         (
             Regex::new(r"(?i)\br\s*[&'n]*\s*b\b").expect("Failed to compile R&B regex"),
             "R&B",
         ),
-        (Regex::new(r"(?i)\bother\b").expect("Failed to compile other regex"), ""),
+        (
+            Regex::new(r"(?i)\bother\b").expect("Failed to compile other remove regex"),
+            "",
+        ),
+        (
+            Regex::new(r"(?i)\bvarious\b").expect("Failed to compile various regex"),
+            "",
+        ),
         (
             Regex::new(r"(?i)\bAccapella\b").expect("Failed to compile Acapella regex"),
             "Acapella",
@@ -446,7 +458,11 @@ static REGEX_MAPPINGS: LazyLock<[(Regex, &'static str); 42]> = LazyLock::new(|| 
             "Mashup",
         ),
         (
-            Regex::new(r"(?i)\bDrum 'n' Bass\b").expect("Failed to compile Drum 'n' Bass regex"),
+            Regex::new(r#"(?i)\bDrum\s+['"]?n['"]?\s+Bass\b"#).expect("Failed to compile Drum N Bass regex"),
+            "Drum & Bass",
+        ),
+        (
+            Regex::new(r"(?i)\bDnB\b").expect("Failed to compile DnB regex"),
             "Drum & Bass",
         ),
         (
@@ -538,6 +554,7 @@ static REGEX_MAPPINGS: LazyLock<[(Regex, &'static str); 42]> = LazyLock::new(|| 
 
 static RE_HOUSE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[^,]* House$").expect("Failed to compile house genre regex"));
+
 /// Format genre tag.
 pub fn format_genre(genre: &str) -> String {
     let mut formatted_genre = genre.trim().to_string();
@@ -593,6 +610,7 @@ mod tests {
         assert_eq!(format_genre("Hip\\Hop"), "Hip-Hop");
         assert_eq!(format_genre("Hip/Hop"), "Hip-Hop");
         assert_eq!(format_genre("Hip  Hop"), "Hip-Hop");
+        assert_eq!(format_genre("Hip / Hop"), "Hip-Hop");
         assert_eq!(format_genre("Jazz\u{FFFD}Blues"), "Jazz Blues");
         assert_eq!(format_genre("Hi"), "");
     }
@@ -606,6 +624,23 @@ mod tests {
         assert_eq!(format_genre("Hip-Hop 90's"), "Hip-Hop 90s");
         assert_eq!(format_genre("90's"), "90s");
         assert_eq!(format_genre("70's"), "70s");
+        assert_eq!(format_genre("Hip-Hop / Rap"), "Hip-Hop");
+        assert_eq!(format_genre("Nu Disco / Disco"), "Disco Nu");
+        assert_eq!(format_genre("Soul / Funk / Disco"), "Funk");
+        assert_eq!(format_genre("Funk / Soul"), "Soul");
+        assert_eq!(format_genre("Soul / Funk"), "Soul");
+        assert_eq!(format_genre("Funk / Boogie"), "Funk Boogie");
+        assert_eq!(format_genre("House / Funk"), "House");
+    }
+
+    #[test]
+    fn test_drum_and_bass() {
+        assert_eq!(format_genre("D&B"), "Drum & Bass");
+        assert_eq!(format_genre("DnB"), "Drum & Bass");
+        assert_eq!(format_genre("D'n'B"), "Drum & Bass");
+        assert_eq!(format_genre("Drum N Bass"), "Drum & Bass");
+        assert_eq!(format_genre("Drum 'n' Bass"), "Drum & Bass");
+        assert_eq!(format_genre("drum n bass"), "Drum & Bass");
     }
 
     #[test]
