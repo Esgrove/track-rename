@@ -508,6 +508,7 @@ checksum = "3d3067d79b975e8844ca9eb072e16b31c3c1c36928edf9c6789548c524d0d954"
 [[package]]
 name = "id3"
 version = "1.16.4"
+source = "git+https://github.com/Esgrove/rust-id3/#7891eeef9bdf98cc3574e147db0dffbb525659c0"
 dependencies = [
  "bitflags",
  "byteorder",
