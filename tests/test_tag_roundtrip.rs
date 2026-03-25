@@ -18,7 +18,7 @@
 use id3::{Tag, TagLike, Version};
 
 /// Path to an MP3 with Serato GEOB frames, an artist tag, but no title or album tag.
-/// Generated from the extended_tags test file by removing TIT2 and TALB.
+/// Generated from the `extended_tags` test file by removing TIT2 and TALB.
 const TEST_FILE: &str = "tests/files/missing_title/Extended Tags - Song - 16-44.mp3";
 
 // ---------------------------------------------------------------------------

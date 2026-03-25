@@ -19,6 +19,8 @@ use crate::statistics::Statistics;
 use track_rename::file_format::FileFormat;
 use track_rename::genre::GENRE_MAPPINGS;
 use track_rename::serato;
+use track_rename::serato::SeratoCrate;
+use track_rename::serato::serato_crate;
 use track_rename::state::State;
 use track_rename::track::{DJ_MUSIC_PATH, Track};
 use track_rename::utils;
@@ -456,7 +458,7 @@ impl TrackRenamer {
         self.state.save()
     }
 
-    /// Print all paths for duplicate tracks with the same name.
+    /// Print all paths for duplicate tracks and create a Serato "Duplicates" crate.
     fn print_all_duplicates(&self) {
         // Get all tracks with multiple paths for the same name.
         // Convert to vector so names can be sorted.
@@ -482,10 +484,89 @@ impl TrackRenamer {
             "{}",
             format!("Duplicates ({}):", duplicate_tracks.len()).magenta().bold()
         );
-        for (_, tracks) in duplicate_tracks {
+
+        for (_, tracks) in &duplicate_tracks {
             println!("{}", tracks[0].name.yellow());
             for track in tracks {
                 println!("  {track}");
+            }
+        }
+
+        self.write_duplicates_crate(&duplicate_tracks);
+    }
+
+    /// Create a Serato "Duplicates" crate containing all duplicate track paths.
+    fn write_duplicates_crate(&self, duplicate_tracks: &[(&String, Vec<&Track>)]) {
+        if duplicate_tracks.is_empty() {
+            return;
+        }
+
+        let subcrates_dir = match serato_crate::default_subcrates_dir() {
+            Ok(dir) => dir,
+            Err(error) => {
+                if self.config.verbose {
+                    eprintln!(
+                        "{}",
+                        format!("Could not determine Serato Subcrates directory: {error}").yellow()
+                    );
+                }
+                return;
+            }
+        };
+
+        if !subcrates_dir.is_dir() {
+            if self.config.verbose {
+                eprintln!(
+                    "{}",
+                    format!("Serato Subcrates directory not found: {}", subcrates_dir.display()).yellow()
+                );
+            }
+            return;
+        }
+
+        let crate_path = subcrates_dir.join(serato_crate::crate_filename_from_name("Duplicates"));
+        let new_paths = duplicate_tracks
+            .iter()
+            .flat_map(|(_, tracks)| tracks.iter().map(|track| track.path.clone()));
+
+        let duplicates_crate = if crate_path.exists() {
+            match SeratoCrate::from_file(&crate_path) {
+                Ok(mut existing) => {
+                    existing.merge_tracks(new_paths);
+                    existing
+                }
+                Err(error) => {
+                    if self.config.verbose {
+                        eprintln!(
+                            "{}",
+                            format!("Failed to read existing Duplicates crate, creating new: {error}").yellow()
+                        );
+                    }
+                    let mut new_crate = SeratoCrate::new("Duplicates");
+                    new_crate.add_tracks(new_paths);
+                    new_crate
+                }
+            }
+        } else {
+            let mut new_crate = SeratoCrate::new("Duplicates");
+            new_crate.add_tracks(new_paths);
+            new_crate
+        };
+
+        match duplicates_crate.write_to_file(&crate_path) {
+            Ok(()) => {
+                println!(
+                    "{}",
+                    format!(
+                        "Updated Serato crate: {} ({} tracks)",
+                        dunce::simplified(&crate_path).display(),
+                        duplicates_crate.track_count(),
+                    )
+                    .green()
+                );
+            }
+            Err(error) => {
+                utils::print_error(&format!("Failed to write Duplicates crate: {error}"));
             }
         }
     }
