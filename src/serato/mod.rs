@@ -1,3 +1,5 @@
+pub mod serato_crate;
+
 mod analysis;
 mod autotags;
 mod beatgrid;
@@ -18,6 +20,8 @@ use crate::serato::beatgrid::BeatGrid;
 use crate::serato::markers::Markers;
 use crate::serato::overview::Overview;
 use crate::utils;
+
+pub use crate::serato::serato_crate::SeratoCrate;
 
 /// Contains all Serato custom tag data in the file.
 #[derive(Debug, Clone, Default)]

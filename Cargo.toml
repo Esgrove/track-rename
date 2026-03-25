@@ -45,6 +45,10 @@ path = "src/main.rs"
 name = "trackprint"
 path = "src/bin/trackprint.rs"
 
+[[bin]]
+name = "crateprint"
+path = "src/bin/crateprint.rs"
+
 [profile.dev]
 incremental = true
 
