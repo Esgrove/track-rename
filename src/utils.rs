@@ -318,8 +318,77 @@ pub fn read_tags(track: &Track, verbose: bool) -> Option<Tag> {
     }
 }
 
-/// Check if an id3 error is caused by a missing null delimiter in a frame we
-/// know how to fix (UFID, PRIV, etc.).
+/// Rename track from given path to new path.
+pub fn rename_track(path: &Path, new_path: &Path, test_mode: bool) -> anyhow::Result<()> {
+    if let Err(error) = std::fs::rename(path, new_path) {
+        let message = format!("Failed to rename file: {error}");
+        if test_mode {
+            panic!("{}", message);
+        } else {
+            print_error(&message);
+        }
+    }
+    Ok(())
+}
+
+/// Resolve optional input path or otherwise use current working dir.
+pub fn resolve_input_path(path: Option<&Path>) -> anyhow::Result<PathBuf> {
+    let filepath = match path {
+        Some(p) => p.to_path_buf(),
+        None => std::env::current_dir().context("Failed to get current working directory")?,
+    };
+    if !filepath.exists() {
+        anyhow::bail!(
+            "Input path does not exist or is not accessible: '{}'",
+            dunce::simplified(&filepath).display()
+        );
+    }
+    let absolute_input_path = dunce::canonicalize(filepath)?;
+    Ok(absolute_input_path)
+}
+
+/// Generate a shell completion script for the given shell.
+pub fn generate_shell_completion(
+    shell: Shell,
+    mut command: ClapCommand,
+    install: bool,
+    verbose: bool,
+    command_name: &str,
+) -> anyhow::Result<()> {
+    if install {
+        let out_dir = get_shell_completion_dir(shell, command_name)?;
+        let path = clap_complete::generate_to(shell, &mut command, command_name, out_dir)?;
+        if verbose {
+            println!("Completion file generated to: {}", path.display());
+        }
+    } else {
+        clap_complete::generate(shell, &mut command, command_name, &mut std::io::stdout());
+    }
+    Ok(())
+}
+
+/// Write a txt log file for failed tracks to current working directory.
+pub fn write_log_for_failed_files(paths: &[String]) -> anyhow::Result<()> {
+    let filepath = Path::new("track-rename-failed.txt");
+    let mut file = std::fs::File::create(filepath).context("Failed to create output file")?;
+    for path in paths {
+        writeln!(file, "{path}")?;
+    }
+    println!("Logged failed files to: {}", dunce::canonicalize(filepath)?.display());
+    Ok(())
+}
+
+/// Get filename string for given Path.
+pub fn get_filename_from_path(path: &Path) -> anyhow::Result<String> {
+    Ok(path
+        .file_name()
+        .context("Failed to get zip file name")?
+        .to_string_lossy()
+        .replace('\u{FFFD}', ""))
+}
+
+/// Check if an id3 parsing error is caused by a missing null delimiter
+/// in a frame we know how to fix (UFID, PRIV, etc.).
 fn is_malformed_frame_error(error: &Error) -> bool {
     matches!(
         &error.kind,
@@ -336,10 +405,10 @@ fn is_malformed_frame_error(error: &Error) -> bool {
 /// Some third-party encoders (Beatport, Google Play, etc.) write frames like
 /// UFID and PRIV without the required null terminator after `owner_identifier`.
 ///
-/// The fix overwrites the first content byte with `0x00`, which creates an
-/// empty `owner_identifier` (null-terminated) and keeps the remaining bytes as
-/// the data payload.  This is a single-byte in-place change that preserves the
-/// frame size and **all** other tag data — nothing is dropped.
+/// The fix overwrites the first content byte with `0x00`,
+/// which creates an empty `owner_identifier` (null-terminated)
+/// and keeps the remaining bytes as the data payload.
+/// This is a single-byte in-place change that preserves the frame size and all other tag data.
 fn repair_malformed_frame(track: &Track, error: Error, verbose: bool) -> Option<Tag> {
     let frame_id = match &error.kind {
         ErrorKind::FrameParsing(fe) => fe.frame_id.clone(),
@@ -393,20 +462,14 @@ fn repair_malformed_frame(track: &Track, error: Error, verbose: bool) -> Option<
     }
 }
 
-/// Decode a synchsafe integer (each byte uses only 7 bits, MSB is always 0).
-fn decode_synchsafe(data: &[u8]) -> u32 {
-    debug_assert!(data.len() == 4);
-    (u32::from(data[0]) << 21) | (u32::from(data[1]) << 14) | (u32::from(data[2]) << 7) | u32::from(data[3])
-}
-
 /// Patch malformed frames directly in the raw file bytes.
 ///
-/// Supports MP3 (`ID3v2` at byte 0), AIFF (`FORM` → `ID3 ` chunk), and WAV
-/// (`RIFF` → `ID3 ` chunk).  Walks the `ID3v2` tag frame-by-frame looking for
-/// frames (UFID, PRIV, etc.) whose first null-terminated string field has no
-/// null terminator.  For each one found, the first content byte is overwritten
-/// with `0x00`, creating the missing delimiter.  Returns a list of
-/// `(frame_id, count)` pairs.
+/// Supports MP3 (`ID3v2` at byte 0), AIFF (`FORM` → `ID3 ` chunk), and WAV (`RIFF` → `ID3 ` chunk).
+/// Walks the `ID3v2` tag frame-by-frame looking for frames (UFID, PRIV, etc.)
+/// whose first null-terminated string field has no null terminator.
+/// For each one found, the first content byte is overwritten with `0x00`,
+/// creating the missing delimiter.
+/// Returns a list of `(frame_id, count)` pairs.
 fn fix_malformed_frames_raw(path: &Path) -> anyhow::Result<Vec<(String, usize)>> {
     let mut data = std::fs::read(path).with_context(|| format!("Failed to read file: {}", path.display()))?;
 
@@ -575,73 +638,10 @@ fn find_id3_header_offset(data: &[u8]) -> Option<usize> {
     None
 }
 
-/// Rename track from given path to new path.
-pub fn rename_track(path: &Path, new_path: &Path, test_mode: bool) -> anyhow::Result<()> {
-    if let Err(error) = std::fs::rename(path, new_path) {
-        let message = format!("Failed to rename file: {error}");
-        if test_mode {
-            panic!("{}", message);
-        } else {
-            print_error(&message);
-        }
-    }
-    Ok(())
-}
-
-/// Resolve optional input path or otherwise use current working dir.
-pub fn resolve_input_path(path: Option<&Path>) -> anyhow::Result<PathBuf> {
-    let filepath = match path {
-        Some(p) => p.to_path_buf(),
-        None => std::env::current_dir().context("Failed to get current working directory")?,
-    };
-    if !filepath.exists() {
-        anyhow::bail!(
-            "Input path does not exist or is not accessible: '{}'",
-            dunce::simplified(&filepath).display()
-        );
-    }
-    let absolute_input_path = dunce::canonicalize(filepath)?;
-    Ok(absolute_input_path)
-}
-
-/// Generate a shell completion script for the given shell.
-pub fn generate_shell_completion(
-    shell: Shell,
-    mut command: ClapCommand,
-    install: bool,
-    verbose: bool,
-    command_name: &str,
-) -> anyhow::Result<()> {
-    if install {
-        let out_dir = get_shell_completion_dir(shell, command_name)?;
-        let path = clap_complete::generate_to(shell, &mut command, command_name, out_dir)?;
-        if verbose {
-            println!("Completion file generated to: {}", path.display());
-        }
-    } else {
-        clap_complete::generate(shell, &mut command, command_name, &mut std::io::stdout());
-    }
-    Ok(())
-}
-
-/// Write a txt log file for failed tracks to current working directory.
-pub fn write_log_for_failed_files(paths: &[String]) -> anyhow::Result<()> {
-    let filepath = Path::new("track-rename-failed.txt");
-    let mut file = std::fs::File::create(filepath).context("Failed to create output file")?;
-    for path in paths {
-        writeln!(file, "{path}")?;
-    }
-    println!("Logged failed files to: {}", dunce::canonicalize(filepath)?.display());
-    Ok(())
-}
-
-/// Get filename string for given Path.
-pub fn get_filename_from_path(path: &Path) -> anyhow::Result<String> {
-    Ok(path
-        .file_name()
-        .context("Failed to get zip file name")?
-        .to_string_lossy()
-        .replace('\u{FFFD}', ""))
+/// Decode a synchsafe integer (each byte uses only 7 bits, MSB is always 0).
+fn decode_synchsafe(data: &[u8]) -> u32 {
+    debug_assert!(data.len() == 4);
+    (u32::from(data[0]) << 21) | (u32::from(data[1]) << 14) | (u32::from(data[2]) << 7) | u32::from(data[3])
 }
 
 /// Determine the appropriate directory for storing shell completions.
