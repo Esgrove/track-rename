@@ -401,24 +401,33 @@ fn decode_synchsafe(data: &[u8]) -> u32 {
 
 /// Patch malformed frames directly in the raw file bytes.
 ///
-/// Walks the `ID3v2` tag frame-by-frame looking for frames (UFID, PRIV, etc.)
-/// whose first null-terminated string field has no null terminator.  For each
-/// one found, the first content byte is overwritten with `0x00`, creating the
-/// missing delimiter.  Returns a list of `(frame_id, count)` pairs.
+/// Supports MP3 (`ID3v2` at byte 0), AIFF (`FORM` → `ID3 ` chunk), and WAV
+/// (`RIFF` → `ID3 ` chunk).  Walks the `ID3v2` tag frame-by-frame looking for
+/// frames (UFID, PRIV, etc.) whose first null-terminated string field has no
+/// null terminator.  For each one found, the first content byte is overwritten
+/// with `0x00`, creating the missing delimiter.  Returns a list of
+/// `(frame_id, count)` pairs.
 fn fix_malformed_frames_raw(path: &Path) -> anyhow::Result<Vec<(String, usize)>> {
     let mut data = std::fs::read(path).with_context(|| format!("Failed to read file: {}", path.display()))?;
 
-    anyhow::ensure!(data.len() >= 10, "File too small to contain an ID3v2 tag");
-    anyhow::ensure!(&data[0..3] == b"ID3", "No ID3v2 header found");
+    anyhow::ensure!(data.len() >= 12, "File too small to contain any tag data");
 
-    let version = data[3]; // 2, 3, or 4
-    let flags = data[5];
+    // Find the byte offset where the ID3v2 header starts.
+    let id3_offset =
+        find_id3_header_offset(&data).with_context(|| format!("No ID3v2 header found in: {}", path.display()))?;
 
-    let tag_size = decode_synchsafe(&data[6..10]) as usize;
-    let tag_end = 10 + tag_size;
+    let id3 = &data[id3_offset..];
+    anyhow::ensure!(id3.len() >= 10, "Not enough data for an ID3v2 header");
+
+    let version = id3[3]; // 2, 3, or 4
+    let flags = id3[5];
+
+    let tag_size = decode_synchsafe(&id3[6..10]) as usize;
+    let tag_end_abs = id3_offset + 10 + tag_size;
     anyhow::ensure!(
-        data.len() >= tag_end,
-        "File truncated: tag declares {tag_end} bytes but file is {} bytes",
+        data.len() >= tag_end_abs,
+        "File truncated: tag declares {} bytes but file is {} bytes",
+        tag_end_abs,
         data.len()
     );
 
@@ -430,9 +439,12 @@ fn fix_malformed_frames_raw(path: &Path) -> anyhow::Result<Vec<(String, usize)>>
     };
 
     // Skip extended header if the flag is set.
-    let mut offset: usize = 10;
+    let mut offset: usize = id3_offset + 10;
     if flags & 0x40 != 0 {
-        anyhow::ensure!(offset + 4 <= tag_end, "Extended header flag set but not enough data");
+        anyhow::ensure!(
+            offset + 4 <= tag_end_abs,
+            "Extended header flag set but not enough data"
+        );
         let ext_size = if version == 4 {
             // v2.4: synchsafe, size includes itself.
             decode_synchsafe(&data[offset..offset + 4]) as usize
@@ -456,7 +468,7 @@ fn fix_malformed_frames_raw(path: &Path) -> anyhow::Result<Vec<(String, usize)>>
     let mut fixed: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
 
     // Walk frames.
-    while offset + frame_header_len <= tag_end {
+    while offset + frame_header_len <= tag_end_abs {
         let frame_id = &data[offset..offset + frame_id_len];
 
         // All-zero bytes mean we've reached padding.
@@ -479,7 +491,7 @@ fn fix_malformed_frames_raw(path: &Path) -> anyhow::Result<Vec<(String, usize)>>
         let content_start = offset + frame_header_len;
         let content_end = content_start + frame_size;
 
-        if content_end > tag_end {
+        if content_end > tag_end_abs {
             // Corrupted frame — stop scanning but don't fail; the id3 crate
             // will deal with whatever comes after our fix.
             break;
@@ -509,6 +521,58 @@ fn fix_malformed_frames_raw(path: &Path) -> anyhow::Result<Vec<(String, usize)>>
     let mut result: Vec<(String, usize)> = fixed.into_iter().collect();
     result.sort_by(|a, b| a.0.cmp(&b.0));
     Ok(result)
+}
+
+/// Locate the byte offset of the `ID3` header within a file's raw bytes.
+///
+/// - **MP3**: the `ID3` header is at byte 0.
+/// - **AIFF** (`FORM`): the `ID3` header is inside an `ID3 ` chunk.
+/// - **WAV** (`RIFF`): the `ID3` header is inside an `ID3 ` chunk.
+///
+/// Returns `None` if no `ID3v2` header can be found.
+fn find_id3_header_offset(data: &[u8]) -> Option<usize> {
+    // Direct ID3v2 header at the start (MP3 and similar).
+    if data.len() >= 10 && &data[0..3] == b"ID3" {
+        return Some(0);
+    }
+
+    // AIFF (FORM, big-endian) or WAV (RIFF, little-endian) container.
+    let (root_tag, big_endian) = if data.len() >= 12 && &data[0..4] == b"FORM" {
+        (b"FORM", true)
+    } else if data.len() >= 12 && &data[0..4] == b"RIFF" {
+        (b"RIFF", false)
+    } else {
+        return None;
+    };
+    let _ = root_tag; // validated above
+
+    // Root chunk size (bytes 4..8) — we mostly care about scanning to EOF.
+    // Skip past root header (tag 4 + size 4 + format 4 = 12 bytes).
+    let mut pos: usize = 12;
+
+    while pos + 8 <= data.len() {
+        let chunk_tag = &data[pos..pos + 4];
+        let chunk_size = if big_endian {
+            u32::from_be_bytes([data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7]]) as usize
+        } else {
+            u32::from_le_bytes([data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7]]) as usize
+        };
+
+        let chunk_data_start = pos + 8;
+
+        if chunk_tag == b"ID3 " {
+            // The chunk data should start with an ID3v2 header.
+            if chunk_data_start + 10 <= data.len() && &data[chunk_data_start..chunk_data_start + 3] == b"ID3" {
+                return Some(chunk_data_start);
+            }
+        }
+
+        // Advance to the next chunk (chunks are word-aligned in AIFF/WAV).
+        let padded_size = chunk_size + (chunk_size % 2);
+        pos = chunk_data_start + padded_size;
+    }
+
+    None
 }
 
 /// Rename track from given path to new path.
