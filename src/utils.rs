@@ -9,7 +9,7 @@ use clap::Command as ClapCommand;
 use clap_complete::Shell;
 use colored::{ColoredString, Colorize};
 use difference::{Changeset, Difference};
-use id3::{Error, ErrorKind, Tag};
+use id3::{Error, ErrorKind, FrameError, FrameErrorKind, Tag};
 use itertools::Itertools;
 use rayon::prelude::*;
 use unicode_normalization::UnicodeNormalization;
@@ -290,6 +290,11 @@ pub fn print_tag_data(file_tags: &Tag) {
 /// If the tag reading fails,
 /// returns the partial tag data that was read succesfully before the error occured,
 /// or `None` if no tag data could be read.
+///
+/// Malformed UFID frames (e.g. Beatport tracks with a missing null terminator)
+/// are automatically repaired by patching the raw ID3 tag bytes in-place:
+/// the missing null delimiter is inserted so the UFID frame becomes valid,
+/// preserving all other tag data (including frames after the UFID).
 #[must_use]
 pub fn read_tags(track: &Track, verbose: bool) -> Option<Tag> {
     match Tag::read_from_path(&track.path) {
@@ -297,6 +302,7 @@ pub fn read_tags(track: &Track, verbose: bool) -> Option<Tag> {
         Err(Error {
             kind: ErrorKind::NoTag, ..
         }) => Some(Tag::new()),
+        Err(error) if is_malformed_ufid_error(&error) => repair_malformed_ufid(track, error, verbose),
         Err(error) => {
             eprintln!("\n{}", format!("Failed to read tags for: {track}\n{error}").red());
             if verbose && let Some(ref partial_tags) = error.partial_tag {
@@ -305,6 +311,181 @@ pub fn read_tags(track: &Track, verbose: bool) -> Option<Tag> {
             error.partial_tag
         }
     }
+}
+
+/// Check if an id3 error is caused by a malformed UFID frame (missing null terminator).
+fn is_malformed_ufid_error(error: &Error) -> bool {
+    matches!(
+        &error.kind,
+        ErrorKind::FrameParsing(FrameError {
+            frame_id,
+            kind: FrameErrorKind::DelimiterNotFound { .. },
+            ..
+        }) if frame_id == "UFID"
+    )
+}
+
+/// Attempt to repair a file with a malformed UFID frame by patching raw bytes.
+///
+/// Beatport-encoded files often have a UFID frame where the `owner_identifier`
+/// field starts with a spurious `0x03` encoding byte and has no null terminator.
+/// The UFID spec does not use an encoding byte (it is always Latin1), so the
+/// `0x03` is invalid.
+///
+/// The fix replaces that first content byte with `0x00`, which creates an empty
+/// `owner_identifier` (null-terminated) followed by the Beatport track ID as the
+/// `identifier`.  This is a single-byte in-place change that preserves the frame
+/// size and **all** other tag data — nothing is dropped.
+fn repair_malformed_ufid(track: &Track, error: Error, verbose: bool) -> Option<Tag> {
+    eprintln!(
+        "\n{}",
+        format!(
+            "Malformed UFID frame in: {track}\n  {}\n  Attempting to fix...",
+            error.description
+        )
+        .yellow()
+    );
+
+    match fix_ufid_frame_raw(&track.path) {
+        Ok(count) => {
+            // Re-read the now-fixed file.
+            match Tag::read_from_path(&track.path) {
+                Ok(tag) => {
+                    let label = if count == 1 { "frame" } else { "frames" };
+                    eprintln!(
+                        "{}",
+                        format!("  Fixed {count} malformed UFID {label} in: {track}").green()
+                    );
+                    if verbose {
+                        print_tag_data(&tag);
+                    }
+                    Some(tag)
+                }
+                Err(reread_err) => {
+                    eprintln!(
+                        "{}",
+                        format!("  Re-read after UFID fix still failed for: {track}\n  {reread_err}").red()
+                    );
+                    reread_err.partial_tag
+                }
+            }
+        }
+        Err(err) => {
+            eprintln!("{}", format!("  Failed to fix UFID frame in: {track}\n  {err}").red());
+            error.partial_tag
+        }
+    }
+}
+
+/// Decode a synchsafe integer (each byte uses only 7 bits, MSB is always 0).
+fn decode_synchsafe(data: &[u8]) -> u32 {
+    debug_assert!(data.len() == 4);
+    (u32::from(data[0]) << 21) | (u32::from(data[1]) << 14) | (u32::from(data[2]) << 7) | u32::from(data[3])
+}
+
+/// Patch malformed UFID frames directly in the raw file bytes.
+///
+/// Walks the `ID3v2` tag frame-by-frame looking for UFID frames whose content
+/// has no null terminator.  For each one found, the first content byte (the
+/// spurious encoding byte) is overwritten with `0x00`, creating the missing
+/// delimiter.  Returns the number of frames fixed.
+fn fix_ufid_frame_raw(path: &Path) -> anyhow::Result<usize> {
+    let mut data = std::fs::read(path).with_context(|| format!("Failed to read file: {}", path.display()))?;
+
+    anyhow::ensure!(data.len() >= 10, "File too small to contain an ID3v2 tag");
+    anyhow::ensure!(&data[0..3] == b"ID3", "No ID3v2 header found");
+
+    let version = data[3]; // 2, 3, or 4
+    let flags = data[5];
+
+    let tag_size = decode_synchsafe(&data[6..10]) as usize;
+    let tag_end = 10 + tag_size;
+    anyhow::ensure!(
+        data.len() >= tag_end,
+        "File truncated: tag declares {tag_end} bytes but file is {} bytes",
+        data.len()
+    );
+
+    // Frame header geometry differs between ID3 versions.
+    let (frame_id_len, frame_header_len): (usize, usize) = match version {
+        2 => (3, 6),
+        3 | 4 => (4, 10),
+        v => anyhow::bail!("Unsupported ID3v2.{v} version"),
+    };
+
+    // Skip extended header if the flag is set.
+    let mut offset: usize = 10;
+    if flags & 0x40 != 0 {
+        anyhow::ensure!(offset + 4 <= tag_end, "Extended header flag set but not enough data");
+        let ext_size = if version == 4 {
+            // v2.4: synchsafe, size includes itself.
+            decode_synchsafe(&data[offset..offset + 4]) as usize
+        } else {
+            // v2.3: big-endian u32, does NOT include the 4 size bytes.
+            u32::from_be_bytes(
+                data[offset..offset + 4]
+                    .try_into()
+                    .context("Extended header size bytes")?,
+            ) as usize
+                + 4
+        };
+        offset += ext_size;
+    }
+
+    let ufid_id: &[u8] = if version == 2 { b"UFI" } else { b"UFID" };
+    let mut fixed_count: usize = 0;
+
+    // Walk frames.
+    while offset + frame_header_len <= tag_end {
+        let frame_id = &data[offset..offset + frame_id_len];
+
+        // All-zero bytes mean we've reached padding.
+        if frame_id.iter().all(|&b| b == 0) {
+            break;
+        }
+
+        let frame_size: usize = if version == 2 {
+            // ID3v2.2: 3-byte big-endian size.
+            (u32::from(data[offset + 3]) << 16 | u32::from(data[offset + 4]) << 8 | u32::from(data[offset + 5]))
+                as usize
+        } else if version == 4 {
+            // ID3v2.4: synchsafe integer.
+            decode_synchsafe(&data[offset + 4..offset + 8]) as usize
+        } else {
+            // ID3v2.3: regular big-endian u32.
+            u32::from_be_bytes(data[offset + 4..offset + 8].try_into().context("Frame size bytes")?) as usize
+        };
+
+        let content_start = offset + frame_header_len;
+        let content_end = content_start + frame_size;
+
+        if content_end > tag_end {
+            // Corrupted frame — stop scanning but don't fail; the id3 crate
+            // will deal with whatever comes after our fix.
+            break;
+        }
+
+        if frame_id == ufid_id && frame_size > 0 {
+            let content = &data[content_start..content_end];
+
+            // Only fix frames that have no null byte at all (the actual bug).
+            if !content.contains(&0x00) {
+                // Replace the first byte with 0x00.  This turns the spurious
+                // encoding byte into a null terminator, giving an empty
+                // owner_identifier and keeping the rest as the identifier.
+                data[content_start] = 0x00;
+                fixed_count += 1;
+            }
+        }
+
+        offset = content_end;
+    }
+
+    anyhow::ensure!(fixed_count > 0, "No malformed UFID frames found to fix");
+
+    std::fs::write(path, &data).with_context(|| format!("Failed to write patched file: {}", path.display()))?;
+
+    Ok(fixed_count)
 }
 
 /// Rename track from given path to new path.
