@@ -532,6 +532,24 @@ impl TrackRenamer {
     }
 
     fn write_tags(track: &Track, file_tags: &mut Tag) -> bool {
+        // Save binary frames (GEOB/APIC) separately.
+        // The id3 crate has a bug where writing text frames together with large
+        // GEOB frames (e.g. Serato data) in a single write_to_path call can silently
+        // fail to persist the new text frames. The workaround is to write text frames
+        // first without binary frames, then add the binary frames back in a second write.
+        let binary_frames: Vec<_> = file_tags
+            .frames()
+            .filter(|f| f.id() == "GEOB" || f.id() == "APIC")
+            .cloned()
+            .collect();
+        let has_binary_frames = !binary_frames.is_empty();
+
+        // Remove binary frames from the tag before writing text frames
+        if has_binary_frames {
+            file_tags.remove("GEOB");
+            file_tags.remove("APIC");
+        }
+
         // Remove genre first to try to get rid of old ID3v1 genre IDs
         file_tags.remove_genre();
         file_tags.remove_disc();
@@ -546,6 +564,7 @@ impl TrackRenamer {
                 format!("Failed to remove tags for: {}\n{}", track.path.display(), error).red()
             );
         }
+
         file_tags.set_artist(track.tags.formatted_artist.clone());
         file_tags.set_title(track.tags.formatted_title.clone());
         file_tags.set_album(track.tags.formatted_album.clone());
@@ -555,10 +574,43 @@ impl TrackRenamer {
                 "\n{}",
                 format!("Failed to write tags for: {}\n{}", track.path.display(), error).red()
             );
-            false
-        } else {
-            true
+            return false;
         }
+
+        // Phase 2: Re-read the written tag and add binary frames back
+        if has_binary_frames {
+            match Tag::read_from_path(&track.path) {
+                Ok(mut written_tag) => {
+                    for frame in binary_frames {
+                        written_tag.add_frame(frame);
+                    }
+                    if let Err(error) = written_tag.write_to_path(&track.path, id3::Version::Id3v24) {
+                        eprintln!(
+                            "\n{}",
+                            format!(
+                                "Failed to restore binary frames for: {}\n{}",
+                                track.path.display(),
+                                error
+                            )
+                            .red()
+                        );
+                    }
+                }
+                Err(error) => {
+                    eprintln!(
+                        "\n{}",
+                        format!(
+                            "Failed to re-read tags after write for: {}\n{}",
+                            track.path.display(),
+                            error
+                        )
+                        .red()
+                    );
+                }
+            }
+        }
+
+        true
     }
 }
 
