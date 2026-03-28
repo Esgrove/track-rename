@@ -1,6 +1,7 @@
 use colored::Colorize;
 use id3::{Tag, TagLike};
 
+use crate::print_yellow;
 use crate::track::Track;
 use crate::utils;
 
@@ -51,7 +52,7 @@ impl TrackTags {
                 current_name = format!("{artist} - {title}");
             }
             (None, None) => {
-                eprintln!("\n{}", format!("Missing tags: {}", track.path.display()).yellow());
+                print_yellow!("\nMissing tags: {}", track.path.display());
                 current_name = format!("{artist} - {title}");
                 if let Some((a, t)) = utils::get_tags_from_filename(&track.name) {
                     artist = a;
@@ -59,7 +60,7 @@ impl TrackTags {
                 }
             }
             (None, Some(t)) => {
-                eprintln!("\n{}", format!("Missing artist tag: {}", track.path.display()).yellow());
+                print_yellow!("\nMissing artist tag: {}", track.path.display());
                 title = utils::normalize_str(t);
                 current_name = format!("{artist} - {title}");
                 if let Some((a, _)) = utils::get_tags_from_filename(&track.name) {
@@ -67,7 +68,7 @@ impl TrackTags {
                 }
             }
             (Some(a), None) => {
-                eprintln!("\n{}", format!("Missing title tag: {}", track.path.display()).yellow());
+                print_yellow!("\nMissing title tag: {}", track.path.display());
                 artist = utils::normalize_str(a);
                 current_name = format!("{artist} - {title}");
                 if let Some((_, t)) = utils::get_tags_from_filename(&track.name) {

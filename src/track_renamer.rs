@@ -24,6 +24,7 @@ use track_rename::serato::serato_crate;
 use track_rename::state::State;
 use track_rename::track::{DJ_MUSIC_PATH, Track};
 use track_rename::utils;
+use track_rename::{print_bold, print_error, print_green, print_yellow};
 
 /// Audio track tag and filename formatting.
 #[derive(Debug, Default)]
@@ -149,12 +150,12 @@ impl TrackRenamer {
     // Format tags and rename files if needed.
     pub fn process_tracks(&mut self) -> Result<()> {
         if self.tracks_count == 0 {
-            println!("{}", "No tracks to process".green());
+            print_green!("No tracks to process");
             return Ok(());
         } else if self.tracks_count == 1 {
-            println!("{}", "Processing 1 track...".bold());
+            print_bold!("Processing 1 track...");
         } else {
-            println!("{}", format!("Processing {} tracks...", self.tracks_count).bold());
+            print_bold!("Processing {} tracks...", self.tracks_count);
         }
 
         let dryrun_header = if self.config.print_only {
@@ -187,15 +188,9 @@ impl TrackRenamer {
                 && utils::contains_subpath(&track.root, DJ_MUSIC_PATH.as_path())
             {
                 if !GENRE_MAPPINGS.contains_key(track.directory.as_str()) {
-                    eprintln!(
-                        "\n{}",
-                        format!("WARNING: DJ music folder missing genre mapping: {}", track.directory).yellow()
-                    );
+                    print_yellow!("\nWARNING: DJ music folder missing genre mapping: {}", track.directory);
                 } else if GENRE_MAPPINGS.get(track.directory.as_str()).unwrap_or(&"").is_empty() {
-                    eprintln!(
-                        "\n{}",
-                        format!("WARNING: Empty genre mapping for: {}", track.directory).yellow()
-                    );
+                    print_yellow!("\nWARNING: Empty genre mapping for: {}", track.directory);
                 }
                 self.checked_genre_mappings.insert(track.directory.clone());
             }
@@ -212,7 +207,7 @@ impl TrackRenamer {
                 if self.config.verbose {
                     track.show(self.tracks_count, max_index_width);
                     let message = format!("Skipping track in exclude list: {track}");
-                    println!("{}", message.yellow());
+                    print_yellow!("{message}");
                     utils::print_divider(&message);
                 }
                 continue;
@@ -223,7 +218,7 @@ impl TrackRenamer {
             if !track.path.exists() {
                 track.show(self.tracks_count, max_index_width);
                 let message = format!("Track no longer exists: {track}");
-                utils::print_error(&message);
+                print_error!("{message}");
                 utils::print_divider(&message);
                 continue;
             }
@@ -275,10 +270,7 @@ impl TrackRenamer {
                 let formatted_name = track.formatted_filename();
                 let formatted_name_lower = formatted_name.to_lowercase();
                 if formatted_name.is_empty() {
-                    eprintln!(
-                        "\n{}",
-                        format!("Formatted name should never be empty: {}", track.path.display()).red()
-                    );
+                    print_error!("\nFormatted name should never be empty: {}", track.path.display());
                     continue;
                 }
                 let tags_changed = track.tags.changed();
@@ -347,10 +339,7 @@ impl TrackRenamer {
                             if !self.config.print_only && (self.config.force || utils::confirm()) {
                                 let is_overwrite = formatted_path.is_file() && self.config.overwrite_existing;
                                 if is_overwrite {
-                                    println!(
-                                        "{}",
-                                        format!("Overwriting existing file: {formatted_path_string}").yellow()
-                                    );
+                                    print_yellow!("Overwriting existing file: {formatted_path_string}");
                                 }
                                 if capitalization_change_only {
                                     let temp_file =
@@ -400,7 +389,7 @@ impl TrackRenamer {
             }
         }
 
-        println!("{}", "\nFinished".green());
+        print_green!("\nFinished");
         if self.config.debug {
             let duration = start_instant.elapsed();
             println!("Time taken: {:.3}s", duration.as_secs_f64());
@@ -435,7 +424,7 @@ impl TrackRenamer {
 
     /// Count and print the total number of each file extension in the file list.
     fn print_extension_counts(&self) {
-        println!("{}", "File format counts:".bold());
+        print_bold!("File format counts:");
         self.tracks
             .iter()
             .map(|track| track.format.to_string())
@@ -496,7 +485,7 @@ impl TrackRenamer {
         );
 
         for (_, tracks) in &duplicate_tracks {
-            println!("{}", tracks[0].name.yellow());
+            print_yellow!("{}", tracks[0].name);
             for track in tracks {
                 println!("  {track}");
             }
@@ -576,7 +565,7 @@ impl TrackRenamer {
                 );
             }
             Err(error) => {
-                utils::print_error(&format!("Failed to write Duplicates crate: {error}"));
+                print_error!("Failed to write Duplicates crate: {error}");
             }
         }
     }
