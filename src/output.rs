@@ -88,9 +88,10 @@ pub fn print_stacked_diff(old: &str, new: &str) {
     println!("{new_diff}");
 }
 
-/// Print a divider line that matches the length of the reference text.
-pub fn print_divider(text: &str) {
-    println!("{}", "-".repeat(text.chars().count()));
+/// Print a divider line that matches the length of the reference text
+/// plus an optional prefix width.
+pub fn print_divider(text: &str, prefix_width: usize) {
+    println!("{}", "-".repeat(prefix_width + text.chars().count()));
 }
 
 /// Print error message with red color to stderr.

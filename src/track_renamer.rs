@@ -146,6 +146,8 @@ impl TrackRenamer {
         let fix_tags_header = format!("Fix tags{dryrun_header}:").blue().bold();
         let rename_file_header = format!("Rename file{dryrun_header}:").cyan().bold();
         let max_index_width: usize = self.tracks_count.checked_ilog10().unwrap_or(0) as usize + 1;
+        // Width of the "{number}/{total}: " prefix printed by track.show()
+        let index_prefix_width = 2 * max_index_width + 3;
 
         self.current_path = self.root.clone();
 
@@ -187,7 +189,7 @@ impl TrackRenamer {
                     track.show(self.tracks_count, max_index_width);
                     let message = format!("Skipping track in exclude list: {track}");
                     print_yellow!("{message}");
-                    print_divider(&message);
+                    print_divider(&message, 0);
                 }
                 continue;
             }
@@ -198,7 +200,7 @@ impl TrackRenamer {
                 track.show(self.tracks_count, max_index_width);
                 let message = format!("Track no longer exists: {track}");
                 print_error!("{message}");
-                print_divider(&message);
+                print_divider(&message, 0);
                 continue;
             }
 
@@ -272,7 +274,7 @@ impl TrackRenamer {
                         track.not_processed = true;
                     }
                     if tags_changed {
-                        print_divider(&track.tags.formatted_name);
+                        print_divider(&track.tags.formatted_name, index_prefix_width);
                     }
                 }
 
@@ -342,7 +344,7 @@ impl TrackRenamer {
                             } else {
                                 track.not_processed = true;
                             }
-                            print_divider(&formatted_file_name);
+                            print_divider(&formatted_file_name, index_prefix_width);
                         }
                     } else if formatted_path != track.path {
                         // A file with the formatted name already exists
@@ -350,7 +352,7 @@ impl TrackRenamer {
                         println!("{}", "Duplicate:".bright_red().bold());
                         println!("Rename:   {original_path_string}");
                         println!("Existing: {formatted_path_string}");
-                        print_divider(&formatted_file_name);
+                        print_divider(&formatted_file_name, index_prefix_width);
                         self.stats.duplicates += 1;
                     }
                 }
