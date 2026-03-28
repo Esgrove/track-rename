@@ -696,6 +696,7 @@ impl TrackRenamer {
 #[cfg(test)]
 mod test_track_renamer {
     use super::*;
+    use track_rename::utils::not_hidden_file;
 
     use std::env;
     use std::fs::copy;
@@ -781,13 +782,6 @@ mod test_track_renamer {
                 test_func(temp_file.clone());
             }
         }
-    }
-
-    /// Check if this is a hidden file like `.DS_Store` on macOS
-    fn not_hidden_file(path: &Path) -> bool {
-        path.file_name()
-            .and_then(|name| name.to_str())
-            .is_none_or(|s| !s.starts_with('.'))
     }
 
     /// Create a new temporary file with an added random string in the name
