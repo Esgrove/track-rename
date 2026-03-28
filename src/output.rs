@@ -204,3 +204,117 @@ macro_rules! print_dimmed {
         $crate::output::print_dimmed(&format!($($arg)*))
     };
 }
+
+#[cfg(test)]
+mod test_color_diff {
+    use super::*;
+
+    /// Strip ANSI escape sequences from a string so plain text can be checked.
+    fn strip_ansi(text: &str) -> String {
+        let mut result = String::new();
+        let mut chars = text.chars().peekable();
+        while let Some(character) = chars.next() {
+            if character == '\x1b' {
+                while let Some(&next) = chars.peek() {
+                    chars.next();
+                    if next == 'm' {
+                        break;
+                    }
+                }
+            } else {
+                result.push(character);
+            }
+        }
+        result
+    }
+
+    #[test]
+    fn identical_strings_contain_input_text() {
+        let (old_diff, new_diff) = color_diff("hello", "hello", false);
+        assert!(
+            old_diff.contains("hello"),
+            "Expected old_diff to contain 'hello', got: {old_diff}"
+        );
+        assert!(
+            new_diff.contains("hello"),
+            "Expected new_diff to contain 'hello', got: {new_diff}"
+        );
+    }
+
+    #[test]
+    fn completely_different_strings_contain_respective_text() {
+        let (old_diff, new_diff) = color_diff("alpha", "beta", false);
+        assert!(
+            !old_diff.is_empty(),
+            "Expected old_diff to be non-empty for removed text"
+        );
+        assert!(!new_diff.is_empty(), "Expected new_diff to be non-empty for added text");
+        assert_ne!(
+            old_diff, new_diff,
+            "Expected old_diff and new_diff to differ for completely different strings"
+        );
+        let old_plain = strip_ansi(&old_diff);
+        let new_plain = strip_ansi(&new_diff);
+        assert!(
+            old_plain.contains("alpha"),
+            "Expected old_diff to contain 'alpha', got plain text: {old_plain}"
+        );
+        assert!(
+            new_plain.contains("beta"),
+            "Expected new_diff to contain 'beta', got plain text: {new_plain}"
+        );
+    }
+
+    #[test]
+    fn partial_difference_contains_common_text() {
+        let (old_diff, new_diff) = color_diff("hello world", "hello earth", false);
+        // The common prefix "hello " appears as plain text in both diffs
+        assert!(
+            old_diff.contains("hello "),
+            "Expected old_diff to contain common prefix 'hello ', got: {old_diff}"
+        );
+        assert!(
+            new_diff.contains("hello "),
+            "Expected new_diff to contain common prefix 'hello ', got: {new_diff}"
+        );
+        // The differing suffixes get ANSI-wrapped per character, so they won't appear
+        // as contiguous plain substrings. Verify the diffs are longer than just the
+        // common prefix and differ from each other.
+        assert!(
+            old_diff.len() > "hello ".len(),
+            "Expected old_diff to contain more than just the common prefix, got: {old_diff}"
+        );
+        assert!(
+            new_diff.len() > "hello ".len(),
+            "Expected new_diff to contain more than just the common prefix, got: {new_diff}"
+        );
+        assert_ne!(
+            old_diff, new_diff,
+            "Expected old_diff and new_diff to differ for changed suffixes"
+        );
+    }
+
+    #[test]
+    fn stacked_mode_alignment() {
+        // "ABC - Shared" is shorter before the common " - Shared" than "XYZW - Shared",
+        // so old_diff should get leading spaces to align the common text.
+        let (old_diff, new_diff) = color_diff("ABC - Shared", "XYZW - Shared", true);
+        assert!(
+            old_diff.contains(" - Shared"),
+            "Expected old_diff to contain common text ' - Shared', got: {old_diff}"
+        );
+        assert!(
+            new_diff.contains(" - Shared"),
+            "Expected new_diff to contain common text ' - Shared', got: {new_diff}"
+        );
+        // The shorter old string should be padded with leading spaces for alignment.
+        assert!(
+            old_diff.starts_with(' '),
+            "Expected old_diff to start with padding spaces for alignment, got: {old_diff}"
+        );
+        assert!(
+            !new_diff.starts_with(' '),
+            "Expected new_diff to have no leading padding, got: {new_diff}"
+        );
+    }
+}

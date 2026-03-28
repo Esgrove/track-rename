@@ -267,3 +267,176 @@ mod test_get_tags_from_filename {
         );
     }
 }
+
+#[cfg(test)]
+mod test_normalize_str {
+    use super::*;
+
+    #[test]
+    fn ascii_string_passes_through_unchanged() {
+        assert_eq!(normalize_str("Hello"), "Hello");
+    }
+
+    #[test]
+    fn nfc_composed_stays_the_same() {
+        assert_eq!(normalize_str("café"), "café");
+    }
+
+    #[test]
+    fn nfd_decomposed_normalizes_to_nfc() {
+        let decomposed = "cafe\u{0301}";
+        assert_eq!(normalize_str(decomposed), "café");
+    }
+
+    #[test]
+    fn empty_string_returns_empty() {
+        assert_eq!(normalize_str(""), "");
+    }
+
+    #[test]
+    fn combining_diaeresis_normalizes_to_composed() {
+        let decomposed = "a\u{0308}";
+        assert_eq!(normalize_str(decomposed), "ä");
+    }
+}
+
+#[cfg(test)]
+mod test_contains_subpath {
+    use super::*;
+    use std::path::Path;
+
+    #[test]
+    fn empty_subpath_returns_false() {
+        assert!(!contains_subpath(Path::new("/a/b"), Path::new("")));
+    }
+
+    #[test]
+    fn single_component_match() {
+        assert!(contains_subpath(Path::new("/a/b/c"), Path::new("b")));
+    }
+
+    #[test]
+    fn full_path_equals_subpath() {
+        assert!(contains_subpath(Path::new("a/b"), Path::new("a/b")));
+    }
+
+    #[test]
+    fn subpath_longer_than_path_returns_false() {
+        assert!(!contains_subpath(Path::new("a/b"), Path::new("a/b/c/d/e")));
+    }
+
+    #[test]
+    fn no_match_at_all() {
+        assert!(!contains_subpath(Path::new("/a/b/c"), Path::new("x/y")));
+    }
+
+    #[test]
+    fn match_not_contiguous_returns_false() {
+        assert!(!contains_subpath(Path::new("a/b/c/d"), Path::new("a/c")));
+    }
+}
+
+#[cfg(test)]
+mod test_get_filename_from_path {
+    use super::*;
+    use std::path::Path;
+
+    #[test]
+    fn normal_path_returns_filename() {
+        let result = get_filename_from_path(Path::new("/some/dir/file.mp3")).expect("should get filename");
+        assert_eq!(result, "file.mp3");
+    }
+
+    #[test]
+    fn path_with_unicode_returns_filename() {
+        let result = get_filename_from_path(Path::new("/dir/ångström.aif")).expect("should get unicode filename");
+        assert_eq!(result, "ångström.aif");
+    }
+
+    #[test]
+    fn root_path_with_no_filename_should_error() {
+        let result = get_filename_from_path(Path::new("/"));
+        assert!(result.is_err());
+    }
+}
+
+#[cfg(test)]
+mod test_rename_track {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn successful_rename() {
+        let temp_directory = std::env::temp_dir();
+        let source_path = temp_directory.join("test_rename_track_source_ok.tmp");
+        let destination_path = temp_directory.join("test_rename_track_dest_ok.tmp");
+
+        // Clean up any leftover files from previous runs
+        let _ = fs::remove_file(&source_path);
+        let _ = fs::remove_file(&destination_path);
+
+        fs::write(&source_path, "test content").expect("should create source file");
+
+        rename_track(&source_path, &destination_path, false).expect("rename should succeed");
+
+        assert!(!source_path.exists(), "source file should no longer exist");
+        assert!(destination_path.exists(), "destination file should now exist");
+
+        // Clean up
+        let _ = fs::remove_file(&destination_path);
+    }
+
+    #[test]
+    fn nonexistent_source_returns_error() {
+        let temp_directory = std::env::temp_dir();
+        let source_path = temp_directory.join("test_rename_track_nonexistent_source.tmp");
+        let destination_path = temp_directory.join("test_rename_track_nonexistent_dest.tmp");
+
+        // Ensure source does not exist
+        let _ = fs::remove_file(&source_path);
+
+        let result = rename_track(&source_path, &destination_path, false);
+        assert!(result.is_err(), "renaming nonexistent source should fail");
+    }
+
+    #[test]
+    #[should_panic(expected = "Failed to rename file")]
+    fn test_mode_with_failure_should_panic() {
+        let temp_directory = std::env::temp_dir();
+        let source_path = temp_directory.join("test_rename_track_panic_source.tmp");
+        let destination_path = temp_directory.join("test_rename_track_panic_dest.tmp");
+
+        // Ensure source does not exist so rename fails
+        let _ = fs::remove_file(&source_path);
+
+        let _ = rename_track(&source_path, &destination_path, true);
+    }
+}
+
+#[cfg(test)]
+mod test_resolve_input_path {
+    use super::*;
+
+    #[test]
+    fn none_input_returns_current_working_directory() {
+        let result = resolve_input_path(None).expect("should resolve None to cwd");
+        let expected = dunce::canonicalize(std::env::current_dir().expect("should get current dir"))
+            .expect("should canonicalize cwd");
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn nonexistent_path_returns_error() {
+        let nonexistent = Path::new("/this/path/should/not/exist/anywhere");
+        let result = resolve_input_path(Some(nonexistent));
+        assert!(result.is_err(), "nonexistent path should return an error");
+    }
+
+    #[test]
+    fn valid_existing_path_returns_canonicalized_path() {
+        let temp_directory = std::env::temp_dir();
+        let result = resolve_input_path(Some(&temp_directory)).expect("should resolve temp directory");
+        let expected = dunce::canonicalize(&temp_directory).expect("should canonicalize temp directory");
+        assert_eq!(result, expected);
+    }
+}

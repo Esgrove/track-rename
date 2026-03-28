@@ -314,3 +314,448 @@ fn read_bytes<R: BufRead>(reader: &mut R) -> io::Result<Vec<u8>> {
     }
     Ok(buffer)
 }
+
+#[cfg(test)]
+mod test_color_new {
+    use super::*;
+
+    #[test]
+    fn creates_color_from_rgb_array() {
+        let color = Color::new([255, 128, 0]);
+        assert_eq!(color.r, 255);
+        assert_eq!(color.g, 128);
+        assert_eq!(color.b, 0);
+    }
+
+    #[test]
+    fn creates_color_from_all_zeros() {
+        let color = Color::new([0, 0, 0]);
+        assert_eq!(color.r, 0);
+        assert_eq!(color.g, 0);
+        assert_eq!(color.b, 0);
+    }
+
+    #[test]
+    fn creates_color_from_all_max() {
+        let color = Color::new([255, 255, 255]);
+        assert_eq!(color.r, 255);
+        assert_eq!(color.g, 255);
+        assert_eq!(color.b, 255);
+    }
+}
+
+#[cfg(test)]
+mod test_color_new_argb {
+    use super::*;
+
+    #[test]
+    fn creates_color_ignoring_alpha_channel() {
+        let color = Color::new_argb([0, 255, 128, 0]);
+        assert_eq!(color.r, 255);
+        assert_eq!(color.g, 128);
+        assert_eq!(color.b, 0);
+    }
+
+    #[test]
+    fn ignores_nonzero_alpha() {
+        let color = Color::new_argb([200, 10, 20, 30]);
+        assert_eq!(color.r, 10);
+        assert_eq!(color.g, 20);
+        assert_eq!(color.b, 30);
+    }
+
+    #[test]
+    fn creates_color_with_max_alpha() {
+        let color = Color::new_argb([255, 100, 150, 200]);
+        assert_eq!(color.r, 100);
+        assert_eq!(color.g, 150);
+        assert_eq!(color.b, 200);
+    }
+}
+
+#[cfg(test)]
+mod test_color_display {
+    use super::*;
+
+    #[test]
+    fn displays_rgb_values() {
+        let color = Color::new([255, 128, 0]);
+        let display_output = color.to_string();
+        assert!(
+            display_output.contains("[255,128,0]"),
+            "Expected display to contain '[255,128,0]', got: {display_output}"
+        );
+    }
+
+    #[test]
+    fn displays_color_prefix() {
+        let color = Color::new([0, 0, 0]);
+        let display_output = color.to_string();
+        assert!(
+            display_output.contains("Color:"),
+            "Expected display to contain 'Color:', got: {display_output}"
+        );
+    }
+
+    #[test]
+    fn displays_all_zeros() {
+        let color = Color::new([0, 0, 0]);
+        let display_output = color.to_string();
+        assert!(
+            display_output.contains("[0,0,0]"),
+            "Expected display to contain '[0,0,0]', got: {display_output}"
+        );
+    }
+
+    #[test]
+    fn displays_argb_constructed_color() {
+        let color = Color::new_argb([128, 10, 20, 30]);
+        let display_output = color.to_string();
+        assert!(
+            display_output.contains("[10,20,30]"),
+            "Expected display to contain '[10,20,30]', got: {display_output}"
+        );
+    }
+}
+
+#[cfg(test)]
+mod test_cue_load {
+    use super::*;
+
+    #[test]
+    fn loads_cue_with_empty_name() {
+        let cue_data: Vec<u8> = vec![
+            0x00, // padding
+            0x00, // index = 0
+            0x00, 0x00, 0x03, 0xe8, // position = 1000 ms
+            0x00, // padding
+            0xCC, 0x00, 0x00, // RGB color
+            0x00, 0x00, // padding
+            0x00, // null-terminated empty name
+        ];
+        let cue = Cue::load(&cue_data).expect("Should parse valid cue data with empty name");
+        assert_eq!(cue.index, 0);
+        assert_eq!(cue.position, 1000);
+        assert_eq!(cue.color.r, 0xCC);
+        assert_eq!(cue.color.g, 0x00);
+        assert_eq!(cue.color.b, 0x00);
+        // Empty name should be replaced with a position timestamp
+        assert!(
+            !cue.name.is_empty(),
+            "Name should not be empty (should be a position timestamp)"
+        );
+    }
+
+    #[test]
+    fn loads_cue_with_name() {
+        let mut cue_data: Vec<u8> = vec![
+            0x00, // padding
+            0x02, // index = 2
+            0x00, 0x00, 0x07, 0xD0, // position = 2000 ms
+            0x00, // padding
+            0x00, 0xFF, 0x00, // RGB color (green)
+            0x00, 0x00, // padding
+        ];
+        // Add name "Drop" + null terminator
+        cue_data.extend_from_slice(b"Drop\x00");
+
+        let cue = Cue::load(&cue_data).expect("Should parse cue with named cue point");
+        assert_eq!(cue.index, 2);
+        assert_eq!(cue.position, 2000);
+        assert_eq!(cue.color.r, 0x00);
+        assert_eq!(cue.color.g, 0xFF);
+        assert_eq!(cue.color.b, 0x00);
+        assert_eq!(cue.name, "Drop");
+    }
+
+    #[test]
+    fn rejects_too_short_data() {
+        let short_data: Vec<u8> = vec![0x00, 0x00, 0x00, 0x00];
+        let result = Cue::load(&short_data);
+        assert!(result.is_err(), "Should reject data shorter than 13 bytes");
+    }
+}
+
+#[cfg(test)]
+mod test_loop_load {
+    use super::*;
+
+    #[test]
+    fn loads_loop_with_empty_name() {
+        let loop_data: Vec<u8> = vec![
+            0x00, // padding
+            0x00, // index = 0
+            0x00, 0x00, 0x01, 0xF4, // start_position = 500 ms
+            0x00, 0x00, 0x07, 0xD0, // end_position = 2000 ms
+            0xFF, 0xFF, 0xFF, 0xFF, // padding
+            0x00, 0x27, 0xAA, 0xE1, // ARGB color
+            0x00, // padding
+            0x01, // locked = true
+            0x00, // null-terminated empty name
+        ];
+        let loop_entry = Loop::load(&loop_data).expect("Should parse valid loop data");
+        assert_eq!(loop_entry.index, 0);
+        assert_eq!(loop_entry.start_position, 500);
+        assert_eq!(loop_entry.end_position, 2000);
+        assert_eq!(loop_entry.color.r, 0x27);
+        assert_eq!(loop_entry.color.g, 0xAA);
+        assert_eq!(loop_entry.color.b, 0xE1);
+        assert!(loop_entry.locked, "Loop should be locked");
+    }
+
+    #[test]
+    fn rejects_too_short_data() {
+        let short_data: Vec<u8> = vec![0x00; 10];
+        let result = Loop::load(&short_data);
+        assert!(result.is_err(), "Should reject data shorter than 15 bytes");
+    }
+}
+
+#[cfg(test)]
+mod test_cue_display {
+    use super::*;
+
+    #[test]
+    fn displays_cue_marker() {
+        let cue_data: Vec<u8> = vec![
+            0x00, // padding
+            0x00, // index = 0
+            0x00, 0x00, 0x03, 0xe8, // position = 1000 ms
+            0x00, // padding
+            0xCC, 0x00, 0x00, // RGB color
+            0x00, 0x00, // padding
+            0x00, // null-terminated empty name
+        ];
+        let cue = Cue::load(&cue_data).expect("Should parse valid cue data");
+        let marker = Markers::Cue(cue);
+        let display_output = format!("{marker}");
+        assert!(
+            display_output.contains("Cue 1"),
+            "Display should contain 'Cue 1', got: {display_output}"
+        );
+    }
+}
+
+#[cfg(test)]
+mod test_loop_display {
+    use super::*;
+
+    /// Helper to build a valid loop byte array with the given lock state.
+    fn build_loop_data(locked: bool) -> Vec<u8> {
+        vec![
+            0x00, // padding
+            0x00, // index = 0
+            0x00,
+            0x00,
+            0x01,
+            0xF4, // start_position = 500 ms
+            0x00,
+            0x00,
+            0x07,
+            0xD0, // end_position = 2000 ms
+            0xFF,
+            0xFF,
+            0xFF,
+            0xFF, // padding
+            0x00,
+            0x27,
+            0xAA,
+            0xE1, // ARGB color
+            0x00, // padding
+            u8::from(locked),
+            0x00, // null-terminated empty name
+        ]
+    }
+
+    #[test]
+    fn displays_locked_loop() {
+        let loop_data = build_loop_data(true);
+        let loop_entry = Loop::load(&loop_data).expect("Should parse valid locked loop data");
+        let marker = Markers::Loop(loop_entry);
+        let display_output = format!("{marker}");
+        assert!(
+            display_output.contains("Loop 1"),
+            "Display should contain 'Loop 1', got: {display_output}"
+        );
+        assert!(
+            display_output.contains("locked"),
+            "Display should contain 'locked', got: {display_output}"
+        );
+    }
+
+    #[test]
+    fn displays_unlocked_loop() {
+        let loop_data = build_loop_data(false);
+        let loop_entry = Loop::load(&loop_data).expect("Should parse valid unlocked loop data");
+        let marker = Markers::Loop(loop_entry);
+        let display_output = format!("{marker}");
+        assert!(
+            display_output.contains("Loop 1"),
+            "Display should contain 'Loop 1', got: {display_output}"
+        );
+        assert!(
+            display_output.contains("unlocked"),
+            "Display should contain 'unlocked', got: {display_output}"
+        );
+    }
+}
+
+#[cfg(test)]
+mod test_color_format {
+    use super::*;
+
+    #[test]
+    fn formats_text_with_color() {
+        let color = Color::new([255, 0, 0]);
+        let colored_text = color.format("test");
+        let text_string = colored_text.to_string();
+        assert!(
+            text_string.contains("test"),
+            "Formatted text should contain 'test', got: {text_string}"
+        );
+    }
+}
+
+#[cfg(test)]
+mod test_markers_parse_from_real_file {
+    use super::*;
+    use std::path::Path;
+
+    #[test]
+    fn parses_markers_from_extended_tags_file() {
+        let test_path =
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/extended_tags/Extended Tags - Song - 16-44.mp3");
+        if !test_path.exists() {
+            eprintln!("Test file not found, skipping: {}", test_path.display());
+            return;
+        }
+        let tag = id3::Tag::read_from_path(&test_path).expect("Failed to read ID3 tags from test file");
+
+        let mut found_markers = false;
+        for frame in tag.frames() {
+            if let Some(object) = frame.content().encapsulated_object()
+                && object.description == "Serato Markers2"
+            {
+                let markers = Markers::parse(&object.data).expect("Should parse Serato Markers2 data");
+                assert!(!markers.is_empty(), "Markers should not be empty");
+
+                // Check that at least one known marker variant is present
+                let has_known_variant = markers.iter().any(|marker| {
+                    matches!(
+                        marker,
+                        Markers::BpmLock(_) | Markers::Color(_) | Markers::Cue(_) | Markers::Loop(_)
+                    )
+                });
+                assert!(has_known_variant, "Should have at least one known marker variant");
+                found_markers = true;
+            }
+        }
+        assert!(
+            found_markers,
+            "Should have found Serato Markers2 GEOB frame in test file"
+        );
+    }
+}
+
+#[cfg(test)]
+mod test_read_bytes {
+    use super::*;
+    use std::io::Cursor;
+
+    #[test]
+    fn reads_bytes_until_null() {
+        let data = vec![0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x00, 0xFF];
+        let mut cursor = Cursor::new(data);
+        let result = read_bytes(&mut cursor).expect("Should read bytes until null terminator");
+        assert_eq!(result, vec![0x48, 0x65, 0x6c, 0x6c, 0x6f]);
+    }
+
+    #[test]
+    fn reads_all_bytes_without_null() {
+        let data = vec![0x48, 0x65, 0x6c, 0x6c, 0x6f];
+        let mut cursor = Cursor::new(data);
+        let result = read_bytes(&mut cursor).expect("Should read all bytes when no null is present");
+        assert_eq!(result, vec![0x48, 0x65, 0x6c, 0x6c, 0x6f]);
+    }
+
+    #[test]
+    fn reads_empty_data() {
+        let data: Vec<u8> = vec![];
+        let mut cursor = Cursor::new(data);
+        let result = read_bytes(&mut cursor).expect("Should handle empty data");
+        assert!(result.is_empty(), "Should return empty vec for empty data");
+    }
+}
+
+#[cfg(test)]
+mod test_bpmlock_display {
+    use super::*;
+
+    #[test]
+    fn displays_enabled_bpmlock() {
+        let bpmlock = BpmLock { enabled: true };
+        let marker = Markers::BpmLock(bpmlock);
+        assert_eq!(marker.to_string(), "BPM Lock: true");
+    }
+
+    #[test]
+    fn displays_disabled_bpmlock() {
+        let bpmlock = BpmLock { enabled: false };
+        let marker = Markers::BpmLock(bpmlock);
+        assert_eq!(marker.to_string(), "BPM Lock: false");
+    }
+}
+
+#[cfg(test)]
+mod test_bpmlock_load {
+    use super::*;
+
+    #[test]
+    fn loads_enabled_bpmlock() {
+        let result = BpmLock::load(&[1]).expect("Should parse enabled BpmLock");
+        assert!(result.enabled);
+    }
+
+    #[test]
+    fn loads_disabled_bpmlock() {
+        let result = BpmLock::load(&[0]).expect("Should parse disabled BpmLock");
+        assert!(!result.enabled);
+    }
+
+    #[test]
+    fn rejects_empty_data() {
+        let result = BpmLock::load(&[]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn rejects_too_long_data() {
+        let result = BpmLock::load(&[1, 0]);
+        assert!(result.is_err());
+    }
+}
+
+#[cfg(test)]
+mod test_color_load {
+    use super::*;
+
+    #[test]
+    fn loads_color_from_four_bytes() {
+        let color = Color::load(&[0x00, 0xFF, 0x80, 0x40]).expect("Should parse color");
+        assert_eq!(color.r, 0xFF);
+        assert_eq!(color.g, 0x80);
+        assert_eq!(color.b, 0x40);
+    }
+
+    #[test]
+    fn rejects_too_short_data() {
+        let result = Color::load(&[0x00, 0xFF, 0x80]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn rejects_too_long_data() {
+        let result = Color::load(&[0x00, 0xFF, 0x80, 0x40, 0x00]);
+        assert!(result.is_err());
+    }
+}

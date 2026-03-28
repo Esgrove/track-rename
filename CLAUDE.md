@@ -42,6 +42,9 @@ cargo fmt
 
 # Run tests
 cargo test
+
+# Run tests with coverage report (text output)
+cargo llvm-cov nextest
 ```
 
 ## Project Structure

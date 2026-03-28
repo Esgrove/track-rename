@@ -129,3 +129,223 @@ impl Display for BeatGridMarker {
         }
     }
 }
+
+#[cfg(test)]
+mod test_beatgrid_parse {
+    use super::*;
+
+    #[test]
+    fn data_too_short_returns_error() {
+        let short_data: Vec<u8> = vec![0x01, 0x00, 0x00, 0x00, 0x00];
+        assert!(BeatGrid::parse(&short_data).is_err());
+    }
+
+    #[test]
+    fn empty_data_returns_error() {
+        let empty_data: Vec<u8> = vec![];
+        assert!(BeatGrid::parse(&empty_data).is_err());
+    }
+
+    #[test]
+    fn zero_markers_returns_empty_beatgrid() {
+        // Header (2 bytes) + num_markers = 0 (4 bytes)
+        let data: Vec<u8> = vec![0x01, 0x00, 0x00, 0x00, 0x00, 0x00];
+        let beatgrid = BeatGrid::parse(&data).expect("should parse zero-marker beatgrid");
+        assert_eq!(beatgrid.num_markers, 0);
+        assert!(beatgrid.markers.is_empty());
+    }
+
+    #[test]
+    fn single_terminal_marker() {
+        let position: f32 = 0.0;
+        let bpm: f32 = 128.0;
+        let position_bytes = position.to_be_bytes();
+        let bpm_bytes = bpm.to_be_bytes();
+
+        let mut data: Vec<u8> = vec![
+            0x01, 0x00, // header
+            0x00, 0x00, 0x00, 0x01, // num_markers = 1
+        ];
+        data.extend_from_slice(&position_bytes);
+        data.extend_from_slice(&bpm_bytes);
+        data.push(0x00); // footer byte
+
+        let beatgrid = BeatGrid::parse(&data).expect("should parse single terminal marker");
+        assert_eq!(beatgrid.num_markers, 1);
+        assert_eq!(beatgrid.markers.len(), 1);
+
+        match &beatgrid.markers[0] {
+            BeatGridMarker::Terminal {
+                position: parsed_position,
+                bpm: parsed_bpm,
+            } => {
+                assert!(
+                    (*parsed_position - position).abs() < f32::EPSILON,
+                    "expected position {position}, got {parsed_position}"
+                );
+                assert!(
+                    (*parsed_bpm - bpm).abs() < f32::EPSILON,
+                    "expected bpm {bpm}, got {parsed_bpm}"
+                );
+            }
+            BeatGridMarker::NonTerminal { .. } => {
+                panic!("expected terminal marker, got non-terminal");
+            }
+        }
+    }
+
+    #[test]
+    fn two_markers_non_terminal_then_terminal() {
+        let first_position: f32 = 0.5;
+        let beats_till_next: u32 = 4;
+        let second_position: f32 = 10.0;
+        let terminal_bpm: f32 = 120.0;
+
+        let mut data: Vec<u8> = vec![
+            0x01, 0x00, // header
+            0x00, 0x00, 0x00, 0x02, // num_markers = 2
+        ];
+        data.extend_from_slice(&first_position.to_be_bytes());
+        data.extend_from_slice(&beats_till_next.to_be_bytes());
+        data.extend_from_slice(&second_position.to_be_bytes());
+        data.extend_from_slice(&terminal_bpm.to_be_bytes());
+        data.push(0x00); // footer byte
+
+        let beatgrid = BeatGrid::parse(&data).expect("should parse two markers");
+        assert_eq!(beatgrid.num_markers, 2);
+        assert_eq!(beatgrid.markers.len(), 2);
+
+        match &beatgrid.markers[0] {
+            BeatGridMarker::NonTerminal {
+                position,
+                beats_till_next: parsed_beats,
+            } => {
+                assert!(
+                    (*position - first_position).abs() < f32::EPSILON,
+                    "expected position {first_position}, got {position}"
+                );
+                assert_eq!(*parsed_beats, beats_till_next);
+            }
+            BeatGridMarker::Terminal { .. } => {
+                panic!("expected non-terminal marker for first entry");
+            }
+        }
+
+        match &beatgrid.markers[1] {
+            BeatGridMarker::Terminal { position, bpm } => {
+                assert!(
+                    (*position - second_position).abs() < f32::EPSILON,
+                    "expected position {second_position}, got {position}"
+                );
+                assert!(
+                    (*bpm - terminal_bpm).abs() < f32::EPSILON,
+                    "expected bpm {terminal_bpm}, got {bpm}"
+                );
+            }
+            BeatGridMarker::NonTerminal { .. } => {
+                panic!("expected terminal marker for last entry");
+            }
+        }
+    }
+
+    #[test]
+    fn marker_data_truncated_returns_error() {
+        // Header says 1 marker but data is too short to contain it
+        let data: Vec<u8> = vec![
+            0x01, 0x00, // header
+            0x00, 0x00, 0x00, 0x01, // num_markers = 1
+            0x00, 0x00, // only 2 bytes of marker data (need 8 + footer)
+        ];
+        assert!(BeatGrid::parse(&data).is_err());
+    }
+}
+
+#[cfg(test)]
+mod test_beatgrid_display {
+    use super::*;
+
+    #[test]
+    fn empty_beatgrid_displays_empty() {
+        let beatgrid = BeatGrid::default();
+        let display_output = format!("{beatgrid}");
+        assert_eq!(display_output, "Empty");
+    }
+
+    #[test]
+    fn single_terminal_marker_displays_bpm() {
+        let position: f32 = 0.0;
+        let bpm: f32 = 128.0;
+        let position_bytes = position.to_be_bytes();
+        let bpm_bytes = bpm.to_be_bytes();
+
+        let mut data: Vec<u8> = vec![
+            0x01, 0x00, // header
+            0x00, 0x00, 0x00, 0x01, // num_markers = 1
+        ];
+        data.extend_from_slice(&position_bytes);
+        data.extend_from_slice(&bpm_bytes);
+        data.push(0x00); // footer
+
+        let beatgrid = BeatGrid::parse(&data).expect("should parse single marker");
+        let display_output = format!("{beatgrid}");
+        assert_eq!(display_output, "Beatgrid 0.000s 128.000 BPM");
+    }
+
+    #[test]
+    fn multiple_markers_display_with_count() {
+        let first_position: f32 = 0.5;
+        let beats_till_next: u32 = 4;
+        let second_position: f32 = 10.0;
+        let terminal_bpm: f32 = 120.0;
+
+        let mut data: Vec<u8> = vec![
+            0x01, 0x00, // header
+            0x00, 0x00, 0x00, 0x02, // num_markers = 2
+        ];
+        data.extend_from_slice(&first_position.to_be_bytes());
+        data.extend_from_slice(&beats_till_next.to_be_bytes());
+        data.extend_from_slice(&second_position.to_be_bytes());
+        data.extend_from_slice(&terminal_bpm.to_be_bytes());
+        data.push(0x00); // footer
+
+        let beatgrid = BeatGrid::parse(&data).expect("should parse two markers");
+        let display_output = format!("{beatgrid}");
+        assert!(
+            display_output.contains("Beatgrid (2):"),
+            "expected marker count in output, got: {display_output}"
+        );
+        assert!(
+            display_output.contains("0.500s 4 beats"),
+            "expected non-terminal marker in output, got: {display_output}"
+        );
+        assert!(
+            display_output.contains("10.000s 120.000 BPM"),
+            "expected terminal marker in output, got: {display_output}"
+        );
+    }
+}
+
+#[cfg(test)]
+mod test_beatgrid_marker_display {
+    use super::*;
+
+    #[test]
+    fn terminal_marker_format() {
+        let marker = BeatGridMarker::Terminal {
+            position: 1.234,
+            bpm: 140.0,
+        };
+        let display_output = format!("{marker}");
+        assert_eq!(display_output, "1.234s 140.000 BPM");
+    }
+
+    #[test]
+    fn non_terminal_marker_format() {
+        let marker = BeatGridMarker::NonTerminal {
+            position: 0.500,
+            beats_till_next: 8,
+        };
+        let display_output = format!("{marker}");
+        assert_eq!(display_output, "0.500s 8 beats\n");
+    }
+}

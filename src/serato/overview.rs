@@ -150,3 +150,121 @@ impl Display for Overview {
         }
     }
 }
+
+#[cfg(test)]
+mod test_overview_parse {
+    use super::*;
+
+    #[test]
+    fn rejects_data_too_short() {
+        let empty_data: &[u8] = &[];
+        assert!(Overview::parse(empty_data).is_err());
+
+        let single_byte: &[u8] = &[0x01];
+        assert!(Overview::parse(single_byte).is_err());
+    }
+
+    #[test]
+    fn parses_header_only_with_no_blocks() {
+        let header_only: &[u8] = &[0x01, 0x05];
+        let overview = Overview::parse(header_only).expect("Should parse header-only data");
+        assert_eq!(overview.blocks.len(), 0);
+    }
+
+    #[test]
+    fn parses_single_block() {
+        let mut data = vec![0x01, 0x05];
+        let block: [u8; 16] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+        data.extend_from_slice(&block);
+        let overview = Overview::parse(&data).expect("Should parse single block");
+        assert_eq!(overview.blocks.len(), 1);
+        assert_eq!(overview.blocks[0], block);
+    }
+
+    #[test]
+    fn parses_multiple_blocks() {
+        let mut data = vec![0x01, 0x05];
+        let block_a: [u8; 16] = [10; 16];
+        let block_b: [u8; 16] = [20; 16];
+        let block_c: [u8; 16] = [30; 16];
+        data.extend_from_slice(&block_a);
+        data.extend_from_slice(&block_b);
+        data.extend_from_slice(&block_c);
+        let overview = Overview::parse(&data).expect("Should parse multiple blocks");
+        assert_eq!(overview.blocks.len(), 3);
+        assert_eq!(overview.blocks[0], block_a);
+        assert_eq!(overview.blocks[1], block_b);
+        assert_eq!(overview.blocks[2], block_c);
+    }
+
+    #[test]
+    fn ignores_trailing_bytes_less_than_block_size() {
+        let mut data = vec![0x01, 0x05];
+        let block: [u8; 16] = [5; 16];
+        data.extend_from_slice(&block);
+        // Add 10 trailing bytes (less than a full 16-byte block)
+        data.extend_from_slice(&[0xFF; 10]);
+        let overview = Overview::parse(&data).expect("Should parse ignoring partial trailing block");
+        assert_eq!(overview.blocks.len(), 1);
+        assert_eq!(overview.blocks[0], block);
+    }
+
+    #[test]
+    fn verifies_block_count_for_known_length() {
+        let num_blocks = 240;
+        let mut data = vec![0x01, 0x05];
+        for index in 0..num_blocks {
+            let value = (index % 256) as u8;
+            let block = [value; 16];
+            data.extend_from_slice(&block);
+        }
+        let overview = Overview::parse(&data).expect("Should parse 240 blocks");
+        assert_eq!(overview.blocks.len(), num_blocks);
+    }
+}
+
+#[cfg(test)]
+mod test_overview_display {
+    use super::*;
+
+    /// Build an `Overview` with 240 blocks of synthetic waveform data.
+    fn build_overview_with_blocks(num_blocks: usize) -> Overview {
+        let blocks: Vec<[u8; 16]> = (0..num_blocks)
+            .map(|index| {
+                let value = ((index * 3) % 256) as u8;
+                [value; 16]
+            })
+            .collect();
+        Overview { blocks }
+    }
+
+    #[test]
+    fn display_produces_non_empty_output() {
+        let overview = build_overview_with_blocks(240);
+        let display_output = format!("{overview}");
+        // In CI the terminal size may not be available, causing draw_waveform
+        // to return an error string. Either way the output must not be empty.
+        assert!(!display_output.is_empty(), "Display output should not be empty");
+    }
+
+    #[test]
+    fn display_with_few_blocks_produces_output() {
+        let overview = build_overview_with_blocks(10);
+        let display_output = format!("{overview}");
+        assert!(
+            !display_output.is_empty(),
+            "Display output for small overview should not be empty"
+        );
+    }
+
+    #[test]
+    fn display_empty_overview_produces_output() {
+        let overview = Overview::default();
+        let display_output = format!("{overview}");
+        // An empty overview may succeed with an empty waveform or return an error string
+        assert!(
+            !display_output.is_empty(),
+            "Display output for empty overview should not be empty"
+        );
+    }
+}

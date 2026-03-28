@@ -509,3 +509,264 @@ mod test_track_operations {
         assert_ne!(track, "song");
     }
 }
+
+#[cfg(test)]
+mod test_try_from_path {
+    use super::*;
+    use std::path::Path;
+
+    /// Return the path to the basic tags MP3 test file.
+    fn basic_tags_mp3_path() -> PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/basic_tags/Basic Tags - Song - 16-44.mp3")
+    }
+
+    /// Return the path to the basic tags AIF test file.
+    fn basic_tags_aif_path() -> PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/basic_tags/Basic Tags - Song - 16-44.aif")
+    }
+
+    #[test]
+    fn valid_mp3_path_returns_some() {
+        let path = basic_tags_mp3_path();
+        if !path.exists() {
+            println!("Test file not found, skipping: {}", path.display());
+            return;
+        }
+        let result = Track::try_from_path(&path);
+        assert!(result.is_some(), "Expected Some for valid MP3 path");
+        let track = result.expect("Track::try_from_path returned None for valid MP3");
+        assert_eq!(track.format, FileFormat::Mp3, "Expected MP3 format");
+        assert_eq!(track.extension, "mp3", "Expected mp3 extension");
+    }
+
+    #[test]
+    fn valid_aif_path_returns_some_with_correct_format() {
+        let path = basic_tags_aif_path();
+        if !path.exists() {
+            println!("Test file not found, skipping: {}", path.display());
+            return;
+        }
+        let result = Track::try_from_path(&path);
+        assert!(result.is_some(), "Expected Some for valid AIF path");
+        let track = result.expect("Track::try_from_path returned None for valid AIF");
+        assert_eq!(track.format, FileFormat::Aif, "Expected AIF format");
+        assert_eq!(track.extension, "aif", "Expected aif extension");
+    }
+
+    #[test]
+    fn unsupported_extension_returns_none() {
+        let path = Path::new("/users/test/document.txt");
+        let result = Track::try_from_path(path);
+        assert!(result.is_none(), "Expected None for unsupported .txt extension");
+    }
+
+    #[test]
+    fn no_extension_returns_none() {
+        let path = Path::new("/users/test/noextension");
+        let result = Track::try_from_path(path);
+        assert!(result.is_none(), "Expected None for path with no extension");
+    }
+}
+
+#[cfg(test)]
+mod test_format_tags {
+    use super::*;
+    use std::path::Path;
+
+    use crate::tags::read_tags;
+
+    /// Return the path to the basic tags MP3 test file.
+    fn basic_tags_mp3_path() -> PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/basic_tags/Basic Tags - Song - 16-44.mp3")
+    }
+
+    #[test]
+    fn format_tags_populates_formatted_fields() {
+        let path = basic_tags_mp3_path();
+        if !path.exists() {
+            println!("Test file not found, skipping: {}", path.display());
+            return;
+        }
+        let mut track = Track::try_from_path(&path).expect("Failed to create Track from basic tags MP3");
+        let tag = read_tags(&track, false).expect("Failed to read tags from basic tags MP3");
+        track.format_tags(&tag);
+        assert!(
+            !track.tags.formatted_artist.is_empty(),
+            "Expected formatted_artist to be non-empty after format_tags"
+        );
+        assert!(
+            !track.tags.formatted_title.is_empty(),
+            "Expected formatted_title to be non-empty after format_tags"
+        );
+        assert!(
+            track.tags.formatted_name.contains(" - "),
+            "Expected formatted_name to contain ' - ', got '{}'",
+            track.tags.formatted_name
+        );
+    }
+}
+
+#[cfg(test)]
+mod test_formatted_filename {
+    use super::*;
+    use std::path::Path;
+
+    use crate::tags::read_tags;
+
+    /// Return the path to the basic tags MP3 test file.
+    fn basic_tags_mp3_path() -> PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/basic_tags/Basic Tags - Song - 16-44.mp3")
+    }
+
+    #[test]
+    fn formatted_filename_contains_separator() {
+        let path = basic_tags_mp3_path();
+        if !path.exists() {
+            println!("Test file not found, skipping: {}", path.display());
+            return;
+        }
+        let mut track = Track::try_from_path(&path).expect("Failed to create Track from basic tags MP3");
+        let tag = read_tags(&track, false).expect("Failed to read tags from basic tags MP3");
+        track.format_tags(&tag);
+        let filename = track.formatted_filename();
+        assert!(!filename.is_empty(), "Expected formatted_filename to be non-empty");
+        assert!(
+            filename.contains(" - "),
+            "Expected formatted_filename to contain ' - ', got '{filename}'"
+        );
+    }
+}
+
+#[cfg(test)]
+mod test_formatted_filename_with_extension {
+    use super::*;
+    use std::path::Path;
+
+    use crate::tags::read_tags;
+
+    /// Return the path to the basic tags MP3 test file.
+    fn basic_tags_mp3_path() -> PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/basic_tags/Basic Tags - Song - 16-44.mp3")
+    }
+
+    #[test]
+    fn formatted_filename_with_extension_ends_with_mp3() {
+        let path = basic_tags_mp3_path();
+        if !path.exists() {
+            println!("Test file not found, skipping: {}", path.display());
+            return;
+        }
+        let mut track = Track::try_from_path(&path).expect("Failed to create Track from basic tags MP3");
+        let tag = read_tags(&track, false).expect("Failed to read tags from basic tags MP3");
+        track.format_tags(&tag);
+        let filename_with_extension = track.formatted_filename_with_extension();
+        assert!(
+            Path::new(&filename_with_extension)
+                .extension()
+                .is_some_and(|ext| ext.eq_ignore_ascii_case("mp3")),
+            "Expected formatted_filename_with_extension to end with '.mp3', got '{filename_with_extension}'"
+        );
+    }
+}
+
+#[cfg(test)]
+mod test_path_with_new_name {
+    use super::*;
+    use std::path::Path;
+
+    /// Return the path to the basic tags MP3 test file.
+    fn basic_tags_mp3_path() -> PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/basic_tags/Basic Tags - Song - 16-44.mp3")
+    }
+
+    #[test]
+    fn path_with_new_name_uses_same_parent_directory() {
+        let path = basic_tags_mp3_path();
+        if !path.exists() {
+            println!("Test file not found, skipping: {}", path.display());
+            return;
+        }
+        let track = Track::try_from_path(&path).expect("Failed to create Track from basic tags MP3");
+        let new_path = track.path_with_new_name("new_name.mp3");
+        assert!(
+            new_path.ends_with("new_name.mp3"),
+            "Expected path to end with 'new_name.mp3', got '{}'",
+            new_path.display()
+        );
+        let new_parent = new_path.parent().expect("Failed to get parent of new path");
+        assert_eq!(new_parent, track.root, "Expected parent directory to match track root");
+    }
+}
+
+#[cfg(test)]
+mod test_track_ordering {
+    use super::*;
+    use std::cmp::Ordering;
+
+    #[test]
+    fn tracks_ordered_by_name() {
+        let track_alpha = Track::new(Path::new("/users/test/Alpha - Song.mp3")).expect("Failed to create track Alpha");
+        let track_beta = Track::new(Path::new("/users/test/Beta - Song.mp3")).expect("Failed to create track Beta");
+        assert_eq!(
+            track_alpha.cmp(&track_beta),
+            Ordering::Less,
+            "Expected Alpha to sort before Beta"
+        );
+        assert_eq!(
+            track_beta.cmp(&track_alpha),
+            Ordering::Greater,
+            "Expected Beta to sort after Alpha"
+        );
+        assert_eq!(
+            track_alpha.cmp(&track_alpha),
+            Ordering::Equal,
+            "Expected track to be equal to itself"
+        );
+    }
+
+    #[test]
+    fn partial_ord_consistent_with_ord() {
+        let track_alpha = Track::new(Path::new("/users/test/Alpha - Song.mp3")).expect("Failed to create track Alpha");
+        let track_beta = Track::new(Path::new("/users/test/Beta - Song.mp3")).expect("Failed to create track Beta");
+        assert_eq!(
+            track_alpha.partial_cmp(&track_beta),
+            Some(Ordering::Less),
+            "Expected partial_cmp to return Some(Less) for Alpha vs Beta"
+        );
+        assert_eq!(
+            track_beta.partial_cmp(&track_alpha),
+            Some(Ordering::Greater),
+            "Expected partial_cmp to return Some(Greater) for Beta vs Alpha"
+        );
+    }
+}
+
+#[cfg(test)]
+mod test_track_show {
+    use super::*;
+
+    #[test]
+    fn show_prints_once_and_sets_printed_flag() {
+        let mut track =
+            Track::new(Path::new("/users/test/Artist - Title.mp3")).expect("Failed to create track for show test");
+        track.number = 1;
+        assert!(!track.printed, "Expected printed flag to be false initially");
+        track.show(10, 2);
+        assert!(track.printed, "Expected printed flag to be true after first show call");
+    }
+
+    #[test]
+    fn show_does_not_print_twice() {
+        let mut track =
+            Track::new(Path::new("/users/test/Artist - Title.mp3")).expect("Failed to create track for show test");
+        track.number = 3;
+        track.show(10, 2);
+        assert!(track.printed, "Expected printed flag to be true after first show call");
+        // Second call should be a no-op because `printed` is already true
+        track.show(10, 2);
+        assert!(
+            track.printed,
+            "Expected printed flag to remain true after second show call"
+        );
+    }
+}

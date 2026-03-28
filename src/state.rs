@@ -424,3 +424,158 @@ mod test_state_database {
         assert!(state.is_empty().unwrap());
     }
 }
+
+#[cfg(test)]
+mod test_conversion_functions {
+    use super::*;
+
+    #[test]
+    fn u64_to_i64_zero_returns_zero() {
+        assert_eq!(u64_to_i64(0), 0);
+    }
+
+    #[test]
+    fn u64_to_i64_small_value_returns_same() {
+        assert_eq!(u64_to_i64(100), 100);
+    }
+
+    #[test]
+    fn u64_to_i64_max_i64_returns_max_i64() {
+        assert_eq!(u64_to_i64(i64::MAX as u64), i64::MAX);
+    }
+
+    #[test]
+    fn u64_to_i64_u64_max_clamps_to_i64_max() {
+        assert_eq!(u64_to_i64(u64::MAX), i64::MAX);
+    }
+
+    #[test]
+    fn u64_to_i64_overflow_clamps_to_i64_max() {
+        assert_eq!(u64_to_i64(i64::MAX as u64 + 1), i64::MAX);
+    }
+
+    #[test]
+    fn i64_to_u64_zero_returns_zero() {
+        assert_eq!(i64_to_u64(0), 0);
+    }
+
+    #[test]
+    fn i64_to_u64_small_value_returns_same() {
+        assert_eq!(i64_to_u64(100), 100);
+    }
+
+    #[test]
+    fn i64_to_u64_negative_returns_zero() {
+        assert_eq!(i64_to_u64(-1), 0);
+    }
+
+    #[test]
+    fn i64_to_u64_min_returns_zero() {
+        assert_eq!(i64_to_u64(i64::MIN), 0);
+    }
+
+    #[test]
+    fn i64_to_usize_zero_returns_zero() {
+        assert_eq!(i64_to_usize(0), 0);
+    }
+
+    #[test]
+    fn i64_to_usize_small_value_returns_same() {
+        assert_eq!(i64_to_usize(100), 100);
+    }
+
+    #[test]
+    fn i64_to_usize_negative_returns_zero() {
+        assert_eq!(i64_to_usize(-1), 0);
+    }
+
+    #[test]
+    fn i64_to_usize_min_returns_zero() {
+        assert_eq!(i64_to_usize(i64::MIN), 0);
+    }
+}
+
+#[cfg(test)]
+mod test_state_path {
+    use super::*;
+
+    #[test]
+    fn in_memory_state_path_returns_memory_string() {
+        let state = State::open_in_memory().expect("Failed to open in-memory state");
+        assert_eq!(state.path().to_string_lossy(), ":memory:");
+    }
+}
+
+#[cfg(test)]
+mod test_state_clean_nonexistent_paths {
+    use std::path::Path;
+
+    use super::*;
+
+    #[test]
+    fn clean_removes_entries_with_nonexistent_filesystem_paths() {
+        let state = State::open_in_memory().expect("Failed to open in-memory state");
+
+        let nonexistent_path_one = Path::new("/nonexistent/track_clean_test_one.aif");
+        let nonexistent_path_two = Path::new("/nonexistent/track_clean_test_two.aif");
+
+        let metadata_one = TrackMetadata {
+            modified: 500,
+            version: VERSION.to_string(),
+        };
+        let metadata_two = TrackMetadata {
+            modified: 600,
+            version: VERSION.to_string(),
+        };
+
+        state
+            .insert(nonexistent_path_one, &metadata_one)
+            .expect("Failed to insert first track");
+        state
+            .insert(nonexistent_path_two, &metadata_two)
+            .expect("Failed to insert second track");
+
+        assert_eq!(state.len().expect("Failed to get length"), 2);
+
+        let removed_count = state.clean().expect("Failed to clean state");
+        assert_eq!(removed_count, 2);
+        assert!(state.is_empty().expect("Failed to check if state is empty"));
+    }
+}
+
+#[cfg(test)]
+mod test_state_insert_update_modifies_values {
+    use std::path::Path;
+
+    use super::*;
+
+    #[test]
+    fn second_insert_updates_modified_and_version() {
+        let state = State::open_in_memory().expect("Failed to open in-memory state");
+        let track_path = Path::new("/music/update_test_track.aif");
+
+        let original_metadata = TrackMetadata {
+            modified: 100,
+            version: "1.0".to_string(),
+        };
+        state
+            .insert(track_path, &original_metadata)
+            .expect("Failed to insert original track");
+
+        let updated_metadata = TrackMetadata {
+            modified: 200,
+            version: "2.0".to_string(),
+        };
+        state
+            .insert(track_path, &updated_metadata)
+            .expect("Failed to insert updated track");
+
+        let retrieved = state
+            .get(track_path)
+            .expect("Failed to get track")
+            .expect("Track should exist after insert");
+
+        assert_eq!(retrieved.modified, 200);
+        assert_eq!(retrieved.version, "2.0");
+    }
+}

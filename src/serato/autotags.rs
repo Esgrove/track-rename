@@ -87,3 +87,122 @@ impl Display for AutoTags {
         )
     }
 }
+
+#[cfg(test)]
+mod test_autotags_parse {
+    use super::*;
+
+    #[test]
+    fn parses_full_autotags_data() {
+        // Header (2 bytes) + BPM "128.00\0" (7 bytes) + Auto gain "-3.257\0" (7 bytes) + Gain "0.000\0" (6 bytes)
+        let data: Vec<u8> = vec![
+            0x01, 0x01, // header
+            0x31, 0x32, 0x38, 0x2e, 0x30, 0x30, 0x00, // "128.00\0"
+            0x2d, 0x33, 0x2e, 0x32, 0x35, 0x37, 0x00, // "-3.257\0"
+            0x30, 0x2e, 0x30, 0x30, 0x30, 0x00, // "0.000\0"
+        ];
+        let autotags = AutoTags::parse(&data).expect("Should parse valid autotags data");
+        let epsilon = 0.001;
+        assert!((autotags.bpm - 128.0).abs() < epsilon, "BPM should be 128.0");
+        assert!(
+            (autotags.auto_gain - (-3.257)).abs() < epsilon,
+            "Auto gain should be -3.257"
+        );
+        assert!((autotags.gain - 0.0).abs() < epsilon, "Gain should be 0.0");
+    }
+
+    #[test]
+    fn parses_without_gain_field() {
+        // Only 16 bytes: header + BPM + auto gain, no gain field
+        let data: Vec<u8> = vec![
+            0x01, 0x01, // header
+            0x31, 0x32, 0x38, 0x2e, 0x30, 0x30, 0x00, // "128.00\0"
+            0x2d, 0x33, 0x2e, 0x32, 0x35, 0x37, 0x00, // "-3.257\0"
+        ];
+        let autotags = AutoTags::parse(&data).expect("Should parse autotags without gain");
+        let epsilon = 0.001;
+        assert!((autotags.bpm - 128.0).abs() < epsilon, "BPM should be 128.0");
+        assert!(
+            (autotags.auto_gain - (-3.257)).abs() < epsilon,
+            "Auto gain should be -3.257"
+        );
+        assert!(
+            (autotags.gain - 0.0).abs() < epsilon,
+            "Gain should default to 0.0 when missing"
+        );
+    }
+
+    #[test]
+    fn fails_on_data_too_short() {
+        let short_data: Vec<u8> = vec![0x01, 0x01, 0x31, 0x32, 0x38];
+        let result = AutoTags::parse(&short_data);
+        assert!(result.is_err(), "Should fail when data is too short");
+    }
+
+    #[test]
+    fn fails_on_empty_data() {
+        let empty_data: Vec<u8> = vec![];
+        let result = AutoTags::parse(&empty_data);
+        assert!(result.is_err(), "Should fail on empty data");
+    }
+
+    #[test]
+    fn parses_positive_auto_gain() {
+        // Header + BPM "115.00\0" + Auto gain "2.500\0\0" (padded) + Gain "1.200\0"
+        let data: Vec<u8> = vec![
+            0x01, 0x01, // header
+            0x31, 0x31, 0x35, 0x2e, 0x30, 0x30, 0x00, // "115.00\0"
+            0x32, 0x2e, 0x35, 0x30, 0x30, 0x00, 0x00, // "2.500\0\0"
+            0x31, 0x2e, 0x32, 0x30, 0x30, 0x00, // "1.200\0"
+        ];
+        let autotags = AutoTags::parse(&data).expect("Should parse positive auto gain");
+        let epsilon = 0.001;
+        assert!((autotags.bpm - 115.0).abs() < epsilon, "BPM should be 115.0");
+        assert!((autotags.auto_gain - 2.5).abs() < epsilon, "Auto gain should be 2.5");
+        assert!((autotags.gain - 1.2).abs() < epsilon, "Gain should be 1.2");
+    }
+}
+
+#[cfg(test)]
+mod test_autotags_display {
+    use super::*;
+
+    #[test]
+    fn formats_all_fields() {
+        let data: Vec<u8> = vec![
+            0x01, 0x01, // header
+            0x31, 0x32, 0x38, 0x2e, 0x30, 0x30, 0x00, // "128.00\0"
+            0x2d, 0x33, 0x2e, 0x32, 0x35, 0x37, 0x00, // "-3.257\0"
+            0x30, 0x2e, 0x30, 0x30, 0x30, 0x00, // "0.000\0"
+        ];
+        let autotags = AutoTags::parse(&data).expect("Should parse valid autotags data");
+        let display_output = format!("{autotags}");
+        assert!(
+            display_output.contains("BPM: 128.000"),
+            "Display should contain BPM value, got: {display_output}"
+        );
+        assert!(
+            display_output.contains("Auto Gain: -3.257 dB"),
+            "Display should contain auto gain value, got: {display_output}"
+        );
+        assert!(
+            display_output.contains("Gain: 0.000 dB"),
+            "Display should contain gain value, got: {display_output}"
+        );
+    }
+
+    #[test]
+    fn formats_default_gain_when_missing() {
+        let data: Vec<u8> = vec![
+            0x01, 0x01, // header
+            0x31, 0x32, 0x38, 0x2e, 0x30, 0x30, 0x00, // "128.00\0"
+            0x2d, 0x33, 0x2e, 0x32, 0x35, 0x37, 0x00, // "-3.257\0"
+        ];
+        let autotags = AutoTags::parse(&data).expect("Should parse autotags without gain");
+        let display_output = format!("{autotags}");
+        assert!(
+            display_output.contains("Gain: 0.000 dB"),
+            "Display should show default gain of 0.000 dB, got: {display_output}"
+        );
+    }
+}

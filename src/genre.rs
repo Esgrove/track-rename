@@ -650,3 +650,98 @@ mod test_genre_formatting {
         assert_eq!(format_genre("Progressive House"), "House Progressive");
     }
 }
+
+#[cfg(test)]
+mod test_genre_edge_cases {
+    use super::*;
+
+    #[test]
+    fn empty_string_returns_empty() {
+        assert_eq!(format_genre(""), "");
+    }
+
+    #[test]
+    fn whitespace_only_returns_empty() {
+        assert_eq!(format_genre("   "), "");
+        assert_eq!(format_genre("\t"), "");
+        assert_eq!(format_genre("  \t  "), "");
+    }
+
+    #[test]
+    fn short_strings_return_empty() {
+        // Genres shorter than 3 characters are cleared
+        assert_eq!(format_genre("Hi"), "");
+        assert_eq!(format_genre("AB"), "");
+        assert_eq!(format_genre("X"), "");
+    }
+
+    #[test]
+    fn already_correct_genre_unchanged() {
+        assert_eq!(format_genre("House"), "House");
+        assert_eq!(format_genre("Funk"), "Funk");
+        assert_eq!(format_genre("Disco"), "Disco");
+        assert_eq!(format_genre("Jazz"), "Jazz");
+        assert_eq!(format_genre("Electronica"), "Electronica");
+    }
+
+    #[test]
+    fn rnb_variations_all_map_to_same_value() {
+        let expected = "R&B";
+        assert_eq!(format_genre("R&B"), expected);
+        assert_eq!(format_genre("RnB"), expected);
+        assert_eq!(format_genre("R'n'B"), expected);
+        assert_eq!(format_genre("R n B"), expected);
+        assert_eq!(format_genre(" Rnb   "), expected);
+    }
+
+    #[test]
+    fn unknown_genre_passes_through() {
+        assert_eq!(format_genre("Polka"), "Polka");
+        assert_eq!(format_genre("Zydeco"), "Zydeco");
+        assert_eq!(format_genre("  Samba  "), "Samba");
+    }
+
+    #[test]
+    fn leading_and_trailing_whitespace_trimmed() {
+        assert_eq!(format_genre("  House  "), "House");
+        assert_eq!(format_genre("  Funk  "), "Funk");
+    }
+}
+
+#[cfg(test)]
+mod test_genre_format_multiple_genres {
+    use super::*;
+
+    #[test]
+    fn slash_separated_genres_become_comma_separated() {
+        // " / " is replaced with ", "
+        assert_eq!(format_genre("Jazz / Blues"), "Jazz, Blues");
+    }
+
+    #[test]
+    fn compound_house_genres_reordered() {
+        assert_eq!(format_genre("Deep House"), "House Deep");
+        assert_eq!(format_genre("Tech House"), "House Tech");
+        assert_eq!(format_genre("Progressive House"), "House Progressive");
+    }
+
+    #[test]
+    fn specific_compound_mappings() {
+        assert_eq!(format_genre("Nu Disco / Disco"), "Disco Nu");
+        assert_eq!(format_genre("Soul / Funk / Disco"), "Funk");
+        assert_eq!(format_genre("Funk / Soul"), "Soul");
+        assert_eq!(format_genre("Funk / Boogie"), "Funk Boogie");
+        assert_eq!(format_genre("House / Funk"), "House");
+    }
+
+    #[test]
+    fn house_deep_house_compound() {
+        assert_eq!(format_genre("House, Deep House"), "House Deep");
+    }
+
+    #[test]
+    fn original_samples_prefix_removed() {
+        assert_eq!(format_genre("Original Samples / Funk"), "Funk");
+        assert_eq!(format_genre("Original Samples / Jazz"), "Jazz");
+    }
+}

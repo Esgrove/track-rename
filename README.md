@@ -52,61 +52,38 @@ It supports specifying track names to exclude, which will be skipped during the 
 These can include a file extension or not, and should _not_ contain a path, just the filename.
 See the [track-rename.toml](./track-rename.toml) template for more details and supported options.
 
-### Run tests
+### Tests
 
 ```shell
 cargo test
+```
+
+### Code Coverage
+
+Code coverage is generated using [cargo-llvm-cov](https://github.com/taiki-e/cargo-llvm-cov)
+with [cargo-nextest](https://nexte.st/).
+
+```shell
+# Run tests with coverage (text output)
+cargo llvm-cov nextest
+
+# Generate HTML coverage report
+cargo llvm-cov nextest --html
+
+# Generate and open HTML report in browser
+cargo llvm-cov nextest --html --open
+```
+
+The HTML report is generated in `target/llvm-cov/html/`.
+
+### Required Tools
+
+```shell
+cargo install --locked cargo-nextest
+cargo install --locked cargo-llvm-cov
 ```
 
 ### TODO
 
 - Refactor track renamer functions
 - Support other tag / filetypes as well
-
-## Python version
-
-Uses [pytaglib](https://github.com/supermihi/pytaglib) for tag handling.
-
-### Dependencies
-
-- Python 3.11+
-- [Poetry](https://github.com/python-poetry/poetry)
-
-Install Python packages:
-
-```shell
-poetry install
-```
-
-### Usage
-
-Run with Poetry script or directly:
-
-```shell
-poetry run rename --help
-poetry run python rename/renamer.py --help
-```
-
-```console
-Usage: renamer.py [OPTIONS] [DIRECTORY]
-
-  Check and rename audio files.
-
-  DIRECTORY: Optional input directory for audio files to format.
-
-Options:
-  -h, --help    Show this message and exit.
-  -f, --force   Do not ask for confirmation
-  -p, --print   Only print changes
-  -r, --rename  Rename all audio files
-  -s, --sort    Sort audio files by name
-  -t, --tags    Only fix tags, do not rename
-```
-
-See the [test data](./tests/test_data.py) for formatting examples.
-
-### Tests
-
-```shell
-poetry run pytest -v --cov=rename tests/
-```

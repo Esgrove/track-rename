@@ -416,3 +416,559 @@ fn decode_synchsafe(data: &[u8]) -> u32 {
     debug_assert!(data.len() == 4);
     (u32::from(data[0]) << 21) | (u32::from(data[1]) << 14) | (u32::from(data[2]) << 7) | u32::from(data[3])
 }
+
+#[cfg(test)]
+mod test_decode_synchsafe {
+    use super::*;
+
+    #[test]
+    fn all_zeros_returns_zero() {
+        let input = [0x00, 0x00, 0x00, 0x00];
+        assert_eq!(decode_synchsafe(&input), 0);
+    }
+
+    #[test]
+    fn least_significant_bit_set() {
+        let input = [0x00, 0x00, 0x00, 0x01];
+        assert_eq!(decode_synchsafe(&input), 1);
+    }
+
+    #[test]
+    fn second_byte_one_gives_128() {
+        let input = [0x00, 0x00, 0x01, 0x00];
+        assert_eq!(decode_synchsafe(&input), 128);
+    }
+
+    #[test]
+    fn third_byte_one_gives_16384() {
+        let input = [0x00, 0x01, 0x00, 0x00];
+        assert_eq!(decode_synchsafe(&input), 16384);
+    }
+
+    #[test]
+    fn fourth_byte_one_gives_2097152() {
+        let input = [0x01, 0x00, 0x00, 0x00];
+        assert_eq!(decode_synchsafe(&input), 2_097_152);
+    }
+
+    #[test]
+    fn max_synchsafe_value() {
+        let input = [0x7f, 0x7f, 0x7f, 0x7f];
+        assert_eq!(decode_synchsafe(&input), 268_435_455);
+    }
+}
+
+#[cfg(test)]
+mod test_find_id3_header_offset {
+    use super::*;
+
+    #[test]
+    fn mp3_file_starting_with_id3_returns_zero() {
+        let mut data = Vec::new();
+        data.extend_from_slice(b"ID3");
+        // version, flags, and synchsafe size (7 bytes to reach 10 total)
+        data.extend_from_slice(&[0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        let result = find_id3_header_offset(&data);
+        assert_eq!(result, Some(0));
+    }
+
+    #[test]
+    fn data_too_short_returns_none() {
+        let data = b"ID3abcde"; // only 8 bytes, need at least 10
+        let result = find_id3_header_offset(data);
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn data_with_no_known_header_returns_none() {
+        let data = b"NOT_A_VALID_HEADER_AT_ALL";
+        let result = find_id3_header_offset(data);
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn aiff_container_with_id3_chunk() {
+        let mut data = Vec::new();
+        data.extend_from_slice(b"FORM");
+        data.extend_from_slice(&100u32.to_be_bytes());
+        data.extend_from_slice(b"AIFF");
+        // Non-ID3 chunk first (COMM)
+        data.extend_from_slice(b"COMM");
+        data.extend_from_slice(&8u32.to_be_bytes());
+        data.extend_from_slice(&[0u8; 8]);
+        // ID3 chunk
+        data.extend_from_slice(b"ID3 ");
+        let id3_payload_offset = data.len() + 4; // after the size field
+        data.extend_from_slice(&20u32.to_be_bytes());
+        // ID3 header marker inside the chunk
+        data.extend_from_slice(b"ID3");
+        // version 2.4, no flags, synchsafe size of 10, plus padding
+        data.extend_from_slice(&[0x04, 0x00, 0x00, 0x00, 0x00, 0x0a, 0x00]);
+
+        let result = find_id3_header_offset(&data);
+        assert_eq!(
+            result,
+            Some(id3_payload_offset),
+            "Expected ID3 header at offset {id3_payload_offset}"
+        );
+    }
+}
+
+#[cfg(test)]
+mod test_track_tags_changed {
+    use super::*;
+
+    /// Helper to create a `TrackTags` with all formatted fields matching current fields.
+    fn create_matching_tags() -> TrackTags {
+        let mut tags = TrackTags::new(
+            String::from("Artist - Title"),
+            String::from("Artist"),
+            String::from("Title"),
+            String::from("Album"),
+            String::from("Genre"),
+        );
+        tags.formatted_name = String::from("Artist - Title");
+        tags.formatted_artist = String::from("Artist");
+        tags.formatted_title = String::from("Title");
+        tags.formatted_album = String::from("Album");
+        tags.formatted_genre = String::from("Genre");
+        tags
+    }
+
+    #[test]
+    fn all_fields_match_returns_false() {
+        let tags = create_matching_tags();
+        assert!(!tags.changed(), "Expected changed() to be false when all fields match");
+    }
+
+    #[test]
+    fn different_formatted_name_returns_true() {
+        let mut tags = create_matching_tags();
+        tags.formatted_name = String::from("Different Artist - Different Title");
+        assert!(
+            tags.changed(),
+            "Expected changed() to be true when formatted_name differs"
+        );
+    }
+
+    #[test]
+    fn different_formatted_artist_returns_true() {
+        let mut tags = create_matching_tags();
+        tags.formatted_artist = String::from("Different Artist");
+        assert!(
+            tags.changed(),
+            "Expected changed() to be true when formatted_artist differs"
+        );
+    }
+
+    #[test]
+    fn different_formatted_title_returns_true() {
+        let mut tags = create_matching_tags();
+        tags.formatted_title = String::from("Different Title");
+        assert!(
+            tags.changed(),
+            "Expected changed() to be true when formatted_title differs"
+        );
+    }
+
+    #[test]
+    fn different_formatted_album_returns_true() {
+        let mut tags = create_matching_tags();
+        tags.formatted_album = String::from("Different Album");
+        assert!(
+            tags.changed(),
+            "Expected changed() to be true when formatted_album differs"
+        );
+    }
+
+    #[test]
+    fn different_formatted_genre_returns_true() {
+        let mut tags = create_matching_tags();
+        tags.formatted_genre = String::from("Different Genre");
+        assert!(
+            tags.changed(),
+            "Expected changed() to be true when formatted_genre differs"
+        );
+    }
+}
+
+#[cfg(test)]
+mod test_track_tags_new {
+    use super::*;
+
+    #[test]
+    fn current_fields_are_set_correctly() {
+        let tags = TrackTags::new(
+            String::from("Artist - Title"),
+            String::from("Artist"),
+            String::from("Title"),
+            String::from("Album"),
+            String::from("Genre"),
+        );
+        assert_eq!(tags.current_name, "Artist - Title");
+        assert_eq!(tags.current_artist, "Artist");
+        assert_eq!(tags.current_title, "Title");
+        assert_eq!(tags.current_album, "Album");
+        assert_eq!(tags.current_genre, "Genre");
+    }
+
+    #[test]
+    fn formatted_fields_default_to_empty_strings() {
+        let tags = TrackTags::new(
+            String::from("Name"),
+            String::from("Artist"),
+            String::from("Title"),
+            String::from("Album"),
+            String::from("Genre"),
+        );
+        assert_eq!(tags.formatted_name, "");
+        assert_eq!(tags.formatted_artist, "");
+        assert_eq!(tags.formatted_title, "");
+        assert_eq!(tags.formatted_album, "");
+        assert_eq!(tags.formatted_genre, "");
+    }
+
+    #[test]
+    fn update_needed_defaults_to_false() {
+        let tags = TrackTags::new(
+            String::from("Name"),
+            String::from("Artist"),
+            String::from("Title"),
+            String::from("Album"),
+            String::from("Genre"),
+        );
+        assert!(!tags.update_needed, "Expected update_needed to default to false");
+    }
+}
+
+#[cfg(test)]
+mod test_is_malformed_frame_error {
+    use super::*;
+
+    use id3::{Encoding, Error, ErrorKind, FrameError, FrameErrorKind};
+
+    #[test]
+    fn ufid_delimiter_not_found_returns_true() {
+        let frame_error = FrameError {
+            frame_id: String::from("UFID"),
+            field: String::from("owner_identifier"),
+            kind: FrameErrorKind::DelimiterNotFound {
+                encoding: Encoding::Latin1,
+                remaining_bytes: 10,
+                hex_preview: String::from("aa bb cc"),
+                ascii_preview: String::from("..."),
+            },
+        };
+        let error = Error::frame_parsing(frame_error);
+        assert!(
+            is_malformed_frame_error(&error),
+            "Expected UFID with DelimiterNotFound to be recognized as malformed"
+        );
+    }
+
+    #[test]
+    fn priv_delimiter_not_found_returns_true() {
+        let frame_error = FrameError {
+            frame_id: String::from("PRIV"),
+            field: String::from("owner_identifier"),
+            kind: FrameErrorKind::DelimiterNotFound {
+                encoding: Encoding::Latin1,
+                remaining_bytes: 5,
+                hex_preview: String::from("de ad"),
+                ascii_preview: String::from(".."),
+            },
+        };
+        let error = Error::frame_parsing(frame_error);
+        assert!(
+            is_malformed_frame_error(&error),
+            "Expected PRIV with DelimiterNotFound to be recognized as malformed"
+        );
+    }
+
+    #[test]
+    fn unknown_frame_id_returns_false() {
+        let frame_error = FrameError {
+            frame_id: String::from("APIC"),
+            field: String::from("mime_type"),
+            kind: FrameErrorKind::DelimiterNotFound {
+                encoding: Encoding::Latin1,
+                remaining_bytes: 20,
+                hex_preview: String::from("ff"),
+                ascii_preview: String::from("."),
+            },
+        };
+        let error = Error::frame_parsing(frame_error);
+        assert!(
+            !is_malformed_frame_error(&error),
+            "Expected non-fixable frame ID to not be recognized as malformed"
+        );
+    }
+
+    #[test]
+    fn frame_other_error_kind_returns_false() {
+        let frame_error = FrameError {
+            frame_id: String::from("UFID"),
+            field: String::from("owner_identifier"),
+            kind: FrameErrorKind::Other(String::from("some other error")),
+        };
+        let error = Error::frame_parsing(frame_error);
+        assert!(
+            !is_malformed_frame_error(&error),
+            "Expected FrameErrorKind::Other to not be recognized as malformed"
+        );
+    }
+
+    #[test]
+    fn non_frame_parsing_error_returns_false() {
+        let error = Error::new(ErrorKind::Parsing, "general parsing failure");
+        assert!(
+            !is_malformed_frame_error(&error),
+            "Expected non-FrameParsing ErrorKind to return false"
+        );
+    }
+
+    #[test]
+    fn no_tag_error_returns_false() {
+        let error = Error::new(ErrorKind::NoTag, "no tag found");
+        assert!(
+            !is_malformed_frame_error(&error),
+            "Expected NoTag error to return false"
+        );
+    }
+}
+
+#[cfg(test)]
+mod test_parse_tag_data {
+    use super::*;
+    use std::path::Path;
+
+    /// Return the path to the basic tags MP3 test file.
+    fn basic_tags_mp3_path() -> std::path::PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/basic_tags/Basic Tags - Song - 16-44.mp3")
+    }
+
+    #[test]
+    fn parses_artist_and_title_from_basic_tags() {
+        let path = basic_tags_mp3_path();
+        if !path.exists() {
+            println!("Test file not found, skipping: {}", path.display());
+            return;
+        }
+        let track = Track::try_from_path(&path).expect("Failed to create Track from basic tags MP3");
+        let tag = Tag::read_from_path(&path).expect("Failed to read tags from basic tags MP3");
+        let tags = TrackTags::parse_tag_data(&track, &tag);
+        assert_eq!(
+            tags.current_artist, "Basic Tags",
+            "Expected current_artist to be 'Basic Tags', got '{}'",
+            tags.current_artist
+        );
+        assert_eq!(
+            tags.current_title, "Song - 16-44",
+            "Expected current_title to be 'Song - 16-44', got '{}'",
+            tags.current_title
+        );
+        assert!(
+            tags.current_name.contains("Basic Tags"),
+            "Expected current_name to contain 'Basic Tags', got '{}'",
+            tags.current_name
+        );
+        assert!(
+            tags.current_name.contains("Song"),
+            "Expected current_name to contain 'Song', got '{}'",
+            tags.current_name
+        );
+    }
+}
+
+#[cfg(test)]
+mod test_parse_tag_data_no_tags {
+    use super::*;
+    use std::path::Path;
+
+    /// Return the path to the no tags MP3 test file.
+    fn no_tags_mp3_path() -> std::path::PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/no_tags/No Tags - Song - 16-44.mp3")
+    }
+
+    #[test]
+    fn parses_artist_and_title_from_filename_when_no_tags() {
+        let path = no_tags_mp3_path();
+        if !path.exists() {
+            println!("Test file not found, skipping: {}", path.display());
+            return;
+        }
+        let track = Track::try_from_path(&path).expect("Failed to create Track from no tags MP3");
+        let tag = Tag::new();
+        let tags = TrackTags::parse_tag_data(&track, &tag);
+        let has_artist = !tags.current_artist.is_empty();
+        let has_title = !tags.current_title.is_empty();
+        assert!(
+            has_artist || has_title,
+            "Expected at least artist or title to be parsed from filename, got artist='{}' title='{}'",
+            tags.current_artist,
+            tags.current_title
+        );
+    }
+}
+
+#[cfg(test)]
+mod test_read_tags_basic {
+    use super::*;
+    use std::path::Path;
+
+    /// Return the path to the basic tags MP3 test file.
+    fn basic_tags_mp3_path() -> std::path::PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/basic_tags/Basic Tags - Song - 16-44.mp3")
+    }
+
+    #[test]
+    fn reads_tags_from_basic_mp3() {
+        let path = basic_tags_mp3_path();
+        if !path.exists() {
+            println!("Test file not found, skipping: {}", path.display());
+            return;
+        }
+        let track = Track::try_from_path(&path).expect("Failed to create Track from basic tags MP3");
+        let result = read_tags(&track, false);
+        assert!(result.is_some(), "Expected read_tags to return Some for basic tags MP3");
+        let tag = result.expect("read_tags returned None for basic tags MP3");
+        assert!(
+            tag.artist().is_some(),
+            "Expected tag to have an artist for basic tags MP3"
+        );
+    }
+}
+
+#[cfg(test)]
+mod test_read_tags_no_tags {
+    use super::*;
+    use std::path::Path;
+
+    /// Return the path to the no tags MP3 test file.
+    fn no_tags_mp3_path() -> std::path::PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/no_tags/No Tags - Song - 16-44.mp3")
+    }
+
+    #[test]
+    fn reads_empty_tags_from_no_tags_mp3() {
+        let path = no_tags_mp3_path();
+        if !path.exists() {
+            println!("Test file not found, skipping: {}", path.display());
+            return;
+        }
+        let track = Track::try_from_path(&path).expect("Failed to create Track from no tags MP3");
+        let result = read_tags(&track, false);
+        assert!(
+            result.is_some(),
+            "Expected read_tags to return Some (empty Tag) for no tags MP3"
+        );
+    }
+}
+
+#[cfg(test)]
+mod test_read_tags_extended {
+    use super::*;
+    use std::path::Path;
+
+    /// Return the path to the extended tags MP3 test file.
+    fn extended_tags_mp3_path() -> std::path::PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/extended_tags/Extended Tags - Song - 16-44.mp3")
+    }
+
+    #[test]
+    fn reads_tags_from_extended_mp3_in_verbose_mode() {
+        let path = extended_tags_mp3_path();
+        if !path.exists() {
+            println!("Test file not found, skipping: {}", path.display());
+            return;
+        }
+        let track = Track::try_from_path(&path).expect("Failed to create Track from extended tags MP3");
+        let result = read_tags(&track, true);
+        assert!(
+            result.is_some(),
+            "Expected read_tags to return Some for extended tags MP3"
+        );
+        let tag = result.expect("read_tags returned None for extended tags MP3");
+        assert!(
+            tag.artist().is_some(),
+            "Expected tag to have an artist for extended tags MP3"
+        );
+        assert!(
+            tag.title().is_some(),
+            "Expected tag to have a title for extended tags MP3"
+        );
+    }
+}
+
+#[cfg(test)]
+mod test_print_tag_data {
+    use super::*;
+    use std::path::Path;
+
+    /// Return the path to the basic tags MP3 test file.
+    fn basic_tags_mp3_path() -> std::path::PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/basic_tags/Basic Tags - Song - 16-44.mp3")
+    }
+
+    #[test]
+    fn prints_tag_data_without_panic() {
+        let path = basic_tags_mp3_path();
+        if !path.exists() {
+            println!("Test file not found, skipping: {}", path.display());
+            return;
+        }
+        let tag = Tag::read_from_path(&path).expect("Failed to read tags from basic tags MP3");
+        print_tag_data(&tag);
+    }
+}
+
+#[cfg(test)]
+mod test_show_diff {
+    use super::*;
+
+    /// Create a `TrackTags` where the formatted name differs from the current name.
+    fn create_tags_with_name_difference() -> TrackTags {
+        let mut tags = TrackTags::new(
+            String::from("old artist - old title"),
+            String::from("old artist"),
+            String::from("old title"),
+            String::from("Old Album"),
+            String::from("Old Genre"),
+        );
+        tags.formatted_name = String::from("New Artist - New Title");
+        tags.formatted_artist = String::from("New Artist");
+        tags.formatted_title = String::from("New Title");
+        tags.formatted_album = String::from("New Album");
+        tags.formatted_genre = String::from("New Genre");
+        tags
+    }
+
+    /// Create a `TrackTags` where all formatted fields match current fields.
+    fn create_tags_with_no_difference() -> TrackTags {
+        let mut tags = TrackTags::new(
+            String::from("Artist - Title"),
+            String::from("Artist"),
+            String::from("Title"),
+            String::from("Album"),
+            String::from("Genre"),
+        );
+        tags.formatted_name = String::from("Artist - Title");
+        tags.formatted_artist = String::from("Artist");
+        tags.formatted_title = String::from("Title");
+        tags.formatted_album = String::from("Album");
+        tags.formatted_genre = String::from("Genre");
+        tags
+    }
+
+    #[test]
+    fn show_diff_with_changes_does_not_panic() {
+        let tags = create_tags_with_name_difference();
+        tags.show_diff();
+    }
+
+    #[test]
+    fn show_diff_with_no_changes_does_not_panic() {
+        let tags = create_tags_with_no_difference();
+        tags.show_diff();
+    }
+}
