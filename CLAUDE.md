@@ -2,6 +2,18 @@
 
 ## Project Overview
 
+CLI tool for formatting and renaming audio files (MP3, AIF/AIFF).
+Formats artist and title ID3 tags using extensive text-normalization rules,
+and renames filenames to match the formatted tags.
+Falls back to parsing artist and title from the filename when tag data is missing.
+Originally written in Python (still included under `rename/`), now primarily Rust.
+
+### Binaries
+
+- **`trackrename`** — Main binary. Formats tags, renames files, optionally converts failed files via ffmpeg.
+- **`trackprint`** — Prints ID3 tag data (including Serato tags) for audio files.
+- **`crateprint`** — Reads and prints Serato `.crate` files.
+
 ## Build and Test Commands
 
 After making code changes, always run:
@@ -33,6 +45,39 @@ cargo test
 ```
 
 ## Project Structure
+
+```
+src/
+├── main.rs              # CLI entry point for trackrename (clap args + run)
+├── lib.rs               # Library root, re-exports all public modules
+├── config.rs            # Config struct merging CLI flags with user config file
+├── file_format.rs       # FileFormat enum (Mp3 / Aif)
+├── formatting.rs        # Text normalization for artist, title, and filename strings
+├── genre.rs             # Genre normalization with lookup tables and regex
+├── state.rs             # SQLite persistence for tracking processed files
+├── statistics.rs        # Statistics counters for processed/renamed/failed tracks
+├── tags.rs              # TrackTags struct for reading and formatting ID3 tags
+├── track.rs             # Track struct representing a single audio file
+├── track_renamer.rs     # TrackRenamer orchestrator (gather files, process, rename)
+├── utils.rs             # Helpers: file collection, tag reading, colored output macros, diffs
+├── bin/
+│   ├── trackprint.rs    # CLI binary for printing audio file tag data
+│   └── crateprint.rs    # CLI binary for reading Serato .crate files
+└── serato/
+    ├── mod.rs           # SeratoData aggregate and SeratoTag enum, GEOB frame parsing
+    ├── analysis.rs      # Serato Analysis tag parser
+    ├── autotags.rs      # Serato Autotags parser (BPM, gain)
+    ├── beatgrid.rs      # Serato BeatGrid tag parser
+    ├── markers.rs       # Serato Markers2 tag parser (cues, loops, color, BPM lock)
+    ├── overview.rs      # Serato Overview tag parser (waveform display)
+    └── serato_crate.rs  # Serato .crate file reader/writer (UTF-16BE TLV format)
+tests/
+├── test_formatting.rs   # Rust integration tests for text formatting
+├── test_tag_roundtrip.rs# Rust integration tests for tag read/write
+├── files/               # Test audio files
+rename/                  # Legacy Python version (pytaglib-based)
+track-rename.toml        # Example user config (placed at ~/.config/track-rename.toml)
+```
 
 ## Code organization
 
