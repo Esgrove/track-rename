@@ -312,7 +312,9 @@ impl TrackRenamer {
                             print_stacked_diff(&track.filename(), &formatted_file_name);
                             self.stats.to_rename += 1;
                             if !self.config.print_only && (self.config.force || utils::confirm()) {
-                                let is_overwrite = formatted_path.is_file() && self.config.overwrite_existing;
+                                let is_overwrite = formatted_path.is_file()
+                                    && self.config.overwrite_existing
+                                    && !capitalization_change_only;
                                 if is_overwrite {
                                     print_yellow!("Overwriting existing file: {formatted_path_string}");
                                 }
