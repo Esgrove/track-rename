@@ -8,8 +8,8 @@ use base64::{Engine as _, engine::general_purpose};
 use byteorder::{BigEndian, ReadBytesExt};
 use colored::{ColoredString, Colorize};
 
-#[derive(Debug, Clone)]
 /// Cue points, saved loops, track color, and BPM lock status
+#[derive(Debug, Clone)]
 pub enum Markers {
     BpmLock(BpmLock),
     Color(Color),
@@ -17,25 +17,25 @@ pub enum Markers {
     Loop(Loop),
 }
 
-#[derive(Debug, Clone)]
 /// Boolean for BPM lock status.
 /// True means lock is enabled.
 /// <https://support.serato.com/hc/en-us/articles/235214887-Lock-Beatgrids>
+#[derive(Debug, Clone)]
 pub struct BpmLock {
     enabled: bool,
 }
 
-#[derive(Debug, Clone)]
 /// RGB colour.
 /// Used for track, cues, and loops.
+#[derive(Debug, Clone)]
 pub struct Color {
     r: u8,
     b: u8,
     g: u8,
 }
 
-#[derive(Debug, Clone)]
 /// A cue point.
+#[derive(Debug, Clone)]
 pub struct Cue {
     /// Cue number
     index: u8,
@@ -47,8 +47,8 @@ pub struct Cue {
     name: String,
 }
 
-#[derive(Debug, Clone)]
 /// Saved loop.
+#[derive(Debug, Clone)]
 pub struct Loop {
     /// Loop number
     index: u8,

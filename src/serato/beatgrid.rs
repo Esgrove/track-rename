@@ -4,16 +4,16 @@ use std::fmt::Display;
 use anyhow::Result;
 use anyhow::anyhow;
 
-#[derive(Debug, Clone, Default)]
-pub struct BeatGrid {
-    pub num_markers: u32,
-    pub markers: Vec<BeatGridMarker>,
-}
-
 #[derive(Debug, Clone)]
 pub enum BeatGridMarker {
     Terminal { position: f32, bpm: f32 },
     NonTerminal { position: f32, beats_till_next: u32 },
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct BeatGrid {
+    pub num_markers: u32,
+    pub markers: Vec<BeatGridMarker>,
 }
 
 impl BeatGrid {

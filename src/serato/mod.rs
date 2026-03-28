@@ -23,16 +23,6 @@ use crate::utils;
 
 pub use crate::serato::serato_crate::SeratoCrate;
 
-/// Contains all Serato custom tag data in the file.
-#[derive(Debug, Clone, Default)]
-pub struct SeratoData {
-    pub analysis: Option<AnalysisVersion>,
-    pub autotags: Option<AutoTags>,
-    pub beatgrid: Option<BeatGrid>,
-    pub markers: Vec<Markers>,
-    pub overview: Option<Overview>,
-}
-
 /// Serato tag types.
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub enum SeratoTag {
@@ -46,6 +36,16 @@ pub enum SeratoTag {
     Markers,
     /// Waveform overview data.
     Overview,
+}
+
+/// Contains all Serato custom tag data in the file.
+#[derive(Debug, Clone, Default)]
+pub struct SeratoData {
+    pub analysis: Option<AnalysisVersion>,
+    pub autotags: Option<AutoTags>,
+    pub beatgrid: Option<BeatGrid>,
+    pub markers: Vec<Markers>,
+    pub overview: Option<Overview>,
 }
 
 impl SeratoData {
@@ -123,21 +123,11 @@ impl Display for SeratoTag {
             f,
             "{}",
             match self {
-                Self::Analysis => {
-                    "SeratoAnalysis"
-                }
-                Self::Autotags => {
-                    "SeratoAutotags"
-                }
-                Self::BeatGrid => {
-                    "SeratoBeatGrid"
-                }
-                Self::Markers => {
-                    "SeratoMarkers"
-                }
-                Self::Overview => {
-                    "SeratoOverview"
-                }
+                Self::Analysis => "SeratoAnalysis",
+                Self::Autotags => "SeratoAutotags",
+                Self::BeatGrid => "SeratoBeatGrid",
+                Self::Markers => "SeratoMarkers",
+                Self::Overview => "SeratoOverview",
             }
         )
     }

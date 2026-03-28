@@ -6,12 +6,12 @@ use anyhow::anyhow;
 use colored::Colorize;
 use crossterm::terminal;
 
-#[derive(Debug, Clone, Default)]
 /// Contains the waveform overview data.
 /// It seems the length will always be 240 time slices,
 /// regardless of the track length.
 /// Each time slice is divided into 16 frequency bands,
 /// with the byte value corresponding to the strength of that frequency band.
+#[derive(Debug, Clone, Default)]
 pub struct Overview {
     blocks: Vec<[u8; 16]>,
 }
