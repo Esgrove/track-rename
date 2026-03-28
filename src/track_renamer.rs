@@ -696,7 +696,7 @@ impl TrackRenamer {
 #[cfg(test)]
 mod test_track_renamer {
     use super::*;
-    use track_rename::utils::not_hidden_file;
+    use track_rename::utils::is_not_hidden;
 
     use std::env;
     use std::fs::copy;
@@ -775,7 +775,7 @@ mod test_track_renamer {
         for entry in fs::read_dir(test_dir).expect("Failed to read test directory") {
             let entry = entry.expect("Failed to read entry");
             let path = entry.path();
-            if path.is_file() && not_hidden_file(&path) {
+            if path.is_file() && is_not_hidden(&path) {
                 let temp_file = temp_test_file(&path).expect("Failed to create temp file path");
                 copy(&path, &temp_file).expect("Failed to copy test file");
                 assert!(temp_file.exists());

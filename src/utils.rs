@@ -18,7 +18,7 @@ pub fn collect_tracks(root: &Path) -> Vec<Track> {
         .par_bridge()
         .filter_map(std::result::Result::ok)
         .map(walkdir::DirEntry::into_path)
-        .filter(|path| path.is_file() && not_hidden_file(path))
+        .filter(|path| path.is_file() && is_not_hidden(path))
         .filter_map(|path| Track::try_from_path(&path))
         .collect()
 }
@@ -212,7 +212,7 @@ pub fn write_log_for_failed_files(paths: &[String]) -> anyhow::Result<()> {
 
 /// Check if this is a hidden file like `.DS_Store` on macOS.
 #[must_use]
-pub fn not_hidden_file(path: &Path) -> bool {
+pub fn is_not_hidden(path: &Path) -> bool {
     path.file_name()
         .and_then(|name| name.to_str())
         .is_none_or(|s| !s.starts_with('.'))
