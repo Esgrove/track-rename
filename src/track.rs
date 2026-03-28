@@ -18,12 +18,12 @@ use crate::utils;
 use crate::utils::{get_file_modified_time, path_to_string, path_to_string_relative};
 use crate::{formatting, genre};
 
-// Other audio file extensions that should trigger a warning message,
-const OTHER_FILE_EXTENSIONS: [&str; 3] = ["wav", "flac", "m4a"];
-
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub static DJ_MUSIC_PATH: LazyLock<PathBuf> = LazyLock::new(|| ["Dropbox", "DJ MUSIC"].iter().collect());
+
+// Other audio file extensions that should trigger a warning message,
+const OTHER_FILE_EXTENSIONS: [&str; 3] = ["wav", "flac", "m4a"];
 
 /// Represents one audio file.
 #[derive(Debug, Default, Clone)]
@@ -289,6 +289,16 @@ impl Track {
         Ok(new_track)
     }
 
+    /// Check if the given string matches the full filename (name.extension).
+    fn matches_filename(&self, other: &str) -> bool {
+        // Check length first to avoid unnecessary work
+        let expected_length = self.name.len() + 1 + self.extension.len();
+        other.len() == expected_length
+            && other.starts_with(&self.name)
+            && other.as_bytes().get(self.name.len()) == Some(&b'.')
+            && other[self.name.len() + 1..] == self.extension
+    }
+
     /// Get filename from Path with special characters retained instead of decomposed.
     fn get_nfc_filename_from_path(path: &Path) -> anyhow::Result<String> {
         Ok(path
@@ -344,26 +354,26 @@ impl Ord for Track {
 
 impl PartialEq<String> for Track {
     fn eq(&self, other: &String) -> bool {
-        format!("{}.{}", self.name, self.extension) == *other || self.name == *other
+        self.name == *other || self.matches_filename(other)
     }
 }
 
 impl PartialEq<&str> for Track {
     fn eq(&self, other: &&str) -> bool {
-        format!("{}.{}", self.name, self.extension) == *other || self.name == *other
+        self.name == *other || self.matches_filename(other)
     }
 }
 
 // Symmetry for comparisons (String == Track and &str == Track)
 impl PartialEq<Track> for String {
     fn eq(&self, other: &Track) -> bool {
-        *self == format!("{}.{}", other.name, other.extension) || *self == other.name
+        other.name == *self || other.matches_filename(self)
     }
 }
 
 impl PartialEq<Track> for &str {
     fn eq(&self, other: &Track) -> bool {
-        *self == format!("{}.{}", other.name, other.extension) || *self == other.name
+        other.name == *self || other.matches_filename(self)
     }
 }
 
@@ -381,7 +391,7 @@ impl fmt::Display for Track {
 }
 
 #[cfg(test)]
-mod tests {
+mod test_track_operations {
     use super::*;
 
     use std::env;

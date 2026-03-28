@@ -478,7 +478,8 @@ pub fn format_album(album: &str) -> String {
 }
 
 pub fn fix_whitespace(text: &mut String) {
-    *text = RE_MULTIPLE_SPACES.replace_all(text, " ").to_string().trim().to_string();
+    let replaced = RE_MULTIPLE_SPACES.replace_all(text, " ");
+    *text = replaced.trim().to_string();
 }
 
 /// Check parenthesis counts match and insert missing.
@@ -500,11 +501,11 @@ fn remove_unmatched_closing_parenthesis(input: &mut String) {
 }
 
 fn move_feat_from_title_to_artist(artist: &mut String, title: &mut String) {
-    if let Some(feat_match) = RE_FEAT.find(&title.clone()) {
-        let feat = feat_match.as_str().trim_end_matches(['(', ')', '-']);
+    if let Some(feat_match) = RE_FEAT.find(title.as_str()) {
+        let feat = feat_match.as_str().trim_end_matches(['(', ')', '-']).to_string();
 
         // Remove the feat from the title
-        *title = title.replace(feat, "").trim().to_string();
+        *title = title.replace(&feat, "").trim().to_string();
 
         // Format feat artists string: remove "feat. ", and change all "and" variations to "&"
         let feat = RE_FEAT_AND
@@ -675,7 +676,7 @@ fn remove_bpm_in_parentheses_from_end(text: &mut String) {
         return;
     }
 
-    let mut result = (*text).clone();
+    let mut result = text.clone();
     let regexes = [
         &RE_BPM_IN_PARENTHESES,
         &RE_BPM_WITH_TEXT,
@@ -729,7 +730,7 @@ fn replace_dash_in_parentheses(text: &mut String) {
 }
 
 #[cfg(test)]
-mod tests {
+mod test_formatting_helpers {
     use super::*;
 
     #[test]

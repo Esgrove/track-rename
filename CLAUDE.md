@@ -50,16 +50,18 @@ cargo test
 src/
 ├── main.rs              # CLI entry point for trackrename (clap args + run)
 ├── lib.rs               # Library root, re-exports all public modules
+├── completion.rs        # Shell completion script generation
 ├── config.rs            # Config struct merging CLI flags with user config file
 ├── file_format.rs       # FileFormat enum (Mp3 / Aif)
 ├── formatting.rs        # Text normalization for artist, title, and filename strings
 ├── genre.rs             # Genre normalization with lookup tables and regex
+├── output.rs            # Colored terminal output functions and macros (print_error!, etc.)
 ├── state.rs             # SQLite persistence for tracking processed files
 ├── statistics.rs        # Statistics counters for processed/renamed/failed tracks
-├── tags.rs              # TrackTags struct for reading and formatting ID3 tags
+├── tags.rs              # TrackTags struct, ID3 tag reading/repair, print_tag_data
 ├── track.rs             # Track struct representing a single audio file
 ├── track_renamer.rs     # TrackRenamer orchestrator (gather files, process, rename)
-├── utils.rs             # Helpers: file collection, tag reading, colored output macros, diffs
+├── utils.rs             # Helpers: file collection, path utilities, confirm, normalize_str
 ├── bin/
 │   ├── trackprint.rs    # CLI binary for printing audio file tag data
 │   └── crateprint.rs    # CLI binary for reading Serato .crate files

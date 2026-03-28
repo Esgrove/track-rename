@@ -38,7 +38,7 @@ impl Display for FileFormat {
 }
 
 #[cfg(test)]
-mod tests {
+mod test_file_format_parsing {
     use super::*;
 
     #[test]

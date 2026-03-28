@@ -14,12 +14,12 @@ use anyhow::{Result, anyhow};
 use colored::Colorize;
 use id3::Tag;
 
+use crate::output;
 use crate::serato::analysis::AnalysisVersion;
 use crate::serato::autotags::AutoTags;
 use crate::serato::beatgrid::BeatGrid;
 use crate::serato::markers::Markers;
 use crate::serato::overview::Overview;
-use crate::utils;
 
 pub use crate::serato::serato_crate::SeratoCrate;
 
@@ -65,35 +65,35 @@ impl SeratoData {
                             serato_data.analysis = Some(data);
                             parsed_any = true;
                         }
-                        Err(error) => utils::print_error(&error.to_string()),
+                        Err(error) => output::print_error(&error.to_string()),
                     },
                     SeratoTag::Autotags => match AutoTags::parse(&object.data) {
                         Ok(data) => {
                             serato_data.autotags = Some(data);
                             parsed_any = true;
                         }
-                        Err(error) => utils::print_error(&error.to_string()),
+                        Err(error) => output::print_error(&error.to_string()),
                     },
                     SeratoTag::BeatGrid => match BeatGrid::parse(&object.data) {
                         Ok(data) => {
                             serato_data.beatgrid = Some(data);
                             parsed_any = true;
                         }
-                        Err(error) => utils::print_error(&error.to_string()),
+                        Err(error) => output::print_error(&error.to_string()),
                     },
                     SeratoTag::Markers => match Markers::parse(&object.data) {
                         Ok(data) => {
                             serato_data.markers = data;
                             parsed_any = true;
                         }
-                        Err(error) => utils::print_error(&error.to_string()),
+                        Err(error) => output::print_error(&error.to_string()),
                     },
                     SeratoTag::Overview => match Overview::parse(&object.data) {
                         Ok(data) => {
                             serato_data.overview = Some(data);
                             parsed_any = true;
                         }
-                        Err(error) => utils::print_error(&error.to_string()),
+                        Err(error) => output::print_error(&error.to_string()),
                     },
                 }
             }

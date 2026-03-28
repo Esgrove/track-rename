@@ -101,7 +101,7 @@ fn main() -> Result<()> {
         verbose,
     }) = &args.command
     {
-        return track_rename::utils::generate_shell_completion(
+        return track_rename::completion::generate_shell_completion(
             *shell,
             RenamerArgs::command(),
             *install,

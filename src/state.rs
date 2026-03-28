@@ -313,7 +313,7 @@ fn i64_to_usize(value: i64) -> usize {
 }
 
 #[cfg(test)]
-mod tests {
+mod test_state_database {
     use super::*;
 
     #[test]

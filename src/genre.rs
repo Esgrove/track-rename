@@ -596,7 +596,7 @@ fn reorder_house_genres(genre: &mut String) {
 }
 
 #[cfg(test)]
-mod tests {
+mod test_genre_formatting {
     use super::*;
 
     #[test]

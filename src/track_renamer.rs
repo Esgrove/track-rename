@@ -3,7 +3,6 @@ use std::fs;
 use std::fs::File;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
-use std::string::String;
 use std::time::Instant;
 
 use anyhow::{Context, Result};
@@ -18,10 +17,12 @@ use crate::statistics::Statistics;
 
 use track_rename::file_format::FileFormat;
 use track_rename::genre::GENRE_MAPPINGS;
+use track_rename::output::{print_divider, print_stacked_diff};
 use track_rename::serato;
 use track_rename::serato::SeratoCrate;
 use track_rename::serato::serato_crate;
 use track_rename::state::State;
+use track_rename::tags;
 use track_rename::track::{DJ_MUSIC_PATH, Track};
 use track_rename::utils;
 use track_rename::{print_bold, print_error, print_green, print_yellow};
@@ -55,8 +56,8 @@ impl TrackRenamer {
         })
     }
 
-    #[cfg(test)]
     /// Create Renamer with config directly. Used in tests.
+    #[cfg(test)]
     pub fn new_with_config(path: PathBuf, config: Config) -> Self {
         Self {
             root: path,
@@ -102,16 +103,16 @@ impl TrackRenamer {
         }
 
         // Assign track numbers for nice print output
-        track_list.par_iter_mut().enumerate().for_each(|(number, track)| {
+        for (number, track) in track_list.iter_mut().enumerate() {
             track.number = number + 1;
-        });
+        }
 
         self.tracks_count = track_list.len();
         self.tracks = track_list;
 
         if self.config.verbose {
             if self.tracks_count < 100 {
-                let index_width: usize = self.tracks_count.to_string().chars().count();
+                let index_width: usize = self.tracks_count.checked_ilog10().unwrap_or(0) as usize + 1;
                 for track in &self.tracks {
                     println!("{:>width$}: {}", track.number, track, width = index_width);
                 }
@@ -123,28 +124,6 @@ impl TrackRenamer {
             println!("Time taken: {:.3}s", duration.as_secs_f64());
         }
         Ok(())
-    }
-
-    /// Find and return a list of audio tracks from the root directory.
-    fn get_tracks_from_root_directory(&self) -> Vec<Track> {
-        if self.config.verbose || self.config.debug {
-            println!(
-                "Getting audio files from: {}",
-                format!("{}", self.root.display()).cyan()
-            );
-        }
-
-        let mut track_list = utils::collect_tracks(&self.root);
-
-        if self.config.sort_files {
-            // Sort by filename, ignoring parent dir
-            track_list.par_sort_unstable();
-        } else {
-            // Sort by full path so directories are in sorted order
-            track_list.par_sort_unstable_by(|a, b| a.path.cmp(&b.path));
-        }
-
-        track_list
     }
 
     // Format tags and rename files if needed.
@@ -166,7 +145,7 @@ impl TrackRenamer {
         };
         let fix_tags_header = format!("Fix tags{dryrun_header}:").blue().bold();
         let rename_file_header = format!("Rename file{dryrun_header}:").cyan().bold();
-        let max_index_width: usize = self.tracks_count.to_string().chars().count();
+        let max_index_width: usize = self.tracks_count.checked_ilog10().unwrap_or(0) as usize + 1;
 
         self.current_path = self.root.clone();
 
@@ -208,7 +187,7 @@ impl TrackRenamer {
                     track.show(self.tracks_count, max_index_width);
                     let message = format!("Skipping track in exclude list: {track}");
                     print_yellow!("{message}");
-                    utils::print_divider(&message);
+                    print_divider(&message);
                 }
                 continue;
             }
@@ -219,7 +198,7 @@ impl TrackRenamer {
                 track.show(self.tracks_count, max_index_width);
                 let message = format!("Track no longer exists: {track}");
                 print_error!("{message}");
-                utils::print_divider(&message);
+                print_divider(&message);
                 continue;
             }
 
@@ -236,17 +215,17 @@ impl TrackRenamer {
                 };
 
             if needs_processing {
-                let mut tag_result = utils::read_tags(track, self.config.verbose || self.config.debug);
+                let mut tag_result = tags::read_tags(track, self.config.verbose || self.config.debug);
                 if tag_result.is_none() && self.config.convert_failed && track.format == FileFormat::Mp3 {
                     println!("Converting MP3 to AIF...");
                     match track.convert_mp3_to_aif() {
                         Ok(aif_track) => {
                             self.stats.converted += 1;
                             *track = aif_track;
-                            tag_result = utils::read_tags(track, self.config.verbose || self.config.debug);
+                            tag_result = tags::read_tags(track, self.config.verbose || self.config.debug);
                         }
-                        Err(e) => {
-                            eprintln!("{e}");
+                        Err(error) => {
+                            eprintln!("{error}");
                         }
                     }
                 }
@@ -262,7 +241,7 @@ impl TrackRenamer {
                 *self.tag_versions.entry(file_tags.version().to_string()).or_insert(0) += 1;
 
                 if self.config.debug && self.config.verbose {
-                    utils::print_tag_data(&file_tags);
+                    tags::print_tag_data(&file_tags);
                     serato::print_serato_tags(&file_tags);
                 }
 
@@ -293,7 +272,7 @@ impl TrackRenamer {
                         track.not_processed = true;
                     }
                     if tags_changed {
-                        utils::print_divider(&track.tags.formatted_name);
+                        print_divider(&track.tags.formatted_name);
                     }
                 }
 
@@ -321,20 +300,16 @@ impl TrackRenamer {
                 let original_path_string = utils::path_to_string_relative(&track.path);
 
                 if formatted_path_string != original_path_string {
+                    // File path contains only capitalization changes:
+                    // Need to use a temp file to workaround case-insensitive file systems.
                     let capitalization_change_only =
-                        if formatted_path_string.to_lowercase() == original_path_string.to_lowercase() {
-                            // File path contains only capitalization changes:
-                            // Need to use a temp file to workaround case-insensitive file systems.
-                            true
-                        } else {
-                            false
-                        };
+                        formatted_path_string.to_lowercase() == original_path_string.to_lowercase();
                     if !formatted_path.is_file() || self.config.overwrite_existing || capitalization_change_only {
                         // Rename files if the flag was given or if tags were not changed
                         if self.config.rename_files || !track.tags_updated {
                             track.show(self.tracks_count, max_index_width);
                             println!("{rename_file_header}");
-                            utils::print_stacked_diff(&track.filename(), &formatted_file_name);
+                            print_stacked_diff(&track.filename(), &formatted_file_name);
                             self.stats.to_rename += 1;
                             if !self.config.print_only && (self.config.force || utils::confirm()) {
                                 let is_overwrite = formatted_path.is_file() && self.config.overwrite_existing;
@@ -365,7 +340,7 @@ impl TrackRenamer {
                             } else {
                                 track.not_processed = true;
                             }
-                            utils::print_divider(&formatted_file_name);
+                            print_divider(&formatted_file_name);
                         }
                     } else if formatted_path != track.path {
                         // A file with the formatted name already exists
@@ -373,7 +348,7 @@ impl TrackRenamer {
                         println!("{}", "Duplicate:".bright_red().bold());
                         println!("Rename:   {original_path_string}");
                         println!("Existing: {formatted_path_string}");
-                        utils::print_divider(&formatted_file_name);
+                        print_divider(&formatted_file_name);
                         self.stats.duplicates += 1;
                     }
                 }
@@ -415,8 +390,30 @@ impl TrackRenamer {
         Ok(())
     }
 
+    /// Find and return a list of audio tracks from the root directory.
+    fn get_tracks_from_root_directory(&self) -> Vec<Track> {
+        if self.config.verbose || self.config.debug {
+            println!(
+                "Getting audio files from: {}",
+                format!("{}", self.root.display()).cyan()
+            );
+        }
+
+        let mut track_list = utils::collect_tracks(&self.root);
+
+        if self.config.sort_files {
+            // Sort by filename, ignoring parent dir
+            track_list.par_sort_unstable();
+        } else {
+            // Sort by full path so directories are in sorted order
+            track_list.par_sort_unstable_by(|a, b| a.path.cmp(&b.path));
+        }
+
+        track_list
+    }
+
+    /// Print running index.
     #[inline]
-    /// Print running index
     fn print_running_index(total_tracks: usize, number: usize, max_index_width: usize) {
         print!("\r{number:>max_index_width$}/{total_tracks}");
         io::stdout().flush().expect("Failed to flush stdout");
@@ -570,6 +567,7 @@ impl TrackRenamer {
         }
     }
 
+    /// Print tag version distribution.
     fn print_tag_version_counts(&self) {
         println!("{}", "Tag versions:".cyan().bold());
         let total: usize = self.tag_versions.values().sum();
@@ -580,17 +578,18 @@ impl TrackRenamer {
                 format!(
                     "{tag}   {count:>width$} ({:.1}%)",
                     *count as f64 / total as f64 * 100.0,
-                    width = total.to_string().chars().count()
+                    width = total.checked_ilog10().unwrap_or(0) as usize + 1
                 )
             })
             .for_each(|string| println!("{string}"));
     }
 
+    /// Print the top 20 genres by track count.
     fn print_top_genres(genre_list: &[(&String, &usize)]) {
         let max_length = genre_list
             .iter()
             .take(20)
-            .map(|g| g.0.chars().count())
+            .map(|genre_entry| genre_entry.0.chars().count())
             .max()
             .unwrap_or(60);
 
@@ -695,7 +694,7 @@ impl TrackRenamer {
 }
 
 #[cfg(test)]
-mod tests {
+mod test_track_renamer {
     use super::*;
 
     use std::env;
@@ -716,9 +715,9 @@ mod tests {
     fn test_no_tags() {
         run_test_on_files(&NO_TAGS_DIR, |temp_file| {
             let track = Track::try_from_path(&temp_file).expect("Failed to create Track for temp file");
-            let tags = utils::read_tags(&track, true).expect("Tags should be present");
-            assert!(tags.artist().is_none());
-            assert!(tags.title().is_none());
+            let file_tags = tags::read_tags(&track, true).expect("Tags should be present");
+            assert!(file_tags.artist().is_none());
+            assert!(file_tags.title().is_none());
             fs::remove_file(temp_file).expect("Failed to remove temp file");
         });
     }
@@ -727,9 +726,9 @@ mod tests {
     fn test_basic_tags() {
         run_test_on_files(&BASIC_TAGS_DIR, |temp_file| {
             let track = Track::try_from_path(&temp_file).expect("Failed to create Track for temp file");
-            let tags = utils::read_tags(&track, true).expect("Tags should be present");
-            assert!(!tags.artist().unwrap().is_empty());
-            assert!(!tags.title().unwrap().is_empty());
+            let file_tags = tags::read_tags(&track, true).expect("Tags should be present");
+            assert!(!file_tags.artist().unwrap().is_empty());
+            assert!(!file_tags.title().unwrap().is_empty());
             fs::remove_file(temp_file).expect("Failed to remove temp file");
         });
     }
@@ -738,9 +737,9 @@ mod tests {
     fn test_extended_tags() {
         run_test_on_files(&EXTENDED_TAGS_DIR, |temp_file| {
             let track = Track::try_from_path(&temp_file).expect("Failed to create Track for temp file");
-            let tags = utils::read_tags(&track, true).expect("Tags should be present");
-            assert!(!tags.artist().unwrap().is_empty());
-            assert!(!tags.title().unwrap().is_empty());
+            let file_tags = tags::read_tags(&track, true).expect("Tags should be present");
+            assert!(!file_tags.artist().unwrap().is_empty());
+            assert!(!file_tags.title().unwrap().is_empty());
             fs::remove_file(temp_file).expect("Failed to remove temp file");
         });
     }

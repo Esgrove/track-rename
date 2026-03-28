@@ -5,27 +5,8 @@ use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::Shell;
 use colored::Colorize;
 
+use track_rename::completion;
 use track_rename::serato::serato_crate::{self, SeratoCrate};
-
-#[derive(Parser)]
-#[command(author, version, about = "Print Serato crate contents", name = "crateprint")]
-pub struct Args {
-    #[command(subcommand)]
-    command: Option<CrateprintCommand>,
-
-    /// Optional path to a .crate file or Serato Subcrates directory.
-    /// Defaults to ~/Music/_Serato_/Subcrates
-    #[arg(value_hint = clap::ValueHint::AnyPath)]
-    path: Option<PathBuf>,
-
-    /// Show track file paths
-    #[arg(short, long)]
-    tracks: bool,
-
-    /// Verbose output (show columns and version)
-    #[arg(short, long)]
-    verbose: bool,
-}
 
 /// Subcommands for crateprint.
 #[derive(Subcommand)]
@@ -47,6 +28,26 @@ enum CrateprintCommand {
     },
 }
 
+#[derive(Parser)]
+#[command(author, version, about = "Print Serato crate contents", name = "crateprint")]
+pub struct Args {
+    #[command(subcommand)]
+    command: Option<CrateprintCommand>,
+
+    /// Optional path to a .crate file or Serato Subcrates directory.
+    /// Defaults to ~/Music/_Serato_/Subcrates
+    #[arg(value_hint = clap::ValueHint::AnyPath)]
+    path: Option<PathBuf>,
+
+    /// Show track file paths
+    #[arg(short, long)]
+    tracks: bool,
+
+    /// Verbose output (show columns and version)
+    #[arg(short, long)]
+    verbose: bool,
+}
+
 fn main() -> Result<()> {
     let args = Args::parse();
 
@@ -56,7 +57,7 @@ fn main() -> Result<()> {
         verbose,
     }) = &args.command
     {
-        return track_rename::utils::generate_shell_completion(
+        return completion::generate_shell_completion(
             *shell,
             Args::command(),
             *install,
@@ -99,8 +100,8 @@ fn main() -> Result<()> {
                 Ok(serato_crate) => {
                     print_crate(&serato_crate, args.tracks, args.verbose);
                 }
-                Err(e) => {
-                    eprintln!("{} Failed to parse {}: {e}", "Error:".red().bold(), path.display());
+                Err(error) => {
+                    eprintln!("{} Failed to parse {}: {error}", "Error:".red().bold(), path.display());
                 }
             }
         }

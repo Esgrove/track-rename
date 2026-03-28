@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::RenamerArgs;
 
-use track_rename::utils;
+use track_rename::output::colorize_bool;
 
 const CONFIG_FILE_DIR: &str = ".config";
 const CONFIG_FILE_NAME: &str = "track-rename.toml";
@@ -37,8 +37,8 @@ pub struct Config {
 struct UserConfig {
     /// Filenames to ignore
     pub exclude: Vec<String>,
-    #[serde(default)]
     /// Convert files that could not be read to AIFF
+    #[serde(default)]
     pub convert_failed: bool,
     #[serde(default)]
     pub genre_statistics: bool,
@@ -71,8 +71,8 @@ impl Config {
         }
     }
 
-    #[cfg(test)]
     /// Used in test cases.
+    #[cfg(test)]
     pub fn new_for_tests() -> Self {
         Self {
             force: true,
@@ -115,18 +115,18 @@ impl fmt::Display for Config {
         // Serialize the struct to a serde_json::Value in place of reflection
         // to automatically handle each member variable.
         writeln!(f, "{}", "Config:".bold())?;
-        writeln!(f, "  force: {}", utils::colorize_bool(self.force))?;
-        writeln!(f, "  rename_files: {}", utils::colorize_bool(self.rename_files))?;
-        writeln!(f, "  sort_files: {}", utils::colorize_bool(self.sort_files))?;
-        writeln!(f, "  print_only: {}", utils::colorize_bool(self.print_only))?;
-        writeln!(f, "  tags_only: {}", utils::colorize_bool(self.tags_only))?;
-        writeln!(f, "  verbose: {}", utils::colorize_bool(self.verbose))?;
-        writeln!(f, "  debug: {}", utils::colorize_bool(self.debug))?;
-        writeln!(f, "  test_mode: {}", utils::colorize_bool(self.test_mode))?;
-        writeln!(f, "  log_failures: {}", utils::colorize_bool(self.log_failures))?;
-        writeln!(f, "  convert_failed: {}", utils::colorize_bool(self.convert_failed))?;
-        writeln!(f, "  write_all_tags: {}", utils::colorize_bool(self.write_all_tags))?;
-        writeln!(f, "  genre_statistics: {}", utils::colorize_bool(self.genre_statistics))?;
+        writeln!(f, "  force: {}", colorize_bool(self.force))?;
+        writeln!(f, "  rename_files: {}", colorize_bool(self.rename_files))?;
+        writeln!(f, "  sort_files: {}", colorize_bool(self.sort_files))?;
+        writeln!(f, "  print_only: {}", colorize_bool(self.print_only))?;
+        writeln!(f, "  tags_only: {}", colorize_bool(self.tags_only))?;
+        writeln!(f, "  verbose: {}", colorize_bool(self.verbose))?;
+        writeln!(f, "  debug: {}", colorize_bool(self.debug))?;
+        writeln!(f, "  test_mode: {}", colorize_bool(self.test_mode))?;
+        writeln!(f, "  log_failures: {}", colorize_bool(self.log_failures))?;
+        writeln!(f, "  convert_failed: {}", colorize_bool(self.convert_failed))?;
+        writeln!(f, "  write_all_tags: {}", colorize_bool(self.write_all_tags))?;
+        writeln!(f, "  genre_statistics: {}", colorize_bool(self.genre_statistics))?;
         if self.excluded_tracks.is_empty() {
             writeln!(f, "  excluded_tracks: []")?;
         } else {
@@ -145,9 +145,9 @@ impl fmt::Display for Config {
 impl fmt::Display for UserConfig {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "{}", "UserConfig:".bold())?;
-        writeln!(f, "  convert_failed: {}", utils::colorize_bool(self.convert_failed))?;
-        writeln!(f, "  genre_statistics: {}", utils::colorize_bool(self.convert_failed))?;
-        writeln!(f, "  log_failures: {}", utils::colorize_bool(self.convert_failed))?;
+        writeln!(f, "  convert_failed: {}", colorize_bool(self.convert_failed))?;
+        writeln!(f, "  genre_statistics: {}", colorize_bool(self.convert_failed))?;
+        writeln!(f, "  log_failures: {}", colorize_bool(self.convert_failed))?;
         if self.exclude.is_empty() {
             writeln!(f, "  exclude: []")
         } else {
