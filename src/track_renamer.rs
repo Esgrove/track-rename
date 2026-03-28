@@ -266,6 +266,7 @@ impl TrackRenamer {
 
                 track.format_tags(&file_tags);
                 let formatted_name = track.formatted_filename();
+                let formatted_name_lower = formatted_name.to_lowercase();
                 if formatted_name.is_empty() {
                     eprintln!(
                         "\n{}",
@@ -304,7 +305,7 @@ impl TrackRenamer {
 
                 if self.config.tags_only {
                     self.processed_files
-                        .entry(formatted_name.to_lowercase())
+                        .entry(formatted_name_lower.clone())
                         .or_default()
                         .push(track.clone());
 
@@ -337,7 +338,8 @@ impl TrackRenamer {
                             utils::print_stacked_diff(&track.filename(), &formatted_file_name);
                             self.stats.to_rename += 1;
                             if !self.config.print_only && (self.config.force || utils::confirm()) {
-                                if formatted_path.is_file() && self.config.overwrite_existing {
+                                let is_overwrite = formatted_path.is_file() && self.config.overwrite_existing;
+                                if is_overwrite {
                                     println!(
                                         "{}",
                                         format!("Overwriting existing file: {formatted_path_string}").yellow()
@@ -359,6 +361,11 @@ impl TrackRenamer {
                                     *track = renamed_track;
                                 }
                                 self.stats.renamed += 1;
+                                if is_overwrite {
+                                    self.stats.overwritten += 1;
+                                    // Remove the pre-existing entry so it is not counted as a duplicate
+                                    self.processed_files.remove(&formatted_name_lower);
+                                }
                             } else {
                                 track.not_processed = true;
                             }
@@ -375,7 +382,7 @@ impl TrackRenamer {
                     }
                 }
                 self.processed_files
-                    .entry(formatted_name.to_lowercase())
+                    .entry(formatted_name_lower)
                     .or_default()
                     .push(track.clone());
             } else {

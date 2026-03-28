@@ -12,6 +12,7 @@ pub struct Statistics {
     pub to_remove: usize,
     pub removed: usize,
     pub duplicates: usize,
+    pub overwritten: usize,
     pub failed: usize,
     pub converted: usize,
 }
@@ -23,6 +24,7 @@ impl Statistics {
             && self.to_rename == 0
             && self.to_remove == 0
             && self.duplicates == 0
+            && self.overwritten == 0
             && self.failed == 0
             && self.converted == 0
     }
@@ -34,19 +36,22 @@ impl fmt::Display for Statistics {
             write!(f, "{}", "All Good".green())?;
         } else {
             writeln!(f, "{}", "Updated:".bold())?;
-            writeln!(f, "Fix tags:   {} / {}", self.tags_fixed, self.tags)?;
-            writeln!(f, "Renamed:    {} / {}", self.renamed, self.to_rename)?;
+            writeln!(f, "Fix tags:    {} / {}", self.tags_fixed, self.tags)?;
+            writeln!(f, "Renamed:     {} / {}", self.renamed, self.to_rename)?;
             if self.converted > 0 {
-                writeln!(f, "Converted:  {}", self.converted)?;
+                writeln!(f, "Converted:   {}", self.converted)?;
             }
             if self.to_remove > 0 {
-                writeln!(f, "Deleted:    {} / {}", self.removed, self.to_remove)?;
+                writeln!(f, "Deleted:     {} / {}", self.removed, self.to_remove)?;
+            }
+            if self.overwritten > 0 {
+                writeln!(f, "Overwritten: {}", self.overwritten)?;
             }
             if self.duplicates > 0 {
-                writeln!(f, "Duplicate:  {}", self.duplicates)?;
+                writeln!(f, "Duplicate:   {}", self.duplicates)?;
             }
             if self.failed > 0 {
-                writeln!(f, "Failed:     {}", self.failed)?;
+                writeln!(f, "Failed:      {}", self.failed)?;
             }
         }
         Ok(())
