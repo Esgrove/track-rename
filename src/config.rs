@@ -146,8 +146,8 @@ impl fmt::Display for UserConfig {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "{}", "UserConfig:".bold())?;
         writeln!(f, "  convert_failed: {}", colorize_bool(self.convert_failed))?;
-        writeln!(f, "  genre_statistics: {}", colorize_bool(self.convert_failed))?;
-        writeln!(f, "  log_failures: {}", colorize_bool(self.convert_failed))?;
+        writeln!(f, "  genre_statistics: {}", colorize_bool(self.genre_statistics))?;
+        writeln!(f, "  log_failures: {}", colorize_bool(self.log_failures))?;
         if self.exclude.is_empty() {
             writeln!(f, "  exclude: []")
         } else {
