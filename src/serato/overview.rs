@@ -152,7 +152,7 @@ impl Display for Overview {
 }
 
 #[cfg(test)]
-mod test_overview_parse {
+mod test_overview {
     use super::*;
 
     #[test]
@@ -221,11 +221,6 @@ mod test_overview_parse {
         let overview = Overview::parse(&data).expect("Should parse 240 blocks");
         assert_eq!(overview.blocks.len(), num_blocks);
     }
-}
-
-#[cfg(test)]
-mod test_overview_display {
-    use super::*;
 
     /// Build an `Overview` with 240 blocks of synthetic waveform data.
     fn build_overview_with_blocks(num_blocks: usize) -> Overview {

@@ -432,7 +432,7 @@ impl TrackRenamer {
     }
 
     /// Insert processed tracks into the state database.
-    fn update_state(&self) -> Result<()> {
+    fn update_state(&mut self) -> Result<()> {
         let entries: Vec<_> = self
             .tracks
             .iter()

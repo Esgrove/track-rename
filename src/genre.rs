@@ -649,11 +649,6 @@ mod test_genre_formatting {
         assert_eq!(format_genre("Deep    House"), "House Deep");
         assert_eq!(format_genre("Progressive House"), "House Progressive");
     }
-}
-
-#[cfg(test)]
-mod test_genre_edge_cases {
-    use super::*;
 
     #[test]
     fn empty_string_returns_empty() {

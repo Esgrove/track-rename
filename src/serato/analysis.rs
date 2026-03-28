@@ -41,7 +41,7 @@ impl Display for AnalysisVersion {
 }
 
 #[cfg(test)]
-mod test_analysis_version_parse {
+mod test_analysis_version {
     use super::*;
 
     #[test]
@@ -81,11 +81,6 @@ mod test_analysis_version_parse {
         let result = AnalysisVersion::parse(&data);
         assert!(result.is_err(), "Should fail when data is empty");
     }
-}
-
-#[cfg(test)]
-mod test_analysis_version_display {
-    use super::*;
 
     #[test]
     fn displays_version_one_five() {

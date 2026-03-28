@@ -397,6 +397,8 @@ mod test_track_operations {
     use std::env;
     use std::path::PathBuf;
 
+    use crate::tags::read_tags;
+
     #[test]
     fn test_track_new_valid_path() {
         let path = Path::new("/users/test/test_song.mp3");
@@ -508,12 +510,6 @@ mod test_track_operations {
         assert_eq!(track, "song5.mp3".to_string());
         assert_ne!(track, "song");
     }
-}
-
-#[cfg(test)]
-mod test_try_from_path {
-    use super::*;
-    use std::path::Path;
 
     /// Return the path to the basic tags MP3 test file.
     fn basic_tags_mp3_path() -> PathBuf {
@@ -566,19 +562,6 @@ mod test_try_from_path {
         let result = Track::try_from_path(path);
         assert!(result.is_none(), "Expected None for path with no extension");
     }
-}
-
-#[cfg(test)]
-mod test_format_tags {
-    use super::*;
-    use std::path::Path;
-
-    use crate::tags::read_tags;
-
-    /// Return the path to the basic tags MP3 test file.
-    fn basic_tags_mp3_path() -> PathBuf {
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/basic_tags/Basic Tags - Song - 16-44.mp3")
-    }
 
     #[test]
     fn format_tags_populates_formatted_fields() {
@@ -604,19 +587,6 @@ mod test_format_tags {
             track.tags.formatted_name
         );
     }
-}
-
-#[cfg(test)]
-mod test_formatted_filename {
-    use super::*;
-    use std::path::Path;
-
-    use crate::tags::read_tags;
-
-    /// Return the path to the basic tags MP3 test file.
-    fn basic_tags_mp3_path() -> PathBuf {
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/basic_tags/Basic Tags - Song - 16-44.mp3")
-    }
 
     #[test]
     fn formatted_filename_contains_separator() {
@@ -634,19 +604,6 @@ mod test_formatted_filename {
             filename.contains(" - "),
             "Expected formatted_filename to contain ' - ', got '{filename}'"
         );
-    }
-}
-
-#[cfg(test)]
-mod test_formatted_filename_with_extension {
-    use super::*;
-    use std::path::Path;
-
-    use crate::tags::read_tags;
-
-    /// Return the path to the basic tags MP3 test file.
-    fn basic_tags_mp3_path() -> PathBuf {
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/basic_tags/Basic Tags - Song - 16-44.mp3")
     }
 
     #[test]
@@ -666,17 +623,6 @@ mod test_formatted_filename_with_extension {
                 .is_some_and(|ext| ext.eq_ignore_ascii_case("mp3")),
             "Expected formatted_filename_with_extension to end with '.mp3', got '{filename_with_extension}'"
         );
-    }
-}
-
-#[cfg(test)]
-mod test_path_with_new_name {
-    use super::*;
-    use std::path::Path;
-
-    /// Return the path to the basic tags MP3 test file.
-    fn basic_tags_mp3_path() -> PathBuf {
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/basic_tags/Basic Tags - Song - 16-44.mp3")
     }
 
     #[test]

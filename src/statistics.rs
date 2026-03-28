@@ -121,6 +121,36 @@ mod test_statistics_no_changes {
         };
         assert!(stats.no_changes());
     }
+
+    #[test]
+    fn to_remove_means_changes() {
+        let stats = Statistics {
+            to_remove: 1,
+            ..Statistics::default()
+        };
+        assert!(!stats.no_changes());
+    }
+
+    #[test]
+    fn overwritten_means_changes() {
+        let stats = Statistics {
+            overwritten: 1,
+            ..Statistics::default()
+        };
+        assert!(!stats.no_changes());
+    }
+
+    #[test]
+    fn renamed_alone_is_not_a_change() {
+        let stats = Statistics {
+            renamed: 1,
+            ..Statistics::default()
+        };
+        assert!(
+            stats.no_changes(),
+            "renamed alone should not count as a change since it is not checked in no_changes"
+        );
+    }
 }
 
 #[cfg(test)]
@@ -179,46 +209,6 @@ mod test_statistics_display {
         let output = format!("{stats}");
         assert!(output.contains("Duplicate:"), "expected 'Duplicate:' in: {output}");
     }
-}
-
-#[cfg(test)]
-mod test_statistics_no_changes_remaining_fields {
-    use super::*;
-
-    #[test]
-    fn to_remove_means_changes() {
-        let stats = Statistics {
-            to_remove: 1,
-            ..Statistics::default()
-        };
-        assert!(!stats.no_changes());
-    }
-
-    #[test]
-    fn overwritten_means_changes() {
-        let stats = Statistics {
-            overwritten: 1,
-            ..Statistics::default()
-        };
-        assert!(!stats.no_changes());
-    }
-
-    #[test]
-    fn renamed_alone_is_not_a_change() {
-        let stats = Statistics {
-            renamed: 1,
-            ..Statistics::default()
-        };
-        assert!(
-            stats.no_changes(),
-            "renamed alone should not count as a change since it is not checked in no_changes"
-        );
-    }
-}
-
-#[cfg(test)]
-mod test_statistics_display_remaining_paths {
-    use super::*;
 
     #[test]
     fn displays_deleted_when_to_remove_is_set() {

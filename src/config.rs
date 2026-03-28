@@ -163,8 +163,9 @@ impl fmt::Display for UserConfig {
 }
 
 #[cfg(test)]
-mod test_config_new_for_tests {
+mod test_config {
     use super::*;
+    use clap::Parser;
 
     #[test]
     fn force_is_true() {
@@ -200,11 +201,6 @@ mod test_config_new_for_tests {
         assert!(!config.overwrite_existing, "overwrite_existing should be false");
         assert!(config.excluded_tracks.is_empty(), "excluded_tracks should be empty");
     }
-}
-
-#[cfg(test)]
-mod test_config_display {
-    use super::*;
 
     #[test]
     fn contains_all_field_names() {
@@ -271,85 +267,6 @@ mod test_config_display {
             "Display output should contain 'track2.aif'"
         );
     }
-}
-
-#[cfg(test)]
-mod test_user_config_deserialization {
-    use super::*;
-
-    #[test]
-    fn parses_all_fields_correctly() {
-        let toml_content = r#"
-exclude = ["file1.mp3", "file2.aif"]
-convert_failed = true
-genre_statistics = false
-log_failures = true
-"#;
-
-        let user_config: UserConfig = toml::from_str(toml_content).expect("Failed to parse TOML into UserConfig");
-
-        assert_eq!(user_config.exclude.len(), 2, "exclude should have 2 items");
-        assert_eq!(user_config.exclude[0], "file1.mp3");
-        assert_eq!(user_config.exclude[1], "file2.aif");
-        assert!(user_config.convert_failed, "convert_failed should be true");
-        assert!(!user_config.genre_statistics, "genre_statistics should be false");
-        assert!(user_config.log_failures, "log_failures should be true");
-    }
-
-    #[test]
-    fn parses_no_state_field() {
-        let toml_content = r"
-exclude = []
-no_state = true
-";
-
-        let user_config: UserConfig = toml::from_str(toml_content).expect("Failed to parse TOML into UserConfig");
-
-        assert!(user_config.no_state, "no_state should be true");
-    }
-}
-
-#[cfg(test)]
-mod test_user_config_default_values {
-    use super::*;
-
-    #[test]
-    fn missing_optional_fields_default_to_false() {
-        let toml_content = r"
-exclude = []
-";
-
-        let user_config: UserConfig = toml::from_str(toml_content).expect("Failed to parse TOML into UserConfig");
-
-        assert!(user_config.exclude.is_empty(), "exclude should be empty");
-        assert!(!user_config.convert_failed, "convert_failed should default to false");
-        assert!(
-            !user_config.genre_statistics,
-            "genre_statistics should default to false"
-        );
-        assert!(!user_config.log_failures, "log_failures should default to false");
-        assert!(!user_config.no_state, "no_state should default to false");
-    }
-
-    #[test]
-    fn default_trait_matches_expected_values() {
-        let user_config = UserConfig::default();
-
-        assert!(user_config.exclude.is_empty(), "exclude should be empty");
-        assert!(!user_config.convert_failed, "convert_failed should default to false");
-        assert!(
-            !user_config.genre_statistics,
-            "genre_statistics should default to false"
-        );
-        assert!(!user_config.log_failures, "log_failures should default to false");
-        assert!(!user_config.no_state, "no_state should default to false");
-    }
-}
-
-#[cfg(test)]
-mod test_config_from_args {
-    use super::*;
-    use clap::Parser;
 
     /// Helper to create `RenamerArgs` with all defaults from clap parsing.
     fn default_args() -> RenamerArgs {
@@ -476,11 +393,6 @@ mod test_config_from_args {
         assert!(!config.print_only);
         assert!(!config.tags_only);
     }
-}
-
-#[cfg(test)]
-mod test_config_serialization {
-    use super::*;
 
     #[test]
     fn serialize_and_deserialize_roundtrip() {
@@ -535,11 +447,112 @@ mod test_config_serialization {
             "Serialized default should contain empty excluded_tracks"
         );
     }
+
+    #[test]
+    fn display_includes_no_state_field() {
+        let config = Config {
+            no_state: true,
+            ..Config::default()
+        };
+        let output = format!("{config}");
+        // no_state is not shown in Display, verify this is consistent
+        assert!(output.contains("Config"), "Display should contain 'Config' header");
+    }
+
+    #[test]
+    fn display_with_all_true_fields() {
+        let config = Config {
+            convert_failed: true,
+            debug: true,
+            excluded_tracks: vec![],
+            force: true,
+            genre_statistics: true,
+            log_failures: true,
+            no_state: true,
+            print_only: true,
+            rename_files: true,
+            sort_files: true,
+            tags_only: true,
+            test_mode: true,
+            verbose: true,
+            write_all_tags: true,
+            overwrite_existing: true,
+        };
+        let output = format!("{config}");
+        assert!(output.contains("true"), "Display with all true should contain 'true'");
+        assert!(
+            output.contains("excluded_tracks: []"),
+            "Empty excluded_tracks should show '[]'"
+        );
+    }
 }
 
 #[cfg(test)]
-mod test_user_config_display {
+mod test_user_config {
     use super::*;
+
+    #[test]
+    fn parses_all_fields_correctly() {
+        let toml_content = r#"
+exclude = ["file1.mp3", "file2.aif"]
+convert_failed = true
+genre_statistics = false
+log_failures = true
+"#;
+
+        let user_config: UserConfig = toml::from_str(toml_content).expect("Failed to parse TOML into UserConfig");
+
+        assert_eq!(user_config.exclude.len(), 2, "exclude should have 2 items");
+        assert_eq!(user_config.exclude[0], "file1.mp3");
+        assert_eq!(user_config.exclude[1], "file2.aif");
+        assert!(user_config.convert_failed, "convert_failed should be true");
+        assert!(!user_config.genre_statistics, "genre_statistics should be false");
+        assert!(user_config.log_failures, "log_failures should be true");
+    }
+
+    #[test]
+    fn parses_no_state_field() {
+        let toml_content = r"
+exclude = []
+no_state = true
+";
+
+        let user_config: UserConfig = toml::from_str(toml_content).expect("Failed to parse TOML into UserConfig");
+
+        assert!(user_config.no_state, "no_state should be true");
+    }
+
+    #[test]
+    fn missing_optional_fields_default_to_false() {
+        let toml_content = r"
+exclude = []
+";
+
+        let user_config: UserConfig = toml::from_str(toml_content).expect("Failed to parse TOML into UserConfig");
+
+        assert!(user_config.exclude.is_empty(), "exclude should be empty");
+        assert!(!user_config.convert_failed, "convert_failed should default to false");
+        assert!(
+            !user_config.genre_statistics,
+            "genre_statistics should default to false"
+        );
+        assert!(!user_config.log_failures, "log_failures should default to false");
+        assert!(!user_config.no_state, "no_state should default to false");
+    }
+
+    #[test]
+    fn default_trait_matches_expected_values() {
+        let user_config = UserConfig::default();
+
+        assert!(user_config.exclude.is_empty(), "exclude should be empty");
+        assert!(!user_config.convert_failed, "convert_failed should default to false");
+        assert!(
+            !user_config.genre_statistics,
+            "genre_statistics should default to false"
+        );
+        assert!(!user_config.log_failures, "log_failures should default to false");
+        assert!(!user_config.no_state, "no_state should default to false");
+    }
 
     #[test]
     fn displays_header() {
@@ -590,11 +603,6 @@ exclude = ["track_a.mp3", "track_b.aif"]
             "Display should not show '[]' when exclude is non-empty"
         );
     }
-}
-
-#[cfg(test)]
-mod test_user_config_deserialization_edge_cases {
-    use super::*;
 
     #[test]
     fn ignores_unknown_fields() {
@@ -660,11 +668,6 @@ exclude = ["a.mp3", "b.mp3", "c.aif", "d.aif", "e.mp3"]
         let user_config: UserConfig = toml::from_str(toml_content).expect("Failed to parse TOML");
         assert_eq!(user_config.exclude.len(), 5);
     }
-}
-
-#[cfg(test)]
-mod test_user_config_get_user_config {
-    use super::*;
 
     #[test]
     fn returns_default_when_no_config_file() {
@@ -677,49 +680,6 @@ mod test_user_config_get_user_config {
         assert!(
             user_config.exclude.is_empty() || !user_config.exclude.is_empty(),
             "get_user_config should return a valid UserConfig"
-        );
-    }
-}
-
-#[cfg(test)]
-mod test_config_display_overwrite_and_no_state {
-    use super::*;
-
-    #[test]
-    fn display_includes_no_state_field() {
-        let config = Config {
-            no_state: true,
-            ..Config::default()
-        };
-        let output = format!("{config}");
-        // no_state is not shown in Display, verify this is consistent
-        assert!(output.contains("Config"), "Display should contain 'Config' header");
-    }
-
-    #[test]
-    fn display_with_all_true_fields() {
-        let config = Config {
-            convert_failed: true,
-            debug: true,
-            excluded_tracks: vec![],
-            force: true,
-            genre_statistics: true,
-            log_failures: true,
-            no_state: true,
-            print_only: true,
-            rename_files: true,
-            sort_files: true,
-            tags_only: true,
-            test_mode: true,
-            verbose: true,
-            write_all_tags: true,
-            overwrite_existing: true,
-        };
-        let output = format!("{config}");
-        assert!(output.contains("true"), "Display with all true should contain 'true'");
-        assert!(
-            output.contains("excluded_tracks: []"),
-            "Empty excluded_tracks should show '[]'"
         );
     }
 }

@@ -316,7 +316,7 @@ fn read_bytes<R: BufRead>(reader: &mut R) -> io::Result<Vec<u8>> {
 }
 
 #[cfg(test)]
-mod test_color_new {
+mod test_color {
     use super::*;
 
     #[test]
@@ -342,11 +342,6 @@ mod test_color_new {
         assert_eq!(color.g, 255);
         assert_eq!(color.b, 255);
     }
-}
-
-#[cfg(test)]
-mod test_color_new_argb {
-    use super::*;
 
     #[test]
     fn creates_color_ignoring_alpha_channel() {
@@ -371,11 +366,6 @@ mod test_color_new_argb {
         assert_eq!(color.g, 150);
         assert_eq!(color.b, 200);
     }
-}
-
-#[cfg(test)]
-mod test_color_display {
-    use super::*;
 
     #[test]
     fn displays_rgb_values() {
@@ -416,10 +406,41 @@ mod test_color_display {
             "Expected display to contain '[10,20,30]', got: {display_output}"
         );
     }
+
+    #[test]
+    fn formats_text_with_color() {
+        let color = Color::new([255, 0, 0]);
+        let colored_text = color.format("test");
+        let text_string = colored_text.to_string();
+        assert!(
+            text_string.contains("test"),
+            "Formatted text should contain 'test', got: {text_string}"
+        );
+    }
+
+    #[test]
+    fn loads_color_from_four_bytes() {
+        let color = Color::load(&[0x00, 0xFF, 0x80, 0x40]).expect("Should parse color");
+        assert_eq!(color.r, 0xFF);
+        assert_eq!(color.g, 0x80);
+        assert_eq!(color.b, 0x40);
+    }
+
+    #[test]
+    fn rejects_too_short_data() {
+        let result = Color::load(&[0x00, 0xFF, 0x80]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn rejects_too_long_data() {
+        let result = Color::load(&[0x00, 0xFF, 0x80, 0x40, 0x00]);
+        assert!(result.is_err());
+    }
 }
 
 #[cfg(test)]
-mod test_cue_load {
+mod test_cue_and_loop {
     use super::*;
 
     #[test]
@@ -474,11 +495,6 @@ mod test_cue_load {
         let result = Cue::load(&short_data);
         assert!(result.is_err(), "Should reject data shorter than 13 bytes");
     }
-}
-
-#[cfg(test)]
-mod test_loop_load {
-    use super::*;
 
     #[test]
     fn loads_loop_with_empty_name() {
@@ -504,16 +520,11 @@ mod test_loop_load {
     }
 
     #[test]
-    fn rejects_too_short_data() {
+    fn rejects_too_short_loop_data() {
         let short_data: Vec<u8> = vec![0x00; 10];
         let result = Loop::load(&short_data);
         assert!(result.is_err(), "Should reject data shorter than 15 bytes");
     }
-}
-
-#[cfg(test)]
-mod test_cue_display {
-    use super::*;
 
     #[test]
     fn displays_cue_marker() {
@@ -534,11 +545,6 @@ mod test_cue_display {
             "Display should contain 'Cue 1', got: {display_output}"
         );
     }
-}
-
-#[cfg(test)]
-mod test_loop_display {
-    use super::*;
 
     /// Helper to build a valid loop byte array with the given lock state.
     fn build_loop_data(locked: bool) -> Vec<u8> {
@@ -601,24 +607,52 @@ mod test_loop_display {
 }
 
 #[cfg(test)]
-mod test_color_format {
+mod test_bpmlock {
     use super::*;
 
     #[test]
-    fn formats_text_with_color() {
-        let color = Color::new([255, 0, 0]);
-        let colored_text = color.format("test");
-        let text_string = colored_text.to_string();
-        assert!(
-            text_string.contains("test"),
-            "Formatted text should contain 'test', got: {text_string}"
-        );
+    fn displays_enabled_bpmlock() {
+        let bpmlock = BpmLock { enabled: true };
+        let marker = Markers::BpmLock(bpmlock);
+        assert_eq!(marker.to_string(), "BPM Lock: true");
+    }
+
+    #[test]
+    fn displays_disabled_bpmlock() {
+        let bpmlock = BpmLock { enabled: false };
+        let marker = Markers::BpmLock(bpmlock);
+        assert_eq!(marker.to_string(), "BPM Lock: false");
+    }
+
+    #[test]
+    fn loads_enabled_bpmlock() {
+        let result = BpmLock::load(&[1]).expect("Should parse enabled BpmLock");
+        assert!(result.enabled);
+    }
+
+    #[test]
+    fn loads_disabled_bpmlock() {
+        let result = BpmLock::load(&[0]).expect("Should parse disabled BpmLock");
+        assert!(!result.enabled);
+    }
+
+    #[test]
+    fn rejects_empty_data() {
+        let result = BpmLock::load(&[]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn rejects_too_long_data() {
+        let result = BpmLock::load(&[1, 0]);
+        assert!(result.is_err());
     }
 }
 
 #[cfg(test)]
-mod test_markers_parse_from_real_file {
+mod test_markers_parsing {
     use super::*;
+    use std::io::Cursor;
     use std::path::Path;
 
     #[test]
@@ -655,12 +689,6 @@ mod test_markers_parse_from_real_file {
             "Should have found Serato Markers2 GEOB frame in test file"
         );
     }
-}
-
-#[cfg(test)]
-mod test_read_bytes {
-    use super::*;
-    use std::io::Cursor;
 
     #[test]
     fn reads_bytes_until_null() {
@@ -684,78 +712,5 @@ mod test_read_bytes {
         let mut cursor = Cursor::new(data);
         let result = read_bytes(&mut cursor).expect("Should handle empty data");
         assert!(result.is_empty(), "Should return empty vec for empty data");
-    }
-}
-
-#[cfg(test)]
-mod test_bpmlock_display {
-    use super::*;
-
-    #[test]
-    fn displays_enabled_bpmlock() {
-        let bpmlock = BpmLock { enabled: true };
-        let marker = Markers::BpmLock(bpmlock);
-        assert_eq!(marker.to_string(), "BPM Lock: true");
-    }
-
-    #[test]
-    fn displays_disabled_bpmlock() {
-        let bpmlock = BpmLock { enabled: false };
-        let marker = Markers::BpmLock(bpmlock);
-        assert_eq!(marker.to_string(), "BPM Lock: false");
-    }
-}
-
-#[cfg(test)]
-mod test_bpmlock_load {
-    use super::*;
-
-    #[test]
-    fn loads_enabled_bpmlock() {
-        let result = BpmLock::load(&[1]).expect("Should parse enabled BpmLock");
-        assert!(result.enabled);
-    }
-
-    #[test]
-    fn loads_disabled_bpmlock() {
-        let result = BpmLock::load(&[0]).expect("Should parse disabled BpmLock");
-        assert!(!result.enabled);
-    }
-
-    #[test]
-    fn rejects_empty_data() {
-        let result = BpmLock::load(&[]);
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn rejects_too_long_data() {
-        let result = BpmLock::load(&[1, 0]);
-        assert!(result.is_err());
-    }
-}
-
-#[cfg(test)]
-mod test_color_load {
-    use super::*;
-
-    #[test]
-    fn loads_color_from_four_bytes() {
-        let color = Color::load(&[0x00, 0xFF, 0x80, 0x40]).expect("Should parse color");
-        assert_eq!(color.r, 0xFF);
-        assert_eq!(color.g, 0x80);
-        assert_eq!(color.b, 0x40);
-    }
-
-    #[test]
-    fn rejects_too_short_data() {
-        let result = Color::load(&[0x00, 0xFF, 0x80]);
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn rejects_too_long_data() {
-        let result = Color::load(&[0x00, 0xFF, 0x80, 0x40, 0x00]);
-        assert!(result.is_err());
     }
 }

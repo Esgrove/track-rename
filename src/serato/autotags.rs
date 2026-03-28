@@ -89,7 +89,7 @@ impl Display for AutoTags {
 }
 
 #[cfg(test)]
-mod test_autotags_parse {
+mod test_autotags {
     use super::*;
 
     #[test]
@@ -161,11 +161,6 @@ mod test_autotags_parse {
         assert!((autotags.auto_gain - 2.5).abs() < epsilon, "Auto gain should be 2.5");
         assert!((autotags.gain - 1.2).abs() < epsilon, "Gain should be 1.2");
     }
-}
-
-#[cfg(test)]
-mod test_autotags_display {
-    use super::*;
 
     #[test]
     fn formats_all_fields() {

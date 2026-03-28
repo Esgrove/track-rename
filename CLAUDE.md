@@ -111,25 +111,54 @@ track-rename.toml        # Example user config (placed at ~/.config/track-rename
 
 - **NEVER use nested modules inside test modules** - all test modules must be separate root-level `#[cfg(test)]` modules
 - Do NOT wrap test modules in a single parent `mod tests` module
+- Group related tests sensibly — avoid one-test modules, but also avoid 1000+ line mega-modules
+- For files with only a few tests, a single test module is fine even if the tests cover different functions
+- For files with many tests, group by logical area (e.g. `test_insert`, `test_clean`, `test_queries`)
+  rather than one module per function or scenario
+- Each module should ideally have at least 3–5 tests; merge smaller modules into a nearby related one
 
 ### Test module structure example
 
 ```rust
+// Small file: single module is fine
 #[cfg(test)]
-mod test_prefix_extraction {
-    use super::test_helpers::*;
+mod test_file_format {
     use super::*;
 
     #[test]
-    fn extracts_three_parts() { ... }
+    fn parses_mp3() { ... }
+
+    #[test]
+    fn parses_aif() { ... }
+
+    #[test]
+    fn display_format() { ... }
+}
+
+// Larger file: group by logical area
+#[cfg(test)]
+mod test_insert {
+    use super::*;
+
+    #[test]
+    fn roundtrip() { ... }
+
+    #[test]
+    fn returns_false_for_new() { ... }
+
+    #[test]
+    fn boundary_values() { ... }
 }
 
 #[cfg(test)]
-mod test_filtering {
+mod test_clean {
     use super::*;
 
     #[test]
-    fn removes_year() { ... }
+    fn removes_wrong_version() { ... }
+
+    #[test]
+    fn retains_valid_entries() { ... }
 }
 ```
 

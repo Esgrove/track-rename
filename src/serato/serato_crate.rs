@@ -421,7 +421,7 @@ mod test_encoding {
 }
 
 #[cfg(test)]
-mod test_tags {
+mod test_crate_data {
     use super::*;
 
     #[test]
@@ -461,11 +461,6 @@ mod test_tags {
         assert_eq!(tag, "ptrk");
         assert_eq!(parsed_value, value);
     }
-}
-
-#[cfg(test)]
-mod test_crate_name {
-    use super::*;
 
     #[test]
     fn simple() {
@@ -494,11 +489,6 @@ mod test_crate_name {
     fn filename_from_name_hierarchy() {
         assert_eq!(crate_filename_from_name("A > B > C"), "A%%B%%C.crate");
     }
-}
-
-#[cfg(test)]
-mod test_path_conversion {
-    use super::*;
 
     #[test]
     fn absolute_path() {
@@ -517,11 +507,6 @@ mod test_path_conversion {
         let result = path_to_crate_string(&path);
         assert_eq!(result, "Music/song.mp3");
     }
-}
-
-#[cfg(test)]
-mod test_parsing {
-    use super::*;
 
     #[test]
     fn parse_column_definition_basic() {
@@ -608,11 +593,6 @@ mod test_parsing {
 
         let _ = fs::remove_file(&crate_path);
     }
-}
-
-#[cfg(test)]
-mod test_display {
-    use super::*;
 
     #[test]
     fn multiple_tracks() {
@@ -640,11 +620,6 @@ mod test_display {
         // Should NOT say "tracks" (plural).
         assert!(!display.contains("tracks"));
     }
-}
-
-#[cfg(test)]
-mod test_list_crates {
-    use super::*;
 
     #[test]
     fn nonexistent_dir() {
@@ -802,11 +777,6 @@ mod test_write_crate {
 
         let _ = fs::remove_file(&crate_path);
     }
-}
-
-#[cfg(test)]
-mod test_real_crate_file {
-    use super::*;
 
     #[test]
     fn parse_real_crate_file() {

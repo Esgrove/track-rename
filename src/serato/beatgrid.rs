@@ -323,11 +323,6 @@ mod test_beatgrid_display {
             "expected terminal marker in output, got: {display_output}"
         );
     }
-}
-
-#[cfg(test)]
-mod test_beatgrid_marker_display {
-    use super::*;
 
     #[test]
     fn terminal_marker_format() {

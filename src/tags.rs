@@ -418,8 +418,10 @@ fn decode_synchsafe(data: &[u8]) -> u32 {
 }
 
 #[cfg(test)]
-mod test_decode_synchsafe {
+mod test_tag_internals {
     use super::*;
+
+    use id3::{Encoding, Error, ErrorKind, FrameError, FrameErrorKind};
 
     #[test]
     fn all_zeros_returns_zero() {
@@ -456,11 +458,6 @@ mod test_decode_synchsafe {
         let input = [0x7f, 0x7f, 0x7f, 0x7f];
         assert_eq!(decode_synchsafe(&input), 268_435_455);
     }
-}
-
-#[cfg(test)]
-mod test_find_id3_header_offset {
-    use super::*;
 
     #[test]
     fn mp3_file_starting_with_id3_returns_zero() {
@@ -512,140 +509,6 @@ mod test_find_id3_header_offset {
             "Expected ID3 header at offset {id3_payload_offset}"
         );
     }
-}
-
-#[cfg(test)]
-mod test_track_tags_changed {
-    use super::*;
-
-    /// Helper to create a `TrackTags` with all formatted fields matching current fields.
-    fn create_matching_tags() -> TrackTags {
-        let mut tags = TrackTags::new(
-            String::from("Artist - Title"),
-            String::from("Artist"),
-            String::from("Title"),
-            String::from("Album"),
-            String::from("Genre"),
-        );
-        tags.formatted_name = String::from("Artist - Title");
-        tags.formatted_artist = String::from("Artist");
-        tags.formatted_title = String::from("Title");
-        tags.formatted_album = String::from("Album");
-        tags.formatted_genre = String::from("Genre");
-        tags
-    }
-
-    #[test]
-    fn all_fields_match_returns_false() {
-        let tags = create_matching_tags();
-        assert!(!tags.changed(), "Expected changed() to be false when all fields match");
-    }
-
-    #[test]
-    fn different_formatted_name_returns_true() {
-        let mut tags = create_matching_tags();
-        tags.formatted_name = String::from("Different Artist - Different Title");
-        assert!(
-            tags.changed(),
-            "Expected changed() to be true when formatted_name differs"
-        );
-    }
-
-    #[test]
-    fn different_formatted_artist_returns_true() {
-        let mut tags = create_matching_tags();
-        tags.formatted_artist = String::from("Different Artist");
-        assert!(
-            tags.changed(),
-            "Expected changed() to be true when formatted_artist differs"
-        );
-    }
-
-    #[test]
-    fn different_formatted_title_returns_true() {
-        let mut tags = create_matching_tags();
-        tags.formatted_title = String::from("Different Title");
-        assert!(
-            tags.changed(),
-            "Expected changed() to be true when formatted_title differs"
-        );
-    }
-
-    #[test]
-    fn different_formatted_album_returns_true() {
-        let mut tags = create_matching_tags();
-        tags.formatted_album = String::from("Different Album");
-        assert!(
-            tags.changed(),
-            "Expected changed() to be true when formatted_album differs"
-        );
-    }
-
-    #[test]
-    fn different_formatted_genre_returns_true() {
-        let mut tags = create_matching_tags();
-        tags.formatted_genre = String::from("Different Genre");
-        assert!(
-            tags.changed(),
-            "Expected changed() to be true when formatted_genre differs"
-        );
-    }
-}
-
-#[cfg(test)]
-mod test_track_tags_new {
-    use super::*;
-
-    #[test]
-    fn current_fields_are_set_correctly() {
-        let tags = TrackTags::new(
-            String::from("Artist - Title"),
-            String::from("Artist"),
-            String::from("Title"),
-            String::from("Album"),
-            String::from("Genre"),
-        );
-        assert_eq!(tags.current_name, "Artist - Title");
-        assert_eq!(tags.current_artist, "Artist");
-        assert_eq!(tags.current_title, "Title");
-        assert_eq!(tags.current_album, "Album");
-        assert_eq!(tags.current_genre, "Genre");
-    }
-
-    #[test]
-    fn formatted_fields_default_to_empty_strings() {
-        let tags = TrackTags::new(
-            String::from("Name"),
-            String::from("Artist"),
-            String::from("Title"),
-            String::from("Album"),
-            String::from("Genre"),
-        );
-        assert_eq!(tags.formatted_name, "");
-        assert_eq!(tags.formatted_artist, "");
-        assert_eq!(tags.formatted_title, "");
-        assert_eq!(tags.formatted_album, "");
-        assert_eq!(tags.formatted_genre, "");
-    }
-
-    #[test]
-    fn update_needed_defaults_to_false() {
-        let tags = TrackTags::new(
-            String::from("Name"),
-            String::from("Artist"),
-            String::from("Title"),
-            String::from("Album"),
-            String::from("Genre"),
-        );
-        assert!(!tags.update_needed, "Expected update_needed to default to false");
-    }
-}
-
-#[cfg(test)]
-mod test_is_malformed_frame_error {
-    use super::*;
-
-    use id3::{Encoding, Error, ErrorKind, FrameError, FrameErrorKind};
 
     #[test]
     fn ufid_delimiter_not_found_returns_true() {
@@ -738,193 +601,125 @@ mod test_is_malformed_frame_error {
 }
 
 #[cfg(test)]
-mod test_parse_tag_data {
+mod test_track_tags {
     use super::*;
-    use std::path::Path;
 
-    /// Return the path to the basic tags MP3 test file.
-    fn basic_tags_mp3_path() -> std::path::PathBuf {
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/basic_tags/Basic Tags - Song - 16-44.mp3")
+    /// Helper to create a `TrackTags` with all formatted fields matching current fields.
+    fn create_matching_tags() -> TrackTags {
+        let mut tags = TrackTags::new(
+            String::from("Artist - Title"),
+            String::from("Artist"),
+            String::from("Title"),
+            String::from("Album"),
+            String::from("Genre"),
+        );
+        tags.formatted_name = String::from("Artist - Title");
+        tags.formatted_artist = String::from("Artist");
+        tags.formatted_title = String::from("Title");
+        tags.formatted_album = String::from("Album");
+        tags.formatted_genre = String::from("Genre");
+        tags
     }
 
     #[test]
-    fn parses_artist_and_title_from_basic_tags() {
-        let path = basic_tags_mp3_path();
-        if !path.exists() {
-            println!("Test file not found, skipping: {}", path.display());
-            return;
-        }
-        let track = Track::try_from_path(&path).expect("Failed to create Track from basic tags MP3");
-        let tag = Tag::read_from_path(&path).expect("Failed to read tags from basic tags MP3");
-        let tags = TrackTags::parse_tag_data(&track, &tag);
-        assert_eq!(
-            tags.current_artist, "Basic Tags",
-            "Expected current_artist to be 'Basic Tags', got '{}'",
-            tags.current_artist
-        );
-        assert_eq!(
-            tags.current_title, "Song - 16-44",
-            "Expected current_title to be 'Song - 16-44', got '{}'",
-            tags.current_title
-        );
-        assert!(
-            tags.current_name.contains("Basic Tags"),
-            "Expected current_name to contain 'Basic Tags', got '{}'",
-            tags.current_name
-        );
-        assert!(
-            tags.current_name.contains("Song"),
-            "Expected current_name to contain 'Song', got '{}'",
-            tags.current_name
-        );
-    }
-}
-
-#[cfg(test)]
-mod test_parse_tag_data_no_tags {
-    use super::*;
-    use std::path::Path;
-
-    /// Return the path to the no tags MP3 test file.
-    fn no_tags_mp3_path() -> std::path::PathBuf {
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/no_tags/No Tags - Song - 16-44.mp3")
+    fn all_fields_match_returns_false() {
+        let tags = create_matching_tags();
+        assert!(!tags.changed(), "Expected changed() to be false when all fields match");
     }
 
     #[test]
-    fn parses_artist_and_title_from_filename_when_no_tags() {
-        let path = no_tags_mp3_path();
-        if !path.exists() {
-            println!("Test file not found, skipping: {}", path.display());
-            return;
-        }
-        let track = Track::try_from_path(&path).expect("Failed to create Track from no tags MP3");
-        let tag = Tag::new();
-        let tags = TrackTags::parse_tag_data(&track, &tag);
-        let has_artist = !tags.current_artist.is_empty();
-        let has_title = !tags.current_title.is_empty();
+    fn different_formatted_name_returns_true() {
+        let mut tags = create_matching_tags();
+        tags.formatted_name = String::from("Different Artist - Different Title");
         assert!(
-            has_artist || has_title,
-            "Expected at least artist or title to be parsed from filename, got artist='{}' title='{}'",
-            tags.current_artist,
-            tags.current_title
+            tags.changed(),
+            "Expected changed() to be true when formatted_name differs"
         );
-    }
-}
-
-#[cfg(test)]
-mod test_read_tags_basic {
-    use super::*;
-    use std::path::Path;
-
-    /// Return the path to the basic tags MP3 test file.
-    fn basic_tags_mp3_path() -> std::path::PathBuf {
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/basic_tags/Basic Tags - Song - 16-44.mp3")
     }
 
     #[test]
-    fn reads_tags_from_basic_mp3() {
-        let path = basic_tags_mp3_path();
-        if !path.exists() {
-            println!("Test file not found, skipping: {}", path.display());
-            return;
-        }
-        let track = Track::try_from_path(&path).expect("Failed to create Track from basic tags MP3");
-        let result = read_tags(&track, false);
-        assert!(result.is_some(), "Expected read_tags to return Some for basic tags MP3");
-        let tag = result.expect("read_tags returned None for basic tags MP3");
+    fn different_formatted_artist_returns_true() {
+        let mut tags = create_matching_tags();
+        tags.formatted_artist = String::from("Different Artist");
         assert!(
-            tag.artist().is_some(),
-            "Expected tag to have an artist for basic tags MP3"
+            tags.changed(),
+            "Expected changed() to be true when formatted_artist differs"
         );
-    }
-}
-
-#[cfg(test)]
-mod test_read_tags_no_tags {
-    use super::*;
-    use std::path::Path;
-
-    /// Return the path to the no tags MP3 test file.
-    fn no_tags_mp3_path() -> std::path::PathBuf {
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/no_tags/No Tags - Song - 16-44.mp3")
     }
 
     #[test]
-    fn reads_empty_tags_from_no_tags_mp3() {
-        let path = no_tags_mp3_path();
-        if !path.exists() {
-            println!("Test file not found, skipping: {}", path.display());
-            return;
-        }
-        let track = Track::try_from_path(&path).expect("Failed to create Track from no tags MP3");
-        let result = read_tags(&track, false);
+    fn different_formatted_title_returns_true() {
+        let mut tags = create_matching_tags();
+        tags.formatted_title = String::from("Different Title");
         assert!(
-            result.is_some(),
-            "Expected read_tags to return Some (empty Tag) for no tags MP3"
+            tags.changed(),
+            "Expected changed() to be true when formatted_title differs"
         );
-    }
-}
-
-#[cfg(test)]
-mod test_read_tags_extended {
-    use super::*;
-    use std::path::Path;
-
-    /// Return the path to the extended tags MP3 test file.
-    fn extended_tags_mp3_path() -> std::path::PathBuf {
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/extended_tags/Extended Tags - Song - 16-44.mp3")
     }
 
     #[test]
-    fn reads_tags_from_extended_mp3_in_verbose_mode() {
-        let path = extended_tags_mp3_path();
-        if !path.exists() {
-            println!("Test file not found, skipping: {}", path.display());
-            return;
-        }
-        let track = Track::try_from_path(&path).expect("Failed to create Track from extended tags MP3");
-        let result = read_tags(&track, true);
+    fn different_formatted_album_returns_true() {
+        let mut tags = create_matching_tags();
+        tags.formatted_album = String::from("Different Album");
         assert!(
-            result.is_some(),
-            "Expected read_tags to return Some for extended tags MP3"
+            tags.changed(),
+            "Expected changed() to be true when formatted_album differs"
         );
-        let tag = result.expect("read_tags returned None for extended tags MP3");
-        assert!(
-            tag.artist().is_some(),
-            "Expected tag to have an artist for extended tags MP3"
-        );
-        assert!(
-            tag.title().is_some(),
-            "Expected tag to have a title for extended tags MP3"
-        );
-    }
-}
-
-#[cfg(test)]
-mod test_print_tag_data {
-    use super::*;
-    use std::path::Path;
-
-    /// Return the path to the basic tags MP3 test file.
-    fn basic_tags_mp3_path() -> std::path::PathBuf {
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/basic_tags/Basic Tags - Song - 16-44.mp3")
     }
 
     #[test]
-    fn prints_tag_data_without_panic() {
-        let path = basic_tags_mp3_path();
-        if !path.exists() {
-            println!("Test file not found, skipping: {}", path.display());
-            return;
-        }
-        let tag = Tag::read_from_path(&path).expect("Failed to read tags from basic tags MP3");
-        print_tag_data(&tag);
+    fn different_formatted_genre_returns_true() {
+        let mut tags = create_matching_tags();
+        tags.formatted_genre = String::from("Different Genre");
+        assert!(
+            tags.changed(),
+            "Expected changed() to be true when formatted_genre differs"
+        );
     }
-}
 
-#[cfg(test)]
-mod test_show_diff {
-    use super::*;
+    #[test]
+    fn current_fields_are_set_correctly() {
+        let tags = TrackTags::new(
+            String::from("Artist - Title"),
+            String::from("Artist"),
+            String::from("Title"),
+            String::from("Album"),
+            String::from("Genre"),
+        );
+        assert_eq!(tags.current_name, "Artist - Title");
+        assert_eq!(tags.current_artist, "Artist");
+        assert_eq!(tags.current_title, "Title");
+        assert_eq!(tags.current_album, "Album");
+        assert_eq!(tags.current_genre, "Genre");
+    }
+
+    #[test]
+    fn formatted_fields_default_to_empty_strings() {
+        let tags = TrackTags::new(
+            String::from("Name"),
+            String::from("Artist"),
+            String::from("Title"),
+            String::from("Album"),
+            String::from("Genre"),
+        );
+        assert_eq!(tags.formatted_name, "");
+        assert_eq!(tags.formatted_artist, "");
+        assert_eq!(tags.formatted_title, "");
+        assert_eq!(tags.formatted_album, "");
+        assert_eq!(tags.formatted_genre, "");
+    }
+
+    #[test]
+    fn update_needed_defaults_to_false() {
+        let tags = TrackTags::new(
+            String::from("Name"),
+            String::from("Artist"),
+            String::from("Title"),
+            String::from("Album"),
+            String::from("Genre"),
+        );
+        assert!(!tags.update_needed, "Expected update_needed to default to false");
+    }
 
     /// Create a `TrackTags` where the formatted name differs from the current name.
     fn create_tags_with_name_difference() -> TrackTags {
@@ -970,5 +765,161 @@ mod test_show_diff {
     fn show_diff_with_no_changes_does_not_panic() {
         let tags = create_tags_with_no_difference();
         tags.show_diff();
+    }
+}
+
+#[cfg(test)]
+mod test_parse_tag_data {
+    use super::*;
+    use std::path::Path;
+
+    /// Return the path to the basic tags MP3 test file.
+    fn basic_tags_mp3_path() -> std::path::PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/basic_tags/Basic Tags - Song - 16-44.mp3")
+    }
+
+    /// Return the path to the no tags MP3 test file.
+    fn no_tags_mp3_path() -> std::path::PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/no_tags/No Tags - Song - 16-44.mp3")
+    }
+
+    #[test]
+    fn parses_artist_and_title_from_basic_tags() {
+        let path = basic_tags_mp3_path();
+        if !path.exists() {
+            println!("Test file not found, skipping: {}", path.display());
+            return;
+        }
+        let track = Track::try_from_path(&path).expect("Failed to create Track from basic tags MP3");
+        let tag = Tag::read_from_path(&path).expect("Failed to read tags from basic tags MP3");
+        let tags = TrackTags::parse_tag_data(&track, &tag);
+        assert_eq!(
+            tags.current_artist, "Basic Tags",
+            "Expected current_artist to be 'Basic Tags', got '{}'",
+            tags.current_artist
+        );
+        assert_eq!(
+            tags.current_title, "Song - 16-44",
+            "Expected current_title to be 'Song - 16-44', got '{}'",
+            tags.current_title
+        );
+        assert!(
+            tags.current_name.contains("Basic Tags"),
+            "Expected current_name to contain 'Basic Tags', got '{}'",
+            tags.current_name
+        );
+        assert!(
+            tags.current_name.contains("Song"),
+            "Expected current_name to contain 'Song', got '{}'",
+            tags.current_name
+        );
+    }
+
+    #[test]
+    fn parses_artist_and_title_from_filename_when_no_tags() {
+        let path = no_tags_mp3_path();
+        if !path.exists() {
+            println!("Test file not found, skipping: {}", path.display());
+            return;
+        }
+        let track = Track::try_from_path(&path).expect("Failed to create Track from no tags MP3");
+        let tag = Tag::new();
+        let tags = TrackTags::parse_tag_data(&track, &tag);
+        let has_artist = !tags.current_artist.is_empty();
+        let has_title = !tags.current_title.is_empty();
+        assert!(
+            has_artist || has_title,
+            "Expected at least artist or title to be parsed from filename, got artist='{}' title='{}'",
+            tags.current_artist,
+            tags.current_title
+        );
+    }
+}
+
+#[cfg(test)]
+mod test_read_tags {
+    use super::*;
+    use std::path::Path;
+
+    /// Return the path to the basic tags MP3 test file.
+    fn basic_tags_mp3_path() -> std::path::PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/basic_tags/Basic Tags - Song - 16-44.mp3")
+    }
+
+    #[test]
+    fn reads_tags_from_basic_mp3() {
+        let path = basic_tags_mp3_path();
+        if !path.exists() {
+            println!("Test file not found, skipping: {}", path.display());
+            return;
+        }
+        let track = Track::try_from_path(&path).expect("Failed to create Track from basic tags MP3");
+        let result = read_tags(&track, false);
+        assert!(result.is_some(), "Expected read_tags to return Some for basic tags MP3");
+        let tag = result.expect("read_tags returned None for basic tags MP3");
+        assert!(
+            tag.artist().is_some(),
+            "Expected tag to have an artist for basic tags MP3"
+        );
+    }
+
+    /// Return the path to the no tags MP3 test file.
+    fn no_tags_mp3_path() -> std::path::PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/no_tags/No Tags - Song - 16-44.mp3")
+    }
+
+    #[test]
+    fn reads_empty_tags_from_no_tags_mp3() {
+        let path = no_tags_mp3_path();
+        if !path.exists() {
+            println!("Test file not found, skipping: {}", path.display());
+            return;
+        }
+        let track = Track::try_from_path(&path).expect("Failed to create Track from no tags MP3");
+        let result = read_tags(&track, false);
+        assert!(
+            result.is_some(),
+            "Expected read_tags to return Some (empty Tag) for no tags MP3"
+        );
+    }
+
+    /// Return the path to the extended tags MP3 test file.
+    fn extended_tags_mp3_path() -> std::path::PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/extended_tags/Extended Tags - Song - 16-44.mp3")
+    }
+
+    #[test]
+    fn reads_tags_from_extended_mp3_in_verbose_mode() {
+        let path = extended_tags_mp3_path();
+        if !path.exists() {
+            println!("Test file not found, skipping: {}", path.display());
+            return;
+        }
+        let track = Track::try_from_path(&path).expect("Failed to create Track from extended tags MP3");
+        let result = read_tags(&track, true);
+        assert!(
+            result.is_some(),
+            "Expected read_tags to return Some for extended tags MP3"
+        );
+        let tag = result.expect("read_tags returned None for extended tags MP3");
+        assert!(
+            tag.artist().is_some(),
+            "Expected tag to have an artist for extended tags MP3"
+        );
+        assert!(
+            tag.title().is_some(),
+            "Expected tag to have a title for extended tags MP3"
+        );
+    }
+
+    #[test]
+    fn prints_tag_data_without_panic() {
+        let path = basic_tags_mp3_path();
+        if !path.exists() {
+            println!("Test file not found, skipping: {}", path.display());
+            return;
+        }
+        let tag = Tag::read_from_path(&path).expect("Failed to read tags from basic tags MP3");
+        print_tag_data(&tag);
     }
 }

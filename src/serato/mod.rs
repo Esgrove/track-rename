@@ -235,7 +235,7 @@ fn hexdump(buffer: &[u8], ascii: bool) -> String {
 }
 
 #[cfg(test)]
-mod test_serato_tag_from_str {
+mod test_serato_tag {
     use super::*;
 
     #[test]
@@ -279,11 +279,6 @@ mod test_serato_tag_from_str {
         let result = SeratoTag::from_str("");
         assert!(result.is_err(), "Should reject empty string");
     }
-}
-
-#[cfg(test)]
-mod test_serato_tag_display {
-    use super::*;
 
     #[test]
     fn displays_analysis() {
@@ -312,43 +307,7 @@ mod test_serato_tag_display {
 }
 
 #[cfg(test)]
-mod test_format_position_timestamp {
-    use super::*;
-
-    #[test]
-    fn formats_zero_milliseconds() {
-        assert_eq!(format_position_timestamp(0), "00:00.0");
-    }
-
-    #[test]
-    fn formats_one_second() {
-        assert_eq!(format_position_timestamp(1000), "00:01.0");
-    }
-
-    #[test]
-    fn formats_one_minute() {
-        assert_eq!(format_position_timestamp(60000), "01:00.0");
-    }
-
-    #[test]
-    fn formats_one_minute_one_second_five_tenths() {
-        assert_eq!(format_position_timestamp(61500), "01:01.5");
-    }
-
-    #[test]
-    fn formats_two_minutes_five_seconds_three_tenths() {
-        assert_eq!(format_position_timestamp(125_300), "02:05.3");
-    }
-
-    #[test]
-    fn formats_large_value() {
-        // 10 minutes exactly
-        assert_eq!(format_position_timestamp(600_000), "10:00.0");
-    }
-}
-
-#[cfg(test)]
-mod test_serato_data_parse {
+mod test_serato_data {
     use super::*;
     use std::path::Path;
 
@@ -386,12 +345,6 @@ mod test_serato_data_parse {
         assert!(serato_data.overview.is_some(), "Overview should be present");
         assert!(!serato_data.markers.is_empty(), "Markers should not be empty");
     }
-}
-
-#[cfg(test)]
-mod test_serato_data_parse_no_serato {
-    use super::*;
-    use std::path::Path;
 
     #[test]
     fn returns_none_for_file_without_serato_data() {
@@ -407,17 +360,6 @@ mod test_serato_data_parse_no_serato {
             serato_data.is_none(),
             "SeratoData::parse should return None for file without Serato tags"
         );
-    }
-}
-
-#[cfg(test)]
-mod test_serato_data_display {
-    use super::*;
-    use std::path::Path;
-
-    /// Return the path to the extended tags MP3 test file.
-    fn extended_tags_mp3_path() -> std::path::PathBuf {
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/extended_tags/Extended Tags - Song - 16-44.mp3")
     }
 
     #[test]
@@ -460,11 +402,6 @@ mod test_serato_data_display {
             "Display should contain 'BPM', got: {display_output}"
         );
     }
-}
-
-#[cfg(test)]
-mod test_serato_data_display_empty {
-    use super::*;
 
     #[test]
     fn display_shows_none_for_all_fields() {
@@ -478,8 +415,39 @@ mod test_serato_data_display_empty {
 }
 
 #[cfg(test)]
-mod test_format_as_byte_string {
+mod test_helper_functions {
     use super::*;
+
+    #[test]
+    fn formats_zero_milliseconds() {
+        assert_eq!(format_position_timestamp(0), "00:00.0");
+    }
+
+    #[test]
+    fn formats_one_second() {
+        assert_eq!(format_position_timestamp(1000), "00:01.0");
+    }
+
+    #[test]
+    fn formats_one_minute() {
+        assert_eq!(format_position_timestamp(60000), "01:00.0");
+    }
+
+    #[test]
+    fn formats_one_minute_one_second_five_tenths() {
+        assert_eq!(format_position_timestamp(61500), "01:01.5");
+    }
+
+    #[test]
+    fn formats_two_minutes_five_seconds_three_tenths() {
+        assert_eq!(format_position_timestamp(125_300), "02:05.3");
+    }
+
+    #[test]
+    fn formats_large_value() {
+        // 10 minutes exactly
+        assert_eq!(format_position_timestamp(600_000), "10:00.0");
+    }
 
     #[test]
     fn formats_three_bytes() {
@@ -492,11 +460,6 @@ mod test_format_as_byte_string {
         let result = format_as_byte_string(&[]);
         assert_eq!(result, "");
     }
-}
-
-#[cfg(test)]
-mod test_hexdump {
-    use super::*;
 
     #[test]
     fn contains_hex_values_without_ascii() {

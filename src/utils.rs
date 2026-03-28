@@ -228,8 +228,9 @@ pub fn get_filename_from_path(path: &Path) -> anyhow::Result<String> {
 }
 
 #[cfg(test)]
-mod test_get_tags_from_filename {
+mod test_filename_and_tags {
     use super::*;
+    use std::path::Path;
 
     #[test]
     fn parses_standard_format() {
@@ -275,11 +276,30 @@ mod test_get_tags_from_filename {
             Some(("DJ Snake".to_string(), "Turn Down for What".to_string()))
         );
     }
+
+    #[test]
+    fn normal_path_returns_filename() {
+        let result = get_filename_from_path(Path::new("/some/dir/file.mp3")).expect("should get filename");
+        assert_eq!(result, "file.mp3");
+    }
+
+    #[test]
+    fn path_with_unicode_returns_filename() {
+        let result = get_filename_from_path(Path::new("/dir/ångström.aif")).expect("should get unicode filename");
+        assert_eq!(result, "ångström.aif");
+    }
+
+    #[test]
+    fn root_path_with_no_filename_should_error() {
+        let result = get_filename_from_path(Path::new("/"));
+        assert!(result.is_err());
+    }
 }
 
 #[cfg(test)]
-mod test_normalize_str {
+mod test_string_and_path_helpers {
     use super::*;
+    use std::path::Path;
 
     #[test]
     fn ascii_string_passes_through_unchanged() {
@@ -307,12 +327,6 @@ mod test_normalize_str {
         let decomposed = "a\u{0308}";
         assert_eq!(normalize_str(decomposed), "ä");
     }
-}
-
-#[cfg(test)]
-mod test_contains_subpath {
-    use super::*;
-    use std::path::Path;
 
     #[test]
     fn empty_subpath_returns_false() {
@@ -346,31 +360,7 @@ mod test_contains_subpath {
 }
 
 #[cfg(test)]
-mod test_get_filename_from_path {
-    use super::*;
-    use std::path::Path;
-
-    #[test]
-    fn normal_path_returns_filename() {
-        let result = get_filename_from_path(Path::new("/some/dir/file.mp3")).expect("should get filename");
-        assert_eq!(result, "file.mp3");
-    }
-
-    #[test]
-    fn path_with_unicode_returns_filename() {
-        let result = get_filename_from_path(Path::new("/dir/ångström.aif")).expect("should get unicode filename");
-        assert_eq!(result, "ångström.aif");
-    }
-
-    #[test]
-    fn root_path_with_no_filename_should_error() {
-        let result = get_filename_from_path(Path::new("/"));
-        assert!(result.is_err());
-    }
-}
-
-#[cfg(test)]
-mod test_rename_track {
+mod test_file_operations {
     use super::*;
     use std::fs;
 
@@ -420,11 +410,6 @@ mod test_rename_track {
 
         let _ = rename_track(&source_path, &destination_path, true);
     }
-}
-
-#[cfg(test)]
-mod test_resolve_input_path {
-    use super::*;
 
     #[test]
     fn none_input_returns_current_working_directory() {
