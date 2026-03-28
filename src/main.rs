@@ -109,6 +109,5 @@ fn main() -> Result<()> {
             env!("CARGO_BIN_NAME"),
         );
     }
-    let absolute_input_path = track_rename::utils::resolve_input_path(args.path.as_deref())?;
-    TrackRenamer::new(absolute_input_path, &args).run()
+    TrackRenamer::new(&args)?.run()
 }

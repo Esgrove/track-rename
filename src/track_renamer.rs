@@ -44,13 +44,14 @@ pub struct TrackRenamer {
 
 impl TrackRenamer {
     /// Create Renamer from command line arguments.
-    pub fn new(path: PathBuf, args: &RenamerArgs) -> Self {
-        Self {
-            root: path,
+    pub fn new(args: &RenamerArgs) -> Result<Self> {
+        let root = utils::resolve_input_path(args.path.as_deref())?;
+        Ok(Self {
+            root,
             config: Config::from_args(args),
-            state: State::load(),
+            state: State::open()?,
             ..Default::default()
-        }
+        })
     }
 
     #[cfg(test)]
@@ -67,7 +68,7 @@ impl TrackRenamer {
     pub fn run(&mut self) -> Result<()> {
         if self.config.debug {
             println!("{}", self.config);
-            println!("State: {}", self.state.len());
+            println!("State: {}", self.state.len().unwrap_or(0));
         }
 
         if self.config.convert_failed && !utils::ffmpeg_available() {
@@ -229,8 +230,14 @@ impl TrackRenamer {
 
             let needs_processing = self.config.no_state
                 || match self.state.get(&track.path) {
-                    Some(state) => state.modified < track.metadata.modified || state.version != track.metadata.version,
-                    None => true,
+                    Ok(Some(state)) => {
+                        state.modified < track.metadata.modified || state.version != track.metadata.version
+                    }
+                    Ok(None) => true,
+                    Err(err) => {
+                        eprintln!("Failed to read state for {}: {err}", track.path.display());
+                        true
+                    }
                 };
 
             if needs_processing {
@@ -438,31 +445,27 @@ impl TrackRenamer {
             .for_each(|(format, count)| println!("{format}: {count}"));
     }
 
-    /// Insert processed tracks and save state.
+    /// Insert processed tracks into the state database.
     fn update_state(&self) -> Result<()> {
-        let (added_count, updated_count) = self
+        let entries: Vec<_> = self
             .tracks
-            .par_iter()
+            .iter()
             .filter(|track| !track.not_processed)
-            .map(|track| {
-                if self.state.insert(track.path.clone(), track.metadata.clone()).is_some() {
-                    (0, 1)
-                } else {
-                    (1, 0)
-                }
-            })
-            .reduce(|| (0, 0), |acc, item| (acc.0 + item.0, acc.1 + item.1));
+            .map(|track| (track.path.as_path(), &track.metadata))
+            .collect();
+
+        let (added_count, updated_count) = self.state.batch_insert(&entries)?;
 
         if self.config.debug || self.config.verbose {
             println!(
                 "State updated: {} new tracks added, {} existing tracks updated. Total: {}",
                 added_count,
                 updated_count,
-                self.state.len()
+                self.state.len().unwrap_or(0)
             );
         }
 
-        self.state.save()
+        Ok(())
     }
 
     /// Print all paths for duplicate tracks and create a Serato "Duplicates" crate.
