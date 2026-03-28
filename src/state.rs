@@ -254,8 +254,7 @@ impl State {
                 path TEXT NOT NULL UNIQUE,
                 modified INTEGER NOT NULL,
                 version TEXT NOT NULL
-            );
-            CREATE INDEX IF NOT EXISTS idx_tracks_path ON tracks(path);",
+            );",
         )
         .context("Failed to initialize database schema")?;
 
