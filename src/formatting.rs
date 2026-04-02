@@ -49,7 +49,7 @@ static TITLE_SUBSTITUTES: [(&str, &str); 18] = [
     ("(Clean-", "(Clean "),
     ("(Dirty-", "(Dirty "),
 ];
-static REGEX_SUBSTITUTES: LazyLock<[(Regex, &'static str); 12]> = LazyLock::new(|| {
+static REGEX_SUBSTITUTES: LazyLock<[(Regex, &'static str); 14]> = LazyLock::new(|| {
     [
         // Replace various opening bracket types with "("
         (
@@ -104,6 +104,15 @@ static REGEX_SUBSTITUTES: LazyLock<[(Regex, &'static str); 12]> = LazyLock::new(
         (
             Regex::new(r"\s+").expect("Failed to compile multiple spaces regex"),
             " ",
+        ),
+        // Fix casing for URL parts
+        (
+            Regex::new(r"(?i)\bwww\b").expect("Failed to compile www casing regex"),
+            "www",
+        ),
+        (
+            Regex::new(r"(?i)\bcom\b").expect("Failed to compile com casing regex"),
+            "com",
         ),
     ]
 });
@@ -472,6 +481,15 @@ pub fn format_filename(artist: &str, title: &str) -> (String, String) {
 
 pub fn format_album(album: &str) -> String {
     let mut formatted_album = album.trim().to_string();
+
+    for (pattern, replacement) in &COMMON_SUBSTITUTES {
+        formatted_album = formatted_album.replace(pattern, replacement);
+    }
+
+    for (regex, replacement) in REGEX_SUBSTITUTES.iter() {
+        formatted_album = regex.replace_all(&formatted_album, *replacement).to_string();
+    }
+
     formatted_album = RE_WWW.replace(&formatted_album, "").to_string();
     fix_whitespace(&mut formatted_album);
     formatted_album

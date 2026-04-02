@@ -542,6 +542,33 @@ static WHITESPACE_TEST_DATA: &[FormattingTestData] = &[
     },
 ];
 
+static URL_CASING_TEST_DATA: &[FormattingTestData] = &[
+    FormattingTestData {
+        artist: "Www.example.Com",
+        correct_artist: "www.example.com",
+        title: "Some Title",
+        correct_title: "Some Title",
+    },
+    FormattingTestData {
+        artist: "DJ Test",
+        correct_artist: "DJ Test",
+        title: "Track (WWW.EXAMPLE.COM)",
+        correct_title: "Track (www.EXAMPLE.com)",
+    },
+    FormattingTestData {
+        artist: "WWW.SoundCloud.COM",
+        correct_artist: "www.SoundCloud.com",
+        title: "My Song",
+        correct_title: "My Song",
+    },
+    FormattingTestData {
+        artist: "www.example.com",
+        correct_artist: "www.example.com",
+        title: "Already Lowercase",
+        correct_title: "Already Lowercase",
+    },
+];
+
 static FILE_FORMATTING_TEST_DATA: &[FormattingTestData] = &[
     FormattingTestData {
         artist: "A*rtist",
@@ -639,6 +666,11 @@ fn test_remove_bpm_and_key() {
 #[test]
 fn test_whitespace_formatting() {
     run_tag_formatting_tests(WHITESPACE_TEST_DATA);
+}
+
+#[test]
+fn test_url_casing() {
+    run_tag_formatting_tests(URL_CASING_TEST_DATA);
 }
 
 #[test]
