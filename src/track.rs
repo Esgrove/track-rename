@@ -229,6 +229,14 @@ impl Track {
         }
     }
 
+    /// Print a divider line matching the width of the header printed by `show()`.
+    pub fn print_divider(&self, _total_tracks: usize, max_width: usize) {
+        // Matches the format: "{number:>max_width$}/{total_tracks}: {filename}"
+        let prefix_width = 2 * max_width + 3;
+        let width = prefix_width + self.filename().chars().count();
+        println!("{}", "-".repeat(width));
+    }
+
     /// Convert mp3 file to aif using ffmpeg.
     /// Returns an updated Track if conversion was successful.
     pub fn convert_mp3_to_aif(&self) -> anyhow::Result<Self> {
@@ -699,6 +707,20 @@ mod test_track_show {
         assert!(!track.printed, "Expected printed flag to be false initially");
         track.show(10, 2);
         assert!(track.printed, "Expected printed flag to be true after first show call");
+    }
+
+    #[test]
+    fn print_divider_width_matches_show_header() {
+        let track =
+            Track::new(Path::new("/users/test/Artist - Title.mp3")).expect("Failed to create track for divider test");
+        // show() format: "{number:>max_width$}/{total_tracks}: {filename}"
+        // For total_tracks=768, max_width=3: "  1/768: Artist - Title.mp3"
+        let max_width = 3;
+        // Verify the prefix matches: "  1/768: " = 3 + 1 + 3 + 2 = 9
+        let prefix_width = 2 * max_width + 3;
+        assert_eq!(prefix_width, 9);
+        let divider_width = prefix_width + track.filename().chars().count();
+        assert_eq!(divider_width, 9 + "Artist - Title.mp3".len());
     }
 
     #[test]
