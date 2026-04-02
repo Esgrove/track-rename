@@ -363,6 +363,12 @@ static FORMATTING_TEST_DATA: &[FormattingTestData] = &[
         title: "Jerzzey Boy – Is It Good To You?",
         correct_title: "Is It Good To You?",
     },
+    FormattingTestData {
+        artist: "DJ Quik feat. Nate Dogg",
+        correct_artist: "DJ Quik feat. Nate Dogg",
+        title: "Black Mercedes (Clean)-Mm Intro",
+        correct_title: "Black Mercedes (Clean) (Mm Intro)",
+    },
 ];
 
 static NESTED_PARENTHESES_TEST_DATA: &[FormattingTestData] = &[

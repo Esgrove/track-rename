@@ -3,11 +3,12 @@ use std::sync::LazyLock;
 
 use regex::{Captures, Regex};
 
-static COMMON_SUBSTITUTES: [(&str, &str); 23] = [
+static COMMON_SUBSTITUTES: [(&str, &str); 24] = [
     ("\0", "/"),
     ("`", "'"),
     ("´", "'"),
     (")(", ") ("),
+    (")-", ") "),
     ("()", " "),
     (") - (", ""),
     (" - (", " ("),
