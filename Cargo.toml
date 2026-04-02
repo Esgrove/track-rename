@@ -31,7 +31,7 @@ regex = "1.12.3"
 rusqlite = { version = "0.39.0", features = ["bundled"] }
 serde = { version = "1.0.228", features = ["derive"] }
 titlecase = "3.6.0"
-toml = "1.1.1"
+toml = "1.1.2"
 trash = "5.2.5"
 unicode-normalization = "0.1.25"
 walkdir = "2.5.0"
