@@ -876,3 +876,274 @@ mod bpm_tests {
         }
     }
 }
+
+#[cfg(test)]
+mod test_format_album {
+    use super::*;
+
+    #[test]
+    fn trims_whitespace() {
+        assert_eq!(format_album("  Some Album  "), "Some Album");
+    }
+
+    #[test]
+    fn removes_www_prefix() {
+        assert_eq!(format_album("www.example.com"), "example.com");
+    }
+
+    #[test]
+    fn preserves_www_not_at_start() {
+        assert_eq!(format_album("Visit www.example.com"), "Visit www.example.com");
+    }
+
+    #[test]
+    fn normalizes_dashes() {
+        assert_eq!(format_album("Album \u{2013} Deluxe"), "Album - Deluxe");
+        assert_eq!(format_album("Album \u{2014} Deluxe"), "Album - Deluxe");
+    }
+
+    #[test]
+    fn replaces_backtick_with_apostrophe() {
+        assert_eq!(format_album("Rock `n` Roll"), "Rock 'n' Roll");
+    }
+
+    #[test]
+    fn converts_brackets_to_parentheses() {
+        assert_eq!(format_album("Album [Deluxe Edition]"), "Album (Deluxe Edition)");
+        assert_eq!(format_album("Album {Special}"), "Album (Special)");
+    }
+
+    #[test]
+    fn collapses_multiple_spaces() {
+        assert_eq!(format_album("Album   Name"), "Album Name");
+    }
+
+    #[test]
+    fn removes_empty_parentheses() {
+        assert_eq!(format_album("Album ()"), "Album");
+    }
+
+    #[test]
+    fn preserves_normal_album_name() {
+        assert_eq!(format_album("Dark Side of the Moon"), "Dark Side of the Moon");
+    }
+
+    #[test]
+    fn handles_empty_string() {
+        assert_eq!(format_album(""), "");
+    }
+}
+
+#[cfg(test)]
+mod test_fix_whitespace {
+    use super::*;
+
+    #[test]
+    fn collapses_multiple_spaces() {
+        let mut text = "Hello   World".to_string();
+        fix_whitespace(&mut text);
+        assert_eq!(text, "Hello World");
+    }
+
+    #[test]
+    fn trims_leading_and_trailing() {
+        let mut text = "  Hello World  ".to_string();
+        fix_whitespace(&mut text);
+        assert_eq!(text, "Hello World");
+    }
+
+    #[test]
+    fn handles_tabs() {
+        let mut text = "Hello\t\tWorld".to_string();
+        fix_whitespace(&mut text);
+        assert_eq!(text, "Hello World");
+    }
+
+    #[test]
+    fn preserves_single_spaces() {
+        let mut text = "Hello World".to_string();
+        fix_whitespace(&mut text);
+        assert_eq!(text, "Hello World");
+    }
+
+    #[test]
+    fn handles_empty_string() {
+        let mut text = String::new();
+        fix_whitespace(&mut text);
+        assert_eq!(text, "");
+    }
+}
+
+#[cfg(test)]
+mod test_parenthesis_balancing {
+    use super::*;
+
+    #[test]
+    fn balance_no_change_when_already_balanced() {
+        let mut text = "Song (Remix)".to_string();
+        balance_parenthesis(&mut text);
+        assert_eq!(text, "Song (Remix)");
+    }
+
+    #[test]
+    fn balance_adds_closing_parenthesis() {
+        let mut text = "Song (Remix".to_string();
+        balance_parenthesis(&mut text);
+        assert_eq!(text, "Song (Remix)");
+    }
+
+    #[test]
+    fn balance_adds_opening_parenthesis() {
+        let mut text = "Song Remix)".to_string();
+        balance_parenthesis(&mut text);
+        assert_eq!(text, "(Song Remix)");
+    }
+
+    #[test]
+    fn balance_multiple_groups() {
+        let mut text = "Song (Edit) (Remix)".to_string();
+        balance_parenthesis(&mut text);
+        assert_eq!(text, "Song (Edit) (Remix)");
+    }
+
+    #[test]
+    fn add_closing_appends_at_end() {
+        let mut text = "Song (Remix".to_string();
+        add_missing_closing_parentheses(&mut text);
+        assert_eq!(text, "Song (Remix)");
+    }
+
+    #[test]
+    fn add_closing_splits_consecutive_opens() {
+        let mut text = "(Hello (World)".to_string();
+        add_missing_closing_parentheses(&mut text);
+        assert_eq!(text, "(Hello ) (World)");
+    }
+
+    #[test]
+    fn add_closing_no_change_when_balanced() {
+        let mut text = "Song (Remix)".to_string();
+        add_missing_closing_parentheses(&mut text);
+        assert_eq!(text, "Song (Remix)");
+    }
+
+    #[test]
+    fn add_opening_prepends_at_start() {
+        let mut text = "Song Remix)".to_string();
+        add_missing_opening_parentheses(&mut text);
+        assert_eq!(text, "(Song Remix)");
+    }
+
+    #[test]
+    fn add_opening_splits_consecutive_closes() {
+        let mut text = "Song Edit) (Remix)".to_string();
+        add_missing_opening_parentheses(&mut text);
+        assert_eq!(text, "(Song Edit) (Remix)");
+    }
+
+    #[test]
+    fn add_opening_no_change_when_balanced() {
+        let mut text = "Song (Remix)".to_string();
+        add_missing_opening_parentheses(&mut text);
+        assert_eq!(text, "Song (Remix)");
+    }
+
+    #[test]
+    fn remove_unmatched_closing_removes_trailing_paren() {
+        let mut text = "Artist)".to_string();
+        remove_unmatched_closing_parenthesis(&mut text);
+        assert_eq!(text, "Artist");
+    }
+
+    #[test]
+    fn remove_unmatched_closing_preserves_matched_parens() {
+        let mut text = "Artist (feat. Someone)".to_string();
+        remove_unmatched_closing_parenthesis(&mut text);
+        assert_eq!(text, "Artist (feat. Someone)");
+    }
+
+    #[test]
+    fn remove_unmatched_closing_no_change_without_trailing_paren() {
+        let mut text = "Artist".to_string();
+        remove_unmatched_closing_parenthesis(&mut text);
+        assert_eq!(text, "Artist");
+    }
+
+    #[test]
+    fn remove_unmatched_closing_trims_whitespace() {
+        let mut text = "  Artist)  ".to_string();
+        remove_unmatched_closing_parenthesis(&mut text);
+        assert_eq!(text, "Artist");
+    }
+}
+
+#[cfg(test)]
+mod test_feat_and_dash {
+    use super::*;
+
+    #[test]
+    fn moves_feat_from_title_to_artist() {
+        let mut artist = "DJ".to_string();
+        let mut title = "Song feat. Someone".to_string();
+        move_feat_from_title_to_artist(&mut artist, &mut title);
+        assert_eq!(artist, "DJ feat. Someone");
+        assert_eq!(title, "Song");
+    }
+
+    #[test]
+    fn converts_and_to_ampersand_in_feat() {
+        let mut artist = "DJ".to_string();
+        let mut title = "Song feat. A and B".to_string();
+        move_feat_from_title_to_artist(&mut artist, &mut title);
+        assert_eq!(artist, "DJ feat. A & B");
+        assert_eq!(title, "Song");
+    }
+
+    #[test]
+    fn no_change_without_feat() {
+        let mut artist = "DJ".to_string();
+        let mut title = "Song (Remix)".to_string();
+        move_feat_from_title_to_artist(&mut artist, &mut title);
+        assert_eq!(artist, "DJ");
+        assert_eq!(title, "Song (Remix)");
+    }
+
+    #[test]
+    fn removes_duplicate_feat_artist_from_artist() {
+        let mut artist = "DJ & Someone".to_string();
+        let mut title = "Song feat. Someone".to_string();
+        move_feat_from_title_to_artist(&mut artist, &mut title);
+        assert_eq!(artist, "DJ feat. Someone");
+        assert_eq!(title, "Song");
+    }
+
+    #[test]
+    fn does_not_add_duplicate_feat() {
+        let mut artist = "DJ feat. Someone".to_string();
+        let mut title = "Song feat. Someone".to_string();
+        move_feat_from_title_to_artist(&mut artist, &mut title);
+        assert_eq!(artist, "DJ feat. Someone");
+        assert_eq!(title, "Song");
+    }
+
+    #[test]
+    fn replace_dash_splits_into_two_groups() {
+        let mut text = "Song (Club - Mix)".to_string();
+        replace_dash_in_parentheses(&mut text);
+        assert_eq!(text, "Song (Club) (Mix)");
+    }
+
+    #[test]
+    fn replace_dash_no_change_without_dash() {
+        let mut text = "Song (Remix)".to_string();
+        replace_dash_in_parentheses(&mut text);
+        assert_eq!(text, "Song (Remix)");
+    }
+
+    #[test]
+    fn replace_dash_handles_multiple_groups() {
+        let mut text = "Song (A - B) (C - D)".to_string();
+        replace_dash_in_parentheses(&mut text);
+        assert_eq!(text, "Song (A) (B) (C) (D)");
+    }
+}
