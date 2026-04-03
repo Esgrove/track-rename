@@ -241,6 +241,7 @@ impl TrackRenamer {
                 *self.tag_versions.entry(file_tags.version_label()).or_insert(0) += 1;
 
                 if self.config.debug && self.config.verbose {
+                    println!();
                     tags::print_tag_data(&file_tags);
                     if let Some(id3_tag) = file_tags.get_id3() {
                         serato::print_serato_tags(id3_tag);

@@ -271,28 +271,44 @@ pub fn write_tags(track: &Track, file_tags: &mut FileTags) -> anyhow::Result<()>
 
 /// Print all ID3 frames in a stable order.
 fn print_id3_tag_data(tag: &Id3Tag) {
-    println!("\n{}", format!("Tags ({}):", tag.version()).cyan().bold());
-    tag.frames()
-        .map(|frame| format!("{}: {}", frame.id(), frame.content()))
-        .sorted_unstable()
-        .for_each(|tag_string| println!("  {tag_string}"));
+    println!("{}", format!("Tags ({}):", tag.version()).cyan().bold());
+    for tag_string in id3_tag_lines(tag) {
+        println!("  {tag_string}");
+    }
 }
 
 /// Print FLAC Vorbis comments and picture count.
 fn print_flac_tag_data(tag: &FlacTag) {
-    println!("\n{}", "Tags (FLAC/Vorbis):".cyan().bold());
-    if let Some(vorbis_comments) = tag.vorbis_comments() {
-        vorbis_comments
-            .comments
-            .iter()
-            .flat_map(|(key, values)| values.iter().map(move |value| format!("{key}: {value}")))
-            .sorted_unstable()
-            .for_each(|tag_string| println!("  {tag_string}"));
+    println!("{}", "Tags (FLAC/Vorbis):".cyan().bold());
+    for tag_string in flac_tag_lines(tag) {
+        println!("  {tag_string}");
     }
+}
+
+/// Return all ID3 frames formatted for printing in stable sorted order.
+fn id3_tag_lines(tag: &Id3Tag) -> Vec<String> {
+    tag.frames()
+        .map(|frame| format!("{}: {}", frame.id(), frame.content()))
+        .sorted_unstable()
+        .collect()
+}
+
+/// Return all FLAC Vorbis comments and picture count in stable sorted order.
+fn flac_tag_lines(tag: &FlacTag) -> Vec<String> {
+    let mut tag_lines = tag
+        .vorbis_comments()
+        .into_iter()
+        .flat_map(|vorbis_comments| vorbis_comments.comments.iter())
+        .flat_map(|(key, values)| values.iter().map(move |value| format!("{key}: {value}")))
+        .collect::<Vec<_>>();
+
     let pictures = tag.pictures().count();
     if pictures > 0 {
-        println!("  PICTURES: {pictures}");
+        tag_lines.push(format!("PICTURES: {pictures}"));
     }
+
+    tag_lines.sort_unstable();
+    tag_lines
 }
 
 /// Read ID3 tag data from an MP3 or AIFF file.
@@ -1261,5 +1277,39 @@ mod test_read_tags {
         }
         let tag = Id3Tag::read_from_path(&path).expect("Failed to read tags from basic tags MP3");
         print_tag_data(&FileTags::Id3(tag));
+    }
+
+    #[test]
+    fn sorts_id3_tag_lines() {
+        let mut tag = Id3Tag::new();
+        tag.set_title("Song");
+        tag.set_artist("Artist");
+        tag.set_album("Album");
+
+        assert_eq!(
+            id3_tag_lines(&tag),
+            vec![
+                String::from("TALB: Album"),
+                String::from("TIT2: Song"),
+                String::from("TPE1: Artist"),
+            ]
+        );
+    }
+
+    #[test]
+    fn sorts_flac_tag_lines_including_pictures() {
+        let mut tag = FlacTag::new();
+        tag.set_vorbis("TITLE", vec!["Song"]);
+        tag.set_vorbis("ALBUM", vec!["Album"]);
+        tag.add_picture("image/jpeg", metaflac::block::PictureType::Other, vec![0]);
+
+        assert_eq!(
+            flac_tag_lines(&tag),
+            vec![
+                String::from("ALBUM: Album"),
+                String::from("PICTURES: 1"),
+                String::from("TITLE: Song"),
+            ]
+        );
     }
 }

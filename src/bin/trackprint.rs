@@ -67,7 +67,10 @@ fn main() -> Result<()> {
 
     let tracks = collect_input_tracks(&args.paths)?;
 
-    for track in tracks {
+    for (index, track) in tracks.into_iter().enumerate() {
+        if index > 0 {
+            println!();
+        }
         println!("{}", track.to_string().bold().magenta());
         if let Some(file_tags) = track.read_tags(args.verbose || args.debug) {
             // Don't print empty tags
