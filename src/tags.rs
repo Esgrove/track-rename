@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -85,6 +86,15 @@ impl FileTags {
         match self {
             Self::Id3(tag) => tag.genre(),
             Self::Flac(tag) => get_flac_value(tag, FLAC_GENRE),
+        }
+    }
+
+    /// Return the parsed genre field if present.
+    #[must_use]
+    pub fn genre_parsed(&self) -> Option<Cow<'_, str>> {
+        match self {
+            Self::Id3(tag) => tag.genre_parsed(),
+            Self::Flac(tag) => get_flac_value(tag, FLAC_GENRE).map(Cow::Borrowed),
         }
     }
 
@@ -177,7 +187,7 @@ impl TrackTags {
             }
         }
         let album = normalize_str(tag.album().unwrap_or_default());
-        let genre = normalize_str(tag.genre().unwrap_or_default());
+        let genre = normalize_str(tag.genre_parsed().unwrap_or_default().as_ref());
         Self::new(current_name, artist, title, album, genre)
     }
 
@@ -232,7 +242,7 @@ pub fn print_tag_data(file_tags: &FileTags) {
 #[must_use]
 pub fn read_tags(track: &Track, verbose: bool) -> Option<FileTags> {
     match track.format {
-        FileFormat::Flac => read_flac_tags(track, verbose),
+        FileFormat::Flac => read_flac_tags(track),
         FileFormat::Mp3 | FileFormat::Aif => read_id3_tags(track, verbose),
     }
 }
@@ -246,15 +256,9 @@ pub fn write_tags(track: &Track, file_tags: &mut FileTags) -> anyhow::Result<()>
 }
 
 /// Read FLAC Vorbis comments and picture metadata from a file.
-fn read_flac_tags(track: &Track, verbose: bool) -> Option<FileTags> {
+fn read_flac_tags(track: &Track) -> Option<FileTags> {
     match FlacTag::read_from_path(&track.path) {
-        Ok(tag) => {
-            let file_tags = FileTags::Flac(tag);
-            if verbose {
-                print_tag_data(&file_tags);
-            }
-            Some(file_tags)
-        }
+        Ok(tag) => Some(FileTags::Flac(tag)),
         Err(error) => {
             eprintln!("\n{}", format!("Failed to read FLAC tags for: {track}\n{error}").red());
             None
@@ -1091,6 +1095,24 @@ mod test_parse_tag_data {
             "Expected current_title to be 'Song - 16-44', got '{}'",
             tags.current_title
         );
+    }
+
+    #[test]
+    fn parses_numeric_id3_genre_to_human_readable_name() {
+        let path = basic_tags_mp3_path();
+        if !path.exists() {
+            println!("Test file not found, skipping: {}", path.display());
+            return;
+        }
+
+        let track = Track::try_from_path(&path).expect("Failed to create Track from basic tags MP3");
+        let mut tag = Id3Tag::new();
+        tag.set_artist("Genre Artist");
+        tag.set_title("Genre Title");
+        tag.set_genre("(31)");
+
+        let tags = TrackTags::parse_tag_data(&track, &FileTags::Id3(tag));
+        assert_eq!(tags.current_genre, "Trance");
     }
 
     #[test]
