@@ -255,17 +255,6 @@ pub fn write_tags(track: &Track, file_tags: &mut FileTags) -> anyhow::Result<()>
     }
 }
 
-/// Read FLAC Vorbis comments and picture metadata from a file.
-fn read_flac_tags(track: &Track) -> Option<FileTags> {
-    match FlacTag::read_from_path(&track.path) {
-        Ok(tag) => Some(FileTags::Flac(tag)),
-        Err(error) => {
-            eprintln!("\n{}", format!("Failed to read FLAC tags for: {track}\n{error}").red());
-            None
-        }
-    }
-}
-
 /// Print all ID3 frames in a stable order.
 fn print_id3_tag_data(tag: &Id3Tag) {
     println!("\n{}", format!("Tags ({}):", tag.version()).cyan().bold());
@@ -310,77 +299,13 @@ fn read_id3_tags(track: &Track, verbose: bool) -> Option<FileTags> {
     }
 }
 
-/// Check if an id3 parsing error is caused by a missing null delimiter
-/// in a frame we know how to fix (UFID, PRIV, etc.).
-fn is_malformed_frame_error(error: &Error) -> bool {
-    matches!(
-        &error.kind,
-        ErrorKind::FrameParsing(FrameError {
-            frame_id,
-            kind: FrameErrorKind::DelimiterNotFound { .. },
-            ..
-        }) if FIXABLE_FRAMES.iter().any(|id| id == frame_id)
-    )
-}
-
-/// Attempt to repair a file with a malformed frame by patching raw bytes.
-///
-/// Some third-party encoders (Beatport, Google Play, etc.) write frames like
-/// UFID and PRIV without the required null terminator after `owner_identifier`.
-///
-/// The fix overwrites the first content byte with `0x00`,
-/// which creates an empty `owner_identifier` (null-terminated)
-/// and keeps the remaining bytes as the data payload.
-/// This is a single-byte in-place change that preserves the frame size and all other tag data.
-fn repair_malformed_frame(track: &Track, error: Error, verbose: bool) -> Option<FileTags> {
-    let frame_id = match &error.kind {
-        ErrorKind::FrameParsing(fe) => fe.frame_id.clone(),
-        _ => String::from("unknown"),
-    };
-
-    eprintln!(
-        "\n{}",
-        format!(
-            "Malformed {frame_id} frame in: {track}\n  {}\n  Attempting to fix...",
-            error.description
-        )
-        .yellow()
-    );
-
-    match fix_malformed_frames_raw(&track.path) {
-        Ok(fixed) => {
-            // Re-read the now-fixed file.
-            match Id3Tag::read_from_path(&track.path) {
-                Ok(tag) => {
-                    let summary = fixed
-                        .iter()
-                        .map(|(id, n)| {
-                            let label = if *n == 1 { "frame" } else { "frames" };
-                            format!("{n} {id} {label}")
-                        })
-                        .collect::<Vec<_>>()
-                        .join(", ");
-                    eprintln!("{}", format!("  Fixed {summary} in: {track}").green());
-                    if verbose {
-                        print_id3_tag_data(&tag);
-                    }
-                    Some(FileTags::Id3(tag))
-                }
-                Err(reread_err) => {
-                    eprintln!(
-                        "{}",
-                        format!("  Re-read after fix still failed for: {track}\n  {reread_err}").red()
-                    );
-                    reread_err.partial_tag.map(FileTags::Id3)
-                }
-            }
-        }
-        Err(err) => {
-            eprintln!(
-                "{}",
-                format!("  Failed to fix {frame_id} frame in: {track}\n  {err}").red()
-            );
-            error.partial_tag.map(FileTags::Id3)
+/// Read FLAC Vorbis comments and picture metadata from a file.
+fn read_flac_tags(track: &Track) -> Option<FileTags> {
+    match FlacTag::read_from_path(&track.path) {
+        Ok(tag) => Some(FileTags::Flac(tag)),
+        Err(error) => {
+            eprintln!("\n{}", format!("Failed to read FLAC tags for: {track}\n{error}").red());
+            None
         }
     }
 }
@@ -488,6 +413,81 @@ fn get_flac_value<'a>(tag: &'a FlacTag, key: &str) -> Option<&'a str> {
             .find(|(existing_key, _)| existing_key.eq_ignore_ascii_case(key))
             .and_then(|(_, values)| values.first().map(String::as_str))
     })
+}
+
+/// Check if an id3 parsing error is caused by a missing null delimiter
+/// in a frame we know how to fix (UFID, PRIV, etc.).
+fn is_malformed_frame_error(error: &Error) -> bool {
+    matches!(
+        &error.kind,
+        ErrorKind::FrameParsing(FrameError {
+            frame_id,
+            kind: FrameErrorKind::DelimiterNotFound { .. },
+            ..
+        }) if FIXABLE_FRAMES.iter().any(|id| id == frame_id)
+    )
+}
+
+/// Attempt to repair a file with a malformed frame by patching raw bytes.
+///
+/// Some third-party encoders (Beatport, Google Play, etc.) write frames like
+/// UFID and PRIV without the required null terminator after `owner_identifier`.
+///
+/// The fix overwrites the first content byte with `0x00`,
+/// which creates an empty `owner_identifier` (null-terminated)
+/// and keeps the remaining bytes as the data payload.
+/// This is a single-byte in-place change that preserves the frame size and all other tag data.
+fn repair_malformed_frame(track: &Track, error: Error, verbose: bool) -> Option<FileTags> {
+    let frame_id = match &error.kind {
+        ErrorKind::FrameParsing(fe) => fe.frame_id.clone(),
+        _ => String::from("unknown"),
+    };
+
+    eprintln!(
+        "\n{}",
+        format!(
+            "Malformed {frame_id} frame in: {track}\n  {}\n  Attempting to fix...",
+            error.description
+        )
+        .yellow()
+    );
+
+    match fix_malformed_frames_raw(&track.path) {
+        Ok(fixed) => {
+            // Re-read the now-fixed file.
+            match Id3Tag::read_from_path(&track.path) {
+                Ok(tag) => {
+                    let summary = fixed
+                        .iter()
+                        .map(|(id, n)| {
+                            let label = if *n == 1 { "frame" } else { "frames" };
+                            format!("{n} {id} {label}")
+                        })
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    eprintln!("{}", format!("  Fixed {summary} in: {track}").green());
+                    if verbose {
+                        print_id3_tag_data(&tag);
+                    }
+                    Some(FileTags::Id3(tag))
+                }
+                Err(reread_err) => {
+                    eprintln!(
+                        "{}",
+                        format!("  Re-read after fix still failed for: {track}\n  {reread_err}").red()
+                    );
+                    reread_err.partial_tag.map(FileTags::Id3)
+                }
+            }
+        }
+        Err(err) => {
+            eprintln!(
+                "{}",
+                format!("  Failed to fix {frame_id} frame in: {track}\n  {err}").red()
+            );
+            error.partial_tag.map(FileTags::Id3)
+        }
+    }
 }
 
 /// Patch malformed frames directly in the raw file bytes.
