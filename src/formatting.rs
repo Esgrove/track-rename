@@ -412,28 +412,11 @@ pub fn format_tags_for_artist_and_title(artist: &str, title: &str) -> (String, S
         formatted_title = regex.replace_all(&formatted_title, *replacement).to_string();
     }
 
-    formatted_artist = formatted_artist.replace(" / ", ", ");
-    if formatted_artist.eq_ignore_ascii_case("Various Artists") {
-        let (artist, title) = match formatted_title.splitn(2, " - ").collect::<Vec<&str>>().as_slice() {
-            [artist, title] => (*artist, *title),
-            [no_split] => ("", *no_split),
-            _ => ("", ""),
-        };
-        formatted_artist = artist.to_string();
-        formatted_title = title.to_string();
-    } else {
-        formatted_artist = formatted_artist.trim_start_matches("Various Artists - ").to_string();
-    }
-
-    // Remove duplicate artist name from title
-    let artist_with_dash = format!("{formatted_artist} - ");
-    if formatted_title.starts_with(&artist_with_dash) {
-        formatted_title = formatted_title.replacen(&artist_with_dash, "", 1);
-    }
-
     // Artist name should not start with a dot since this will make it a hidden file
-    formatted_artist = formatted_artist.trim_start_matches('.').to_string();
+    formatted_artist = formatted_artist.trim_start_matches('.').replace(" / ", ", ");
 
+    split_various_artists(&mut formatted_artist, &mut formatted_title);
+    remove_duplicate_artist_from_title(&formatted_artist, &mut formatted_title);
     move_article_to_front(&mut formatted_artist);
     use_parenthesis_for_mix(&mut formatted_title);
     move_feat_from_title_to_artist(&mut formatted_artist, &mut formatted_title);
@@ -524,6 +507,35 @@ fn remove_unmatched_closing_parenthesis(input: &mut String) {
     *input = input.trim().to_string();
     if input.ends_with(')') && !input.contains('(') {
         input.pop();
+    }
+}
+
+/// Split "Various Artists" from artist into artist and title from the title string.
+///
+/// If the artist is "Various Artists", try to parse artist and title
+/// from the title string using " - " as the delimiter.
+/// Otherwise, strip a leading "Various Artists - " prefix from the artist.
+fn split_various_artists(artist: &mut String, title: &mut String) {
+    if artist.eq_ignore_ascii_case("Various Artists") {
+        let (parsed_artist, parsed_title) = match title.splitn(2, " - ").collect::<Vec<&str>>().as_slice() {
+            [artist, title] => (*artist, *title),
+            [no_split] => ("", *no_split),
+            _ => ("", ""),
+        };
+        *artist = parsed_artist.to_string();
+        *title = parsed_title.to_string();
+    } else {
+        *artist = artist.trim_start_matches("Various Artists - ").to_string();
+    }
+}
+
+/// Remove duplicate artist name from the beginning of the title.
+///
+/// If the title starts with "Artist - ", strip that prefix.
+fn remove_duplicate_artist_from_title(artist: &str, title: &mut String) {
+    let artist_with_dash = format!("{artist} - ");
+    if title.starts_with(&artist_with_dash) {
+        *title = title.replacen(&artist_with_dash, "", 1);
     }
 }
 
