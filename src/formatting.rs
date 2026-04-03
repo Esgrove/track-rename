@@ -50,15 +50,13 @@ static TITLE_SUBSTITUTES: [(&str, &str); 20] = [
     ("(Clean-", "(Clean "),
     ("(Dirty-", "(Dirty "),
 ];
-static REGEX_SUBSTITUTES: LazyLock<[(Regex, &'static str); 12]> = LazyLock::new(|| {
+static REGEX_SUBSTITUTES: LazyLock<[(Regex, &'static str); 11]> = LazyLock::new(|| {
     [
         // Collapse multiple exclamation marks into one
         (
             Regex::new(r"!{2,}").expect("Failed to compile exclamation marks regex"),
             "!",
         ),
-        // Collapse multiple periods into a single period
-        (Regex::new(r"\.{2,}").expect("Failed to compile periods regex"), "."),
         // Remove empty parentheses
         (
             Regex::new(r"\(\s*?\)").expect("Failed to compile empty parentheses regex"),
@@ -98,17 +96,22 @@ static REGEX_SUBSTITUTES: LazyLock<[(Regex, &'static str); 12]> = LazyLock::new(
         ),
         // Fix casing for URL parts
         (
-            Regex::new(r"(?i)\bwww\b").expect("Failed to compile www casing regex"),
-            "www",
+            Regex::new(r"(?i)\bwww\.").expect("Failed to compile www casing regex"),
+            "www.",
         ),
         (
-            Regex::new(r"(?i)\bcom\b").expect("Failed to compile com casing regex"),
-            "com",
+            Regex::new(r"(?i)\.com\b").expect("Failed to compile com casing regex"),
+            ".com",
         ),
     ]
 });
-static REGEX_NAME_SUBSTITUTES: LazyLock<[(Regex, &'static str); 45]> = LazyLock::new(|| {
+static REGEX_NAME_SUBSTITUTES: LazyLock<[(Regex, &'static str); 46]> = LazyLock::new(|| {
     [
+        // Collapse multiple periods into a single period
+        (
+            Regex::new(r"\.{2,}").expect("Failed to compile periods collapse regex"),
+            ".",
+        ),
         // Replace various opening bracket types with "("
         (
             Regex::new(r"[\[{]+").expect("Failed to compile opening brackets regex"),
@@ -150,7 +153,10 @@ static REGEX_NAME_SUBSTITUTES: LazyLock<[(Regex, &'static str); 45]> = LazyLock:
             "(feat.",
         ),
         // Standardize "w/" to "feat."
-        (Regex::new(r"(?i)\sW/").expect("Failed to compile w/ regex"), " feat. "),
+        (
+            Regex::new(r"(?i)\sW/").expect("Failed to compile w/ standardize regex"),
+            " feat. ",
+        ),
         // Standardize Remix
         (
             Regex::new(r"(?i)\(Rmx\)").expect("Failed to compile rmx parentheses regex"),
@@ -161,7 +167,10 @@ static REGEX_NAME_SUBSTITUTES: LazyLock<[(Regex, &'static str); 45]> = LazyLock:
             "Remix",
         ),
         // Remove trademark symbols
-        (Regex::new(r"[®™]").expect("Failed to compile trademark regex"), ""),
+        (
+            Regex::new(r"[®™]").expect("Failed to compile trademark remove regex"),
+            "",
+        ),
         // Correct name for "Missy Elliott"
         (
             Regex::new(r"(?i)\bMissy Elliot\b|\bMissy Elliot$").expect("Failed to compile Missy Elliott regex"),
@@ -173,14 +182,20 @@ static REGEX_NAME_SUBSTITUTES: LazyLock<[(Regex, &'static str); 45]> = LazyLock:
             "Gang Starr",
         ),
         // Fix capitalization for SZA
-        (Regex::new(r"(?i)\bSza\b").expect("Failed to compile SZA regex"), "SZA"),
+        (
+            Regex::new(r"(?i)\bSza\b").expect("Failed to compile SZA capitalize regex"),
+            "SZA",
+        ),
         // Fix spelling for "You're"
         (
             Regex::new(r"(?i)\bYoure\b").expect("Failed to compile You're regex"),
             "You're",
         ),
         // Fix spelling for "I'm"
-        (Regex::new(r"(?i)\bIm\b").expect("Failed to compile I'm regex"), "I'm"),
+        (
+            Regex::new(r"(?i)\bIm\b").expect("Failed to compile I'm spelling regex"),
+            "I'm",
+        ),
         // Fix spelling for "You've"
         (
             Regex::new(r"(?i)\bYouve\b").expect("Failed to compile You've regex"),
@@ -202,7 +217,10 @@ static REGEX_NAME_SUBSTITUTES: LazyLock<[(Regex, &'static str); 45]> = LazyLock:
             "Don't",
         ),
         // Fix capitalization for "DJ"
-        (Regex::new(r"(?i)\bDj\b").expect("Failed to compile DJ regex"), "DJ"),
+        (
+            Regex::new(r"(?i)\bDj\b").expect("Failed to compile DJ capitalize regex"),
+            "DJ",
+        ),
         // Ensure one whitespace after "feat."
         (
             Regex::new(r"\bfeat\.([A-Za-z0-9])").expect("Failed to compile feat space regex"),
