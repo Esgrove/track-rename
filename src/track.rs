@@ -7,23 +7,24 @@ use std::sync::LazyLock;
 
 use anyhow::Context;
 use colored::Colorize;
-use id3::Tag;
 use serde::{Deserialize, Serialize};
 use unicode_normalization::UnicodeNormalization;
 
 use crate::file_format::FileFormat;
 use crate::genre::GENRE_MAPPINGS;
-use crate::tags::TrackTags;
+use crate::tags::{FileTags, TrackTags};
 use crate::utils;
 use crate::utils::{get_file_modified_time, path_to_string, path_to_string_relative};
 use crate::{formatting, genre};
 
+/// Current crate version used for processed-track state entries.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
+/// Default music root used when inferring genres from directory layout.
 pub static DJ_MUSIC_PATH: LazyLock<PathBuf> = LazyLock::new(|| ["Dropbox", "DJ MUSIC"].iter().collect());
 
 // Other audio file extensions that should trigger a warning message,
-const OTHER_FILE_EXTENSIONS: [&str; 3] = ["wav", "flac", "m4a"];
+const OTHER_FILE_EXTENSIONS: [&str; 2] = ["wav", "m4a"];
 
 /// Represents one audio file.
 #[derive(Debug, Default, Clone)]
@@ -101,6 +102,7 @@ impl Track {
         })
     }
 
+    /// Try to construct a track from a filesystem path.
     #[must_use]
     pub fn try_from_path(path: &Path) -> Option<Self> {
         let extension = path.extension().and_then(|e| e.to_str()).unwrap_or_default().trim();
@@ -141,7 +143,14 @@ impl Track {
         format!("{}.{}", self.name, self.extension)
     }
 
-    pub fn format_tags(&mut self, file_tags: &Tag) {
+    /// Read tags for this track.
+    #[must_use]
+    pub fn read_tags(&self, verbose: bool) -> Option<FileTags> {
+        FileTags::read(self, verbose)
+    }
+
+    /// Read, normalize, and store the formatted tags for this track.
+    pub fn format_tags(&mut self, file_tags: &FileTags) {
         let mut tags = TrackTags::parse_tag_data(self, file_tags);
         let (formatted_artist, formatted_title) =
             formatting::format_tags_for_artist_and_title(&tags.current_artist, &tags.current_title);
@@ -405,8 +414,6 @@ mod test_track_operations {
     use std::env;
     use std::path::PathBuf;
 
-    use crate::tags::read_tags;
-
     #[test]
     fn test_track_new_valid_path() {
         let path = Path::new("/users/test/test_song.mp3");
@@ -529,6 +536,11 @@ mod test_track_operations {
         Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/basic_tags/Basic Tags - Song - 16-44.aif")
     }
 
+    /// Return the path to the basic tags FLAC test file.
+    fn basic_tags_flac_path() -> PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/basic_tags/Basic Tags - Song - 16-44.flac")
+    }
+
     #[test]
     fn valid_mp3_path_returns_some() {
         let path = basic_tags_mp3_path();
@@ -558,6 +570,20 @@ mod test_track_operations {
     }
 
     #[test]
+    fn valid_flac_path_returns_some_with_correct_format() {
+        let path = basic_tags_flac_path();
+        if !path.exists() {
+            println!("Test file not found, skipping: {}", path.display());
+            return;
+        }
+        let result = Track::try_from_path(&path);
+        assert!(result.is_some(), "Expected Some for valid FLAC path");
+        let track = result.expect("Track::try_from_path returned None for valid FLAC");
+        assert_eq!(track.format, FileFormat::Flac, "Expected FLAC format");
+        assert_eq!(track.extension, "flac", "Expected flac extension");
+    }
+
+    #[test]
     fn unsupported_extension_returns_none() {
         let path = Path::new("/users/test/document.txt");
         let result = Track::try_from_path(path);
@@ -579,7 +605,7 @@ mod test_track_operations {
             return;
         }
         let mut track = Track::try_from_path(&path).expect("Failed to create Track from basic tags MP3");
-        let tag = read_tags(&track, false).expect("Failed to read tags from basic tags MP3");
+        let tag = track.read_tags(false).expect("Failed to read tags from basic tags MP3");
         track.format_tags(&tag);
         assert!(
             !track.tags.formatted_artist.is_empty(),
@@ -604,7 +630,7 @@ mod test_track_operations {
             return;
         }
         let mut track = Track::try_from_path(&path).expect("Failed to create Track from basic tags MP3");
-        let tag = read_tags(&track, false).expect("Failed to read tags from basic tags MP3");
+        let tag = track.read_tags(false).expect("Failed to read tags from basic tags MP3");
         track.format_tags(&tag);
         let filename = track.formatted_filename();
         assert!(!filename.is_empty(), "Expected formatted_filename to be non-empty");
@@ -622,7 +648,7 @@ mod test_track_operations {
             return;
         }
         let mut track = Track::try_from_path(&path).expect("Failed to create Track from basic tags MP3");
-        let tag = read_tags(&track, false).expect("Failed to read tags from basic tags MP3");
+        let tag = track.read_tags(false).expect("Failed to read tags from basic tags MP3");
         track.format_tags(&tag);
         let filename_with_extension = track.formatted_filename_with_extension();
         assert!(

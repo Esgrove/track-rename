@@ -10,7 +10,7 @@ If tag data is missing, will try to extract artist and title from the filename.
 
 ## Rust version
 
-Only supports ID3 tags (mp3, aif, wav) currently.
+Supports MP3 and AIFF via ID3 tags, and FLAC via Vorbis comments.
 
 ```shell
 ./build.sh
@@ -32,7 +32,7 @@ Arguments:
 
 Options:
   -a, --all-tags   Resave tags for all files with ID3v2.4
-  -c, --convert    Convert failed files to AIFF using ffmpeg
+  -c, --convert    Convert failed MP3 files to AIFF using ffmpeg
   -d, --debug      Enable debug prints
   -f, --force      Do not ask for confirmation
   -l, --log        Log files that can't be read

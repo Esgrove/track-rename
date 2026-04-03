@@ -1,6 +1,6 @@
 [package]
 name = "track-rename"
-version = "2.2.0"
+version = "2.3.0"
 edition = "2024"
 authors = ["Esgrove <esgrove@outlook.com>"]
 description = "CLI tool for formatting and renaming audio tracks"
@@ -25,6 +25,7 @@ dirs = "6.0.0"
 dunce = "1.0.5"
 id3 = { git = "https://github.com/Esgrove/rust-id3/" }
 itertools = "0.14.0"
+metaflac = "0.2.8"
 rand = "0.10.0"
 rayon = "1.11.0"
 regex = "1.12.3"

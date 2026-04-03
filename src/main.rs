@@ -24,7 +24,7 @@ pub struct RenamerArgs {
     #[arg(short, long)]
     all_tags: bool,
 
-    /// Convert failed files to AIFF using ffmpeg
+    /// Convert failed MP3 files to AIFF using ffmpeg
     #[arg(short, long)]
     convert: bool,
 

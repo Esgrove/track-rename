@@ -34,9 +34,9 @@ pub struct Args {
     #[command(subcommand)]
     command: Option<TrackprintCommand>,
 
-    /// Optional input directory or audio file
+    /// Optional input directories or audio files
     #[arg(value_hint = clap::ValueHint::AnyPath)]
-    path: Option<PathBuf>,
+    paths: Vec<PathBuf>,
 
     /// Enable debug prints
     #[arg(short, long)]
@@ -65,26 +65,46 @@ fn main() -> Result<()> {
         );
     }
 
-    let absolute_input_path = utils::resolve_input_path(args.path.as_deref())?;
-
-    let tracks = if absolute_input_path.is_file() {
-        Track::try_from_path(&absolute_input_path).map_or_else(Vec::new, |track| vec![track])
-    } else {
-        utils::collect_tracks(&absolute_input_path)
-    };
+    let tracks = collect_input_tracks(&args.paths)?;
 
     for track in tracks {
         println!("{}", track.to_string().bold().magenta());
-        if let Some(file_tags) = tags::read_tags(&track, args.verbose || args.debug) {
+        if let Some(file_tags) = track.read_tags(args.verbose || args.debug) {
             // Don't print empty tags
-            if file_tags.frames().next().is_some() {
-                tags::print_tag_data(&file_tags);
-                serato::print_serato_tags(&file_tags);
-            } else {
+            if file_tags.is_empty() {
                 println!("{}", "Empty tags".yellow());
+            } else {
+                tags::print_tag_data(&file_tags);
+                if let Some(id3_tag) = file_tags.get_id3() {
+                    serato::print_serato_tags(id3_tag);
+                }
             }
         }
     }
 
     Ok(())
+}
+
+fn collect_input_tracks(paths: &[PathBuf]) -> Result<Vec<Track>> {
+    let resolved_paths = if paths.is_empty() {
+        vec![utils::resolve_input_path(None)?]
+    } else {
+        paths
+            .iter()
+            .map(|path| utils::resolve_input_path(Some(path.as_path())))
+            .collect::<Result<Vec<_>>>()?
+    };
+
+    let mut tracks = Vec::new();
+    for path in resolved_paths {
+        if path.is_file() {
+            if let Some(track) = Track::try_from_path(&path) {
+                tracks.push(track);
+            }
+        } else {
+            tracks.extend(utils::collect_tracks(&path));
+        }
+    }
+    tracks.sort();
+    Ok(tracks)
 }

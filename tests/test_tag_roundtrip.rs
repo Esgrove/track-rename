@@ -17,13 +17,9 @@
 
 use id3::{Tag, TagLike, Version};
 
-/// Path to an MP3 with Serato GEOB frames, an artist tag, but no title or album tag.
-/// Generated from the `extended_tags` test file by removing TIT2 and TALB.
-const TEST_FILE: &str = "tests/files/missing_title/Extended Tags - Song - 16-44.mp3";
-
-// ---------------------------------------------------------------------------
-// helpers
-// ---------------------------------------------------------------------------
+/// Path to an MP3 with Serato GEOB frames, with artist and album tags present,
+/// but no title tag. Generated from the `extended_tags` test file by removing TIT2.
+const TEST_FILE: &str = "tests/files/missing_title/Missing Title - Song - 16-44.mp3";
 
 fn test_file_exists() -> bool {
     std::path::Path::new(TEST_FILE).exists()
@@ -35,10 +31,6 @@ fn make_temp_copy(suffix: &str) -> std::path::PathBuf {
     tmp
 }
 
-// ---------------------------------------------------------------------------
-// tests
-// ---------------------------------------------------------------------------
-
 /// Verify the test fixture: artist present, title missing.
 #[test]
 fn test_missing_title_tag_detected() {
@@ -49,9 +41,9 @@ fn test_missing_title_tag_detected() {
     let tmp = make_temp_copy("missing_title");
     let tag = Tag::read_from_path(&tmp).expect("Failed to read tags");
 
-    assert_eq!(tag.artist(), Some("Extended Tags"), "Artist tag should be present");
+    assert_eq!(tag.artist(), Some("Missing Title"), "Artist tag should be present");
     assert_eq!(tag.title(), None, "Title tag should be missing");
-    assert_eq!(tag.album(), None, "Album tag should be missing");
+    assert_eq!(tag.album(), Some("Missing Title"), "Album tag should match fixture");
 
     std::fs::remove_file(&tmp).expect("Failed to remove temp file");
 }
@@ -80,7 +72,7 @@ fn test_write_roundtrip_with_geob() {
         .expect("write_to_path should not return an error");
 
     let tag2 = Tag::read_from_path(&tmp).expect("Failed to re-read tags");
-    assert_eq!(tag2.artist(), Some("Extended Tags"));
+    assert_eq!(tag2.artist(), Some("Missing Title"));
     assert_eq!(tag2.title(), Some("Song (16-44)"));
     assert_eq!(tag2.album(), Some("Test Album"));
     assert!(
@@ -101,13 +93,13 @@ fn test_fresh_text_only_tag_write_roundtrips() {
     let tmp = make_temp_copy("fresh_text");
 
     let mut tag = Tag::new();
-    tag.set_artist("Extended Tags");
+    tag.set_artist("Missing Title");
     tag.set_title("Song (16-44)");
     tag.set_album("Test Album");
     tag.write_to_path(&tmp, Version::Id3v24).expect("Failed to write tags");
 
     let tag2 = Tag::read_from_path(&tmp).expect("Failed to re-read tags");
-    assert_eq!(tag2.artist(), Some("Extended Tags"));
+    assert_eq!(tag2.artist(), Some("Missing Title"));
     assert_eq!(tag2.title(), Some("Song (16-44)"));
     assert_eq!(tag2.album(), Some("Test Album"));
 
@@ -145,7 +137,7 @@ fn test_two_phase_write_preserves_text_and_binary_frames() {
             text_tag.add_frame(frame.clone());
         }
     }
-    text_tag.set_artist("Extended Tags");
+    text_tag.set_artist("Missing Title");
     text_tag.set_title("Song (16-44)");
     text_tag.set_album("Test Album");
     text_tag
@@ -154,7 +146,7 @@ fn test_two_phase_write_preserves_text_and_binary_frames() {
 
     // Verify text frames survived phase 1.
     let check = Tag::read_from_path(&tmp).expect("Failed to re-read after phase 1");
-    assert_eq!(check.artist(), Some("Extended Tags"));
+    assert_eq!(check.artist(), Some("Missing Title"));
     assert_eq!(check.title(), Some("Song (16-44)"));
     assert_eq!(check.album(), Some("Test Album"));
 
@@ -169,7 +161,7 @@ fn test_two_phase_write_preserves_text_and_binary_frames() {
 
     // Verify text frames AND binary frames are present.
     let final_tag = Tag::read_from_path(&tmp).expect("Failed to read final tags");
-    assert_eq!(final_tag.artist(), Some("Extended Tags"));
+    assert_eq!(final_tag.artist(), Some("Missing Title"));
     assert_eq!(final_tag.title(), Some("Song (16-44)"));
     assert_eq!(final_tag.album(), Some("Test Album"));
 
@@ -206,7 +198,7 @@ fn test_two_phase_write_is_idempotent() {
             text_tag.add_frame(frame.clone());
         }
     }
-    text_tag.set_artist("Extended Tags");
+    text_tag.set_artist("Missing Title");
     text_tag.set_title("Song (16-44)");
     text_tag.set_album("Test Album");
     text_tag
@@ -226,7 +218,7 @@ fn test_two_phase_write_is_idempotent() {
 
     assert_eq!(
         tag_pass2.artist(),
-        Some("Extended Tags"),
+        Some("Missing Title"),
         "Artist should be present on second pass"
     );
     assert_eq!(
@@ -273,7 +265,7 @@ fn test_strip_and_restore_binary_frames() {
         .expect("Text-only write failed");
 
     let check = Tag::read_from_path(&tmp).expect("Failed to re-read");
-    assert_eq!(check.artist(), Some("Extended Tags"));
+    assert_eq!(check.artist(), Some("Missing Title"));
     assert_eq!(check.title(), Some("Song (16-44)"));
     assert_eq!(check.album(), Some("Test Album"));
 
@@ -286,7 +278,7 @@ fn test_strip_and_restore_binary_frames() {
         .expect("Binary frame write failed");
 
     let final_tag = Tag::read_from_path(&tmp).expect("Failed to read final tags");
-    assert_eq!(final_tag.artist(), Some("Extended Tags"));
+    assert_eq!(final_tag.artist(), Some("Missing Title"));
     assert_eq!(final_tag.title(), Some("Song (16-44)"));
     assert_eq!(final_tag.album(), Some("Test Album"));
     assert!(

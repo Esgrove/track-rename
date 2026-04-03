@@ -1,3 +1,4 @@
+/// Serato crate file reading and writing helpers.
 pub mod serato_crate;
 
 mod analysis;
@@ -41,10 +42,15 @@ pub enum SeratoTag {
 /// Contains all Serato custom tag data in the file.
 #[derive(Debug, Clone, Default)]
 pub struct SeratoData {
+    /// Parsed Serato analysis version tag.
     pub analysis: Option<AnalysisVersion>,
+    /// Parsed Serato autotags data.
     pub autotags: Option<AutoTags>,
+    /// Parsed Serato beatgrid data.
     pub beatgrid: Option<BeatGrid>,
+    /// Parsed Serato cue, loop, color, and BPM lock markers.
     pub markers: Vec<Markers>,
+    /// Parsed Serato waveform overview data.
     pub overview: Option<Overview>,
 }
 
