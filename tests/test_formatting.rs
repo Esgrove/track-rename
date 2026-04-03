@@ -392,6 +392,27 @@ static NESTED_PARENTHESES_TEST_DATA: &[FormattingTestData] = &[
     },
 ];
 
+static DUPLICATE_PARENTHESES_TEST_DATA: &[FormattingTestData] = &[
+    FormattingTestData {
+        artist: "Gunchback Boogie Band, The",
+        correct_artist: "The Gunchback Boogie Band",
+        title: "Funn ()))",
+        correct_title: "Funn",
+    },
+    FormattingTestData {
+        artist: "DJ Test",
+        correct_artist: "DJ Test",
+        title: "Song ((Remix))",
+        correct_title: "Song (Remix)",
+    },
+    FormattingTestData {
+        artist: "DJ Test",
+        correct_artist: "DJ Test",
+        title: "Song ( (Remix) )",
+        correct_title: "Song (Remix)",
+    },
+];
+
 static PARENTHESES_TEST_DATA: &[FormattingTestData] = &[
     FormattingTestData {
         artist: "Redbone",
@@ -548,6 +569,33 @@ static WHITESPACE_TEST_DATA: &[FormattingTestData] = &[
     },
 ];
 
+static TRAILING_ARTICLE_TEST_DATA: &[FormattingTestData] = &[
+    FormattingTestData {
+        artist: "Temptations, The",
+        correct_artist: "The Temptations",
+        title: "Treat Her Like a Lady (Remaster)",
+        correct_title: "Treat Her Like a Lady (Remaster)",
+    },
+    FormattingTestData {
+        artist: "Beatles, The",
+        correct_artist: "The Beatles",
+        title: "Hey Jude",
+        correct_title: "Hey Jude",
+    },
+    FormattingTestData {
+        artist: "Rolling Stones, the",
+        correct_artist: "The Rolling Stones",
+        title: "Paint It Black",
+        correct_title: "Paint It Black",
+    },
+    FormattingTestData {
+        artist: "The Temptations",
+        correct_artist: "The Temptations",
+        title: "My Girl",
+        correct_title: "My Girl",
+    },
+];
+
 static URL_CASING_TEST_DATA: &[FormattingTestData] = &[
     FormattingTestData {
         artist: "Www.example.Com",
@@ -677,6 +725,16 @@ fn test_whitespace_formatting() {
 #[test]
 fn test_url_casing() {
     run_tag_formatting_tests(URL_CASING_TEST_DATA);
+}
+
+#[test]
+fn test_duplicate_parentheses() {
+    run_tag_formatting_tests(DUPLICATE_PARENTHESES_TEST_DATA);
+}
+
+#[test]
+fn test_trailing_article() {
+    run_tag_formatting_tests(TRAILING_ARTICLE_TEST_DATA);
 }
 
 #[test]

@@ -368,6 +368,13 @@ static RE_WWW: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)^www\.").expe
 
 static RE_CHARS_AND_DOTS: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?i)^([a-z]\.)+([a-z])?$").expect("Failed to compile chars and dots regex"));
+
+static RE_DUPLICATE_PARENS: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\(\s*\(([^()]*)\)\s*\)").expect("Failed to compile duplicate parentheses regex"));
+
+static RE_TRAILING_THE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)^(.+),\s*The\s*$").expect("Failed to compile trailing article regex"));
+
 const FILE_EXTENSIONS: [&str; 5] = [".mp3", ".flac", ".aif", ".aiff", ".m4a"];
 
 /// Return formatted artist and title string.
@@ -427,6 +434,7 @@ pub fn format_tags_for_artist_and_title(artist: &str, title: &str) -> (String, S
     // Artist name should not start with a dot since this will make it a hidden file
     formatted_artist = formatted_artist.trim_start_matches('.').to_string();
 
+    move_article_to_front(&mut formatted_artist);
     use_parenthesis_for_mix(&mut formatted_title);
     move_feat_from_title_to_artist(&mut formatted_artist, &mut formatted_title);
     replace_dash_in_parentheses(&mut formatted_title);
@@ -434,10 +442,8 @@ pub fn format_tags_for_artist_and_title(artist: &str, title: &str) -> (String, S
     wrap_text_after_parentheses(&mut formatted_title);
     remove_bpm_in_parentheses_from_end(&mut formatted_title);
     remove_unmatched_closing_parenthesis(&mut formatted_artist);
-
-    // TODO: Fix above so this is not needed
-    formatted_title = formatted_title.replace("((", "(").replace("))", ")");
-
+    fix_duplicate_parentheses(&mut formatted_artist);
+    fix_duplicate_parentheses(&mut formatted_title);
     extract_feat_from_parentheses(&mut formatted_artist);
     balance_parenthesis(&mut formatted_title);
 
@@ -492,6 +498,8 @@ pub fn format_album(album: &str) -> String {
     }
 
     formatted_album = RE_WWW.replace(&formatted_album, "").to_string();
+    fix_duplicate_parentheses(&mut formatted_album);
+    balance_parenthesis(&mut formatted_album);
     fix_whitespace(&mut formatted_album);
     formatted_album
 }
@@ -516,6 +524,23 @@ fn remove_unmatched_closing_parenthesis(input: &mut String) {
     *input = input.trim().to_string();
     if input.ends_with(')') && !input.contains('(') {
         input.pop();
+    }
+}
+
+/// Remove duplicate parentheses like `((text))` or `( (text) )`, collapsing them to `(text)`.
+fn fix_duplicate_parentheses(text: &mut String) {
+    while RE_DUPLICATE_PARENS.is_match(text) {
+        *text = RE_DUPLICATE_PARENS.replace_all(text, "($1)").to_string();
+    }
+}
+
+/// Move trailing article ", The" to the front of the name.
+///
+/// For example, "Temptations, The" becomes "The Temptations".
+fn move_article_to_front(name: &mut String) {
+    if let Some(captures) = RE_TRAILING_THE.captures(name) {
+        let base = captures[1].trim();
+        *name = format!("The {base}");
     }
 }
 
@@ -1075,6 +1100,79 @@ mod test_parenthesis_balancing {
         let mut text = "  Artist)  ".to_string();
         remove_unmatched_closing_parenthesis(&mut text);
         assert_eq!(text, "Artist");
+    }
+}
+
+#[cfg(test)]
+mod test_duplicate_parens_and_article {
+    use super::*;
+
+    #[test]
+    fn collapses_double_parentheses() {
+        let mut text = "Star-Funk ((Volume 42))".to_string();
+        fix_duplicate_parentheses(&mut text);
+        assert_eq!(text, "Star-Funk (Volume 42)");
+    }
+
+    #[test]
+    fn collapses_double_parentheses_with_spaces() {
+        let mut text = "Star-Funk ( (Volume 42) )".to_string();
+        fix_duplicate_parentheses(&mut text);
+        assert_eq!(text, "Star-Funk (Volume 42)");
+    }
+
+    #[test]
+    fn collapses_triple_parentheses() {
+        let mut text = "Star-Funk (((Volume 42)))".to_string();
+        fix_duplicate_parentheses(&mut text);
+        assert_eq!(text, "Star-Funk (Volume 42)");
+    }
+
+    #[test]
+    fn preserves_adjacent_parentheses() {
+        let mut text = "Song (Clean) (Extended)".to_string();
+        fix_duplicate_parentheses(&mut text);
+        assert_eq!(text, "Song (Clean) (Extended)");
+    }
+
+    #[test]
+    fn no_change_without_duplicates() {
+        let mut text = "Song (Remix)".to_string();
+        fix_duplicate_parentheses(&mut text);
+        assert_eq!(text, "Song (Remix)");
+    }
+
+    #[test]
+    fn album_star_funk_double_parens() {
+        assert_eq!(format_album("Star-Funk ((Volume 42))"), "Star-Funk (Volume 42)");
+    }
+
+    #[test]
+    fn moves_trailing_the_to_front() {
+        let mut name = "Temptations, The".to_string();
+        move_article_to_front(&mut name);
+        assert_eq!(name, "The Temptations");
+    }
+
+    #[test]
+    fn moves_trailing_the_case_insensitive() {
+        let mut name = "Rolling Stones, the".to_string();
+        move_article_to_front(&mut name);
+        assert_eq!(name, "The Rolling Stones");
+    }
+
+    #[test]
+    fn no_change_when_the_already_at_front() {
+        let mut name = "The Temptations".to_string();
+        move_article_to_front(&mut name);
+        assert_eq!(name, "The Temptations");
+    }
+
+    #[test]
+    fn no_change_without_trailing_article() {
+        let mut name = "Madonna".to_string();
+        move_article_to_front(&mut name);
+        assert_eq!(name, "Madonna");
     }
 }
 
