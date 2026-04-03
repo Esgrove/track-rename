@@ -3,7 +3,7 @@ use std::sync::LazyLock;
 
 use regex::{Captures, Regex};
 
-static COMMON_SUBSTITUTES: [(&str, &str); 24] = [
+static COMMON_SUBSTITUTES: [(&str, &str); 22] = [
     ("\0", "/"),
     ("`", "'"),
     ("´", "'"),
@@ -18,8 +18,6 @@ static COMMON_SUBSTITUTES: [(&str, &str); 24] = [
     (" - ) ", ")"),
     (" )", ")"),
     ("( ", "("),
-    ("...", " "),
-    ("..", " "),
     (" feat. - ", " feat. "),
     (" feat.-", " feat. "),
     ("o¨", "ö"),
@@ -30,7 +28,9 @@ static COMMON_SUBSTITUTES: [(&str, &str); 24] = [
     ("–", "-"),
     ("—", "-"),
 ];
-static TITLE_SUBSTITUTES: [(&str, &str); 18] = [
+static TITLE_SUBSTITUTES: [(&str, &str); 20] = [
+    ("...", " "),
+    ("..", " "),
     ("(Original Mix/", "("),
     ("12\"", "12''"),
     (" (12 Version) ", " (12'' Version) "),
@@ -50,18 +50,8 @@ static TITLE_SUBSTITUTES: [(&str, &str); 18] = [
     ("(Clean-", "(Clean "),
     ("(Dirty-", "(Dirty "),
 ];
-static REGEX_SUBSTITUTES: LazyLock<[(Regex, &'static str); 14]> = LazyLock::new(|| {
+static REGEX_SUBSTITUTES: LazyLock<[(Regex, &'static str); 12]> = LazyLock::new(|| {
     [
-        // Replace various opening bracket types with "("
-        (
-            Regex::new(r"[\[{]+").expect("Failed to compile opening brackets regex"),
-            "(",
-        ),
-        // Replace various closing bracket types with ")"
-        (
-            Regex::new(r"[]}]+").expect("Failed to compile closing brackets regex"),
-            ")",
-        ),
         // Collapse multiple exclamation marks into one
         (
             Regex::new(r"!{2,}").expect("Failed to compile exclamation marks regex"),
@@ -117,8 +107,18 @@ static REGEX_SUBSTITUTES: LazyLock<[(Regex, &'static str); 14]> = LazyLock::new(
         ),
     ]
 });
-static REGEX_NAME_SUBSTITUTES: LazyLock<[(Regex, &'static str); 43]> = LazyLock::new(|| {
+static REGEX_NAME_SUBSTITUTES: LazyLock<[(Regex, &'static str); 45]> = LazyLock::new(|| {
     [
+        // Replace various opening bracket types with "("
+        (
+            Regex::new(r"[\[{]+").expect("Failed to compile opening brackets regex"),
+            "(",
+        ),
+        // Replace various closing bracket types with ")"
+        (
+            Regex::new(r"[]}]+").expect("Failed to compile closing brackets regex"),
+            ")",
+        ),
         // Matches "12 Inch" or "12Inch" with optional space, case-insensitive
         (
             Regex::new(r"(?i)\b12\s?inch\b").expect("Failed to compile 12 inch regex"),
@@ -482,7 +482,6 @@ pub fn format_album(album: &str) -> String {
 
     formatted_album = RE_WWW.replace(&formatted_album, "").to_string();
     fix_duplicate_parentheses(&mut formatted_album);
-    balance_parenthesis(&mut formatted_album);
     fix_whitespace(&mut formatted_album);
     formatted_album
 }
@@ -943,12 +942,6 @@ mod test_format_album {
     #[test]
     fn replaces_backtick_with_apostrophe() {
         assert_eq!(format_album("Rock `n` Roll"), "Rock 'n' Roll");
-    }
-
-    #[test]
-    fn converts_brackets_to_parentheses() {
-        assert_eq!(format_album("Album [Deluxe Edition]"), "Album (Deluxe Edition)");
-        assert_eq!(format_album("Album {Special}"), "Album (Special)");
     }
 
     #[test]
