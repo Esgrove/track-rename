@@ -38,6 +38,7 @@ Options:
   -l, --log        Log files that can't be read
   -p, --print      Only print changes without modifying files
   -r, --rename     Rename all audio files
+  -S, --silent     Suppress running index and directory output
   -s, --sort       Sort audio files by name
   -t, --tags-only  Only fix tags without renaming files
   -v, --verbose    Verbose output

@@ -60,6 +60,10 @@ pub struct RenamerArgs {
     #[arg(short, long)]
     rename: bool,
 
+    /// Suppress running index and directory output
+    #[arg(short = 'S', long)]
+    silent: bool,
+
     /// Sort audio files by name
     #[arg(short, long)]
     sort: bool,

@@ -128,13 +128,15 @@ impl TrackRenamer {
 
     // Format tags and rename files if needed.
     pub fn process_tracks(&mut self) -> Result<()> {
-        if self.tracks_count == 0 {
-            print_green!("No tracks to process");
-            return Ok(());
-        } else if self.tracks_count == 1 {
-            print_bold!("Processing 1 track...");
-        } else {
-            print_bold!("Processing {} tracks...", self.tracks_count);
+        if self.config.verbose {
+            if self.tracks_count == 0 {
+                print_green!("No tracks to process");
+                return Ok(());
+            } else if self.tracks_count == 1 {
+                print_bold!("Processing 1 track...");
+            } else {
+                print_bold!("Processing {} tracks...", self.tracks_count);
+            }
         }
 
         let dryrun_header = if self.config.print_only {
@@ -151,7 +153,7 @@ impl TrackRenamer {
 
         let start_instant = Instant::now();
         for track in &mut self.tracks {
-            if !self.config.sort_files {
+            if !self.config.silent && !self.config.sort_files {
                 // Print current directory when iterating in directory order
                 if self.current_path != track.root {
                     self.current_path.clone_from(&track.root);
@@ -174,7 +176,9 @@ impl TrackRenamer {
                 self.checked_genre_mappings.insert(track.directory.clone());
             }
 
-            Self::print_running_index(self.tracks_count, track.number, max_index_width);
+            if !self.config.silent {
+                Self::print_running_index(self.tracks_count, track.number, max_index_width);
+            }
 
             // Skip filenames in user configs exclude list
             if self
@@ -481,15 +485,17 @@ impl TrackRenamer {
 
         duplicate_tracks.sort_unstable();
 
-        println!(
-            "{}",
-            format!("Duplicates ({}):", duplicate_tracks.len()).magenta().bold()
-        );
+        if !self.config.silent {
+            println!(
+                "{}",
+                format!("Duplicates ({}):", duplicate_tracks.len()).magenta().bold()
+            );
 
-        for (_, tracks) in &duplicate_tracks {
-            print_yellow!("{}", tracks[0].name);
-            for track in tracks {
-                println!("  {track}");
+            for (_, tracks) in &duplicate_tracks {
+                print_yellow!("{}", tracks[0].name);
+                for track in tracks {
+                    println!("  {track}");
+                }
             }
         }
 
@@ -556,15 +562,17 @@ impl TrackRenamer {
 
         match duplicates_crate.write_to_file(&crate_path) {
             Ok(()) => {
-                println!(
-                    "{}",
-                    format!(
-                        "Updated Serato crate: {} ({} tracks)",
-                        dunce::simplified(&crate_path).display(),
-                        duplicates_crate.track_count(),
-                    )
-                    .green()
-                );
+                if !self.config.silent {
+                    println!(
+                        "{}",
+                        format!(
+                            "Updated Serato crate: {} ({} tracks)",
+                            dunce::simplified(&crate_path).display(),
+                            duplicates_crate.track_count(),
+                        )
+                        .green()
+                    );
+                }
             }
             Err(error) => {
                 print_error!("Failed to write Duplicates crate: {error}");

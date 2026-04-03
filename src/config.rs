@@ -24,6 +24,7 @@ pub struct Config {
     pub no_state: bool,
     pub print_only: bool,
     pub rename_files: bool,
+    pub silent: bool,
     pub sort_files: bool,
     pub tags_only: bool,
     pub test_mode: bool,
@@ -62,6 +63,7 @@ impl Config {
             no_state: args.no_state || user_config.no_state,
             print_only: args.print,
             rename_files: args.rename,
+            silent: args.silent,
             sort_files: args.sort,
             tags_only: args.tags_only,
             test_mode: false,
@@ -119,6 +121,7 @@ impl fmt::Display for Config {
         writeln!(f, "  rename_files: {}", colorize_bool(self.rename_files))?;
         writeln!(f, "  sort_files: {}", colorize_bool(self.sort_files))?;
         writeln!(f, "  print_only: {}", colorize_bool(self.print_only))?;
+        writeln!(f, "  silent: {}", colorize_bool(self.silent))?;
         writeln!(f, "  tags_only: {}", colorize_bool(self.tags_only))?;
         writeln!(f, "  verbose: {}", colorize_bool(self.verbose))?;
         writeln!(f, "  debug: {}", colorize_bool(self.debug))?;
@@ -194,6 +197,7 @@ mod test_config {
         assert!(!config.log_failures, "log_failures should be false");
         assert!(!config.no_state, "no_state should be false");
         assert!(!config.print_only, "print_only should be false");
+        assert!(!config.silent, "silent should be false");
         assert!(!config.sort_files, "sort_files should be false");
         assert!(!config.tags_only, "tags_only should be false");
         assert!(!config.verbose, "verbose should be false");
@@ -212,6 +216,7 @@ mod test_config {
             "rename_files",
             "sort_files",
             "print_only",
+            "silent",
             "tags_only",
             "verbose",
             "debug",
@@ -280,6 +285,7 @@ mod test_config {
         assert!(!config.rename_files);
         assert!(!config.sort_files);
         assert!(!config.print_only);
+        assert!(!config.silent);
         assert!(!config.tags_only);
         assert!(!config.verbose);
         assert!(!config.debug);
@@ -295,6 +301,13 @@ mod test_config {
         let args = RenamerArgs::parse_from(["trackrename", "--force"]);
         let config = Config::from_args(&args);
         assert!(config.force);
+    }
+
+    #[test]
+    fn silent_flag_sets_silent() {
+        let args = RenamerArgs::parse_from(["trackrename", "--silent"]);
+        let config = Config::from_args(&args);
+        assert!(config.silent);
     }
 
     #[test]
@@ -406,6 +419,7 @@ mod test_config {
             no_state: true,
             print_only: true,
             rename_files: true,
+            silent: true,
             sort_files: true,
             tags_only: true,
             test_mode: true,
@@ -426,6 +440,7 @@ mod test_config {
         assert_eq!(deserialized.no_state, original.no_state);
         assert_eq!(deserialized.print_only, original.print_only);
         assert_eq!(deserialized.rename_files, original.rename_files);
+        assert_eq!(deserialized.silent, original.silent);
         assert_eq!(deserialized.sort_files, original.sort_files);
         assert_eq!(deserialized.tags_only, original.tags_only);
         assert_eq!(deserialized.test_mode, original.test_mode);
@@ -471,6 +486,7 @@ mod test_config {
             no_state: true,
             print_only: true,
             rename_files: true,
+            silent: true,
             sort_files: true,
             tags_only: true,
             test_mode: true,
