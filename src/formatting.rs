@@ -24,7 +24,6 @@ static COMMON_SUBSTITUTES: [(&str, &str); 22] = [
     ("e¨", "ë"),
     (" ,", ","),
     ("\u{FFFD}", " "),
-    // Replace en and em dashes with regular dash
     ("–", "-"),
     ("—", "-"),
 ];
@@ -50,7 +49,7 @@ static TITLE_SUBSTITUTES: [(&str, &str); 20] = [
     ("(Clean-", "(Clean "),
     ("(Dirty-", "(Dirty "),
 ];
-static REGEX_SUBSTITUTES: LazyLock<[(Regex, &'static str); 11]> = LazyLock::new(|| {
+static REGEX_COMMON_SUBSTITUTES: LazyLock<[(Regex, &'static str); 11]> = LazyLock::new(|| {
     [
         // Collapse multiple exclamation marks into one
         (
@@ -105,7 +104,7 @@ static REGEX_SUBSTITUTES: LazyLock<[(Regex, &'static str); 11]> = LazyLock::new(
         ),
     ]
 });
-static REGEX_NAME_SUBSTITUTES: LazyLock<[(Regex, &'static str); 46]> = LazyLock::new(|| {
+static REGEX_SUBSTITUTES: LazyLock<[(Regex, &'static str); 3]> = LazyLock::new(|| {
     [
         // Collapse multiple periods into a single period
         (
@@ -122,6 +121,10 @@ static REGEX_NAME_SUBSTITUTES: LazyLock<[(Regex, &'static str); 46]> = LazyLock:
             Regex::new(r"[]}]+").expect("Failed to compile closing brackets regex"),
             ")",
         ),
+    ]
+});
+static REGEX_NAME_SUBSTITUTES: LazyLock<[(Regex, &'static str); 43]> = LazyLock::new(|| {
+    [
         // Matches "12 Inch" or "12Inch" with optional space, case-insensitive
         (
             Regex::new(r"(?i)\b12\s?inch\b").expect("Failed to compile 12 inch regex"),
@@ -420,6 +423,11 @@ pub fn format_tags_for_artist_and_title(artist: &str, title: &str) -> (String, S
         formatted_title = formatted_title.replace(pattern, replacement);
     }
 
+    for (regex, replacement) in REGEX_COMMON_SUBSTITUTES.iter() {
+        formatted_artist = regex.replace_all(&formatted_artist, *replacement).to_string();
+        formatted_title = regex.replace_all(&formatted_title, *replacement).to_string();
+    }
+
     for (regex, replacement) in REGEX_NAME_SUBSTITUTES.iter() {
         formatted_artist = regex.replace_all(&formatted_artist, *replacement).to_string();
         formatted_title = regex.replace_all(&formatted_title, *replacement).to_string();
@@ -449,6 +457,11 @@ pub fn format_tags_for_artist_and_title(artist: &str, title: &str) -> (String, S
     balance_parenthesis(&mut formatted_title);
 
     for (regex, replacement) in REGEX_SUBSTITUTES.iter() {
+        formatted_artist = regex.replace_all(&formatted_artist, *replacement).to_string();
+        formatted_title = regex.replace_all(&formatted_title, *replacement).to_string();
+    }
+
+    for (regex, replacement) in REGEX_COMMON_SUBSTITUTES.iter() {
         formatted_artist = regex.replace_all(&formatted_artist, *replacement).to_string();
         formatted_title = regex.replace_all(&formatted_title, *replacement).to_string();
     }
@@ -494,7 +507,7 @@ pub fn format_album(album: &str) -> String {
         formatted_album = formatted_album.replace(pattern, replacement);
     }
 
-    for (regex, replacement) in REGEX_SUBSTITUTES.iter() {
+    for (regex, replacement) in REGEX_COMMON_SUBSTITUTES.iter() {
         formatted_album = regex.replace_all(&formatted_album, *replacement).to_string();
     }
 
