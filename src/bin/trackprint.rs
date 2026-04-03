@@ -69,7 +69,7 @@ fn main() -> Result<()> {
 
     for track in tracks {
         println!("{}", track.to_string().bold().magenta());
-        if let Some(file_tags) = tags::read_tags(&track, args.verbose || args.debug) {
+        if let Some(file_tags) = track.read_tags(args.verbose || args.debug) {
             // Don't print empty tags
             if file_tags.is_empty() {
                 println!("{}", "Empty tags".yellow());

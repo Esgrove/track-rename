@@ -47,6 +47,25 @@ pub struct TrackTags {
 }
 
 impl FileTags {
+    /// Try to read tags from the given track.
+    ///
+    /// Returns empty tags when there is no tag data.
+    /// If the tag reading fails,
+    /// returns the partial tag data that was read successfully before the error occurred,
+    /// or `None` if no tag data could be read.
+    ///
+    /// Malformed UFID frames (e.g. Beatport tracks with a missing null terminator)
+    /// are automatically repaired by patching the raw ID3 tag bytes in-place:
+    /// the missing null delimiter is inserted so the UFID frame becomes valid,
+    /// preserving all other tag data (including frames after the UFID).
+    #[must_use]
+    pub fn read(track: &Track, verbose: bool) -> Option<Self> {
+        match track.format {
+            FileFormat::Flac => read_flac_tags(track),
+            FileFormat::Mp3 | FileFormat::Aif => read_id3_tags(track, verbose),
+        }
+    }
+
     /// Create an empty ID3-backed tag container.
     #[must_use]
     pub fn empty_id3() -> Self {
@@ -225,25 +244,6 @@ pub fn print_tag_data(file_tags: &FileTags) {
     match file_tags {
         FileTags::Id3(tag) => print_id3_tag_data(tag),
         FileTags::Flac(tag) => print_flac_tag_data(tag),
-    }
-}
-
-/// Try to read tag data from file.
-///
-/// Returns empty tags when there is no tag data.
-/// If the tag reading fails,
-/// returns the partial tag data that was read successfully before the error occurred,
-/// or `None` if no tag data could be read.
-///
-/// Malformed UFID frames (e.g. Beatport tracks with a missing null terminator)
-/// are automatically repaired by patching the raw ID3 tag bytes in-place:
-/// the missing null delimiter is inserted so the UFID frame becomes valid,
-/// preserving all other tag data (including frames after the UFID).
-#[must_use]
-pub fn read_tags(track: &Track, verbose: bool) -> Option<FileTags> {
-    match track.format {
-        FileFormat::Flac => read_flac_tags(track),
-        FileFormat::Mp3 | FileFormat::Aif => read_id3_tags(track, verbose),
     }
 }
 
@@ -1051,8 +1051,8 @@ mod test_parse_tag_data {
             return;
         }
         let track = Track::try_from_path(&path).expect("Failed to create Track from basic tags MP3");
-        let tag = Id3Tag::read_from_path(&path).expect("Failed to read tags from basic tags MP3");
-        let tags = TrackTags::parse_tag_data(&track, &FileTags::Id3(tag));
+        let tag = track.read_tags(false).expect("Failed to read tags from basic tags MP3");
+        let tags = TrackTags::parse_tag_data(&track, &tag);
         assert_eq!(
             tags.current_artist, "Basic Tags",
             "Expected current_artist to be 'Basic Tags', got '{}'",
@@ -1083,7 +1083,9 @@ mod test_parse_tag_data {
             return;
         }
         let track = Track::try_from_path(&path).expect("Failed to create Track from basic tags FLAC");
-        let tag = read_tags(&track, false).expect("Failed to read tags from basic tags FLAC");
+        let tag = track
+            .read_tags(false)
+            .expect("Failed to read tags from basic tags FLAC");
         let tags = TrackTags::parse_tag_data(&track, &tag);
         assert_eq!(
             tags.current_artist, "Basic Tags",
@@ -1158,7 +1160,7 @@ mod test_read_tags {
             return;
         }
         let track = Track::try_from_path(&path).expect("Failed to create Track from basic tags MP3");
-        let result = read_tags(&track, false);
+        let result = track.read_tags(false);
         assert!(result.is_some(), "Expected read_tags to return Some for basic tags MP3");
         let tag = result.expect("read_tags returned None for basic tags MP3");
         assert!(
@@ -1175,7 +1177,7 @@ mod test_read_tags {
             return;
         }
         let track = Track::try_from_path(&path).expect("Failed to create Track from basic tags FLAC");
-        let result = read_tags(&track, false);
+        let result = track.read_tags(false);
         assert!(
             result.is_some(),
             "Expected read_tags to return Some for basic tags FLAC"
@@ -1200,7 +1202,7 @@ mod test_read_tags {
             return;
         }
         let track = Track::try_from_path(&path).expect("Failed to create Track from no tags MP3");
-        let result = read_tags(&track, false);
+        let result = track.read_tags(false);
         assert!(
             result.is_some(),
             "Expected read_tags to return Some (empty Tag) for no tags MP3"
@@ -1220,7 +1222,7 @@ mod test_read_tags {
             return;
         }
         let track = Track::try_from_path(&path).expect("Failed to create Track from extended tags MP3");
-        let result = read_tags(&track, true);
+        let result = track.read_tags(true);
         assert!(
             result.is_some(),
             "Expected read_tags to return Some for extended tags MP3"

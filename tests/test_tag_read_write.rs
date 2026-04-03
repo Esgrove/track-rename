@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use track_rename::tags::{read_tags, write_tags};
+use track_rename::tags::write_tags;
 use track_rename::track::Track;
 
 struct FixtureCase {
@@ -45,7 +45,7 @@ fn assert_tags_match_fixture(
 
     let tmp = make_temp_fixture_copy(case);
     let track = Track::try_from_path(&tmp).expect("Failed to create Track from fixture");
-    let tag = read_tags(&track, false).expect("Failed to read fixture tags");
+    let tag = track.read_tags(false).expect("Failed to read fixture tags");
 
     assert_eq!(tag.artist(), artist, "Artist mismatch for {}", source.display());
     assert_eq!(tag.title(), title, "Title mismatch for {}", source.display());
@@ -66,7 +66,7 @@ fn assert_roundtrip_for_fixture(case: &FixtureCase) {
 
     let tmp = make_temp_fixture_copy(case);
     let mut track = Track::try_from_path(&tmp).expect("Failed to create Track from fixture");
-    let mut file_tags = read_tags(&track, false).expect("Failed to read fixture tags");
+    let mut file_tags = track.read_tags(false).expect("Failed to read fixture tags");
 
     let artist = format!("{} {} Artist", case.fixture_directory, case.extension);
     let title = format!("{} {} Title", case.fixture_directory, case.extension);
@@ -81,7 +81,7 @@ fn assert_roundtrip_for_fixture(case: &FixtureCase) {
     write_tags(&track, &mut file_tags).expect("Failed to write updated tags");
 
     let reread_track = Track::try_from_path(&tmp).expect("Failed to recreate Track from updated fixture");
-    let reread_tags = read_tags(&reread_track, false).expect("Failed to re-read updated tags");
+    let reread_tags = reread_track.read_tags(false).expect("Failed to re-read updated tags");
 
     assert_eq!(
         reread_tags.artist(),

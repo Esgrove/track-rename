@@ -140,6 +140,12 @@ impl Track {
         format!("{}.{}", self.name, self.extension)
     }
 
+    /// Read tags for this track.
+    #[must_use]
+    pub fn read_tags(&self, verbose: bool) -> Option<FileTags> {
+        FileTags::read(self, verbose)
+    }
+
     pub fn format_tags(&mut self, file_tags: &FileTags) {
         let mut tags = TrackTags::parse_tag_data(self, file_tags);
         let (formatted_artist, formatted_title) =
@@ -404,8 +410,6 @@ mod test_track_operations {
     use std::env;
     use std::path::PathBuf;
 
-    use crate::tags::read_tags;
-
     #[test]
     fn test_track_new_valid_path() {
         let path = Path::new("/users/test/test_song.mp3");
@@ -597,7 +601,7 @@ mod test_track_operations {
             return;
         }
         let mut track = Track::try_from_path(&path).expect("Failed to create Track from basic tags MP3");
-        let tag = read_tags(&track, false).expect("Failed to read tags from basic tags MP3");
+        let tag = track.read_tags(false).expect("Failed to read tags from basic tags MP3");
         track.format_tags(&tag);
         assert!(
             !track.tags.formatted_artist.is_empty(),
@@ -622,7 +626,7 @@ mod test_track_operations {
             return;
         }
         let mut track = Track::try_from_path(&path).expect("Failed to create Track from basic tags MP3");
-        let tag = read_tags(&track, false).expect("Failed to read tags from basic tags MP3");
+        let tag = track.read_tags(false).expect("Failed to read tags from basic tags MP3");
         track.format_tags(&tag);
         let filename = track.formatted_filename();
         assert!(!filename.is_empty(), "Expected formatted_filename to be non-empty");
@@ -640,7 +644,7 @@ mod test_track_operations {
             return;
         }
         let mut track = Track::try_from_path(&path).expect("Failed to create Track from basic tags MP3");
-        let tag = read_tags(&track, false).expect("Failed to read tags from basic tags MP3");
+        let tag = track.read_tags(false).expect("Failed to read tags from basic tags MP3");
         track.format_tags(&tag);
         let filename_with_extension = track.formatted_filename_with_extension();
         assert!(
