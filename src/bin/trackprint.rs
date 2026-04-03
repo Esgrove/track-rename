@@ -77,11 +77,13 @@ fn main() -> Result<()> {
         println!("{}", track.to_string().bold().magenta());
         if let Some(file_tags) = tags::read_tags(&track, args.verbose || args.debug) {
             // Don't print empty tags
-            if file_tags.frames().next().is_some() {
-                tags::print_tag_data(&file_tags);
-                serato::print_serato_tags(&file_tags);
-            } else {
+            if file_tags.is_empty() {
                 println!("{}", "Empty tags".yellow());
+            } else {
+                tags::print_tag_data(&file_tags);
+                if let Some(id3_tag) = file_tags.get_id3() {
+                    serato::print_serato_tags(id3_tag);
+                }
             }
         }
     }

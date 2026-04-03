@@ -237,10 +237,6 @@ pub fn crate_filename_from_name(name: &str) -> String {
     format!("{}.crate", name.replace(" > ", "%%"))
 }
 
-// ---------------------------------------------------------------------------
-// Internal helpers
-// ---------------------------------------------------------------------------
-
 /// Build a TLV (tag-length-value) entry from a 4-byte tag name and value bytes.
 fn make_tag(name: [u8; 4], value: &[u8]) -> Vec<u8> {
     let mut buf = Vec::with_capacity(8 + value.len());

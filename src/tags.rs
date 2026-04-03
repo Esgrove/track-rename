@@ -3,9 +3,12 @@ use std::path::Path;
 
 use anyhow::Context;
 use colored::Colorize;
-use id3::{Error, ErrorKind, FrameError, FrameErrorKind, Tag, TagLike};
+use id3::Tag as Id3Tag;
+use id3::{Error, ErrorKind, FrameError, FrameErrorKind, TagLike};
 use itertools::Itertools;
+use metaflac::Tag as FlacTag;
 
+use crate::file_format::FileFormat;
 use crate::output::{print_diff, print_stacked_diff};
 use crate::track::Track;
 use crate::utils::normalize_str;
@@ -14,6 +17,17 @@ use crate::utils::normalize_str;
 /// encoders sometimes write without the null terminator.
 const FIXABLE_FRAMES: &[&str] = &["UFID", "PRIV"];
 const FIXABLE_FRAMES_V2: &[&str] = &["UFI"];
+const FLAC_ARTIST: &str = "ARTIST";
+const FLAC_TITLE: &str = "TITLE";
+const FLAC_ALBUM: &str = "ALBUM";
+const FLAC_GENRE: &str = "GENRE";
+
+/// Backend-specific (ID3/FLAC) tag container for supported audio formats.
+#[derive(Debug, Clone)]
+pub enum FileTags {
+    Id3(Id3Tag),
+    Flac(FlacTag),
+}
 
 /// Track tag data with current and formatted field values.
 #[derive(Debug, Default, Clone)]
@@ -29,6 +43,81 @@ pub struct TrackTags {
     pub formatted_album: String,
     pub formatted_genre: String,
     pub update_needed: bool,
+}
+
+impl FileTags {
+    /// Create an empty ID3-backed tag container.
+    #[must_use]
+    pub fn empty_id3() -> Self {
+        Self::Id3(Id3Tag::new())
+    }
+
+    /// Return the artist field if present.
+    #[must_use]
+    pub fn artist(&self) -> Option<&str> {
+        match self {
+            Self::Id3(tag) => tag.artist(),
+            Self::Flac(tag) => get_flac_value(tag, FLAC_ARTIST),
+        }
+    }
+
+    /// Return the title field if present.
+    #[must_use]
+    pub fn title(&self) -> Option<&str> {
+        match self {
+            Self::Id3(tag) => tag.title(),
+            Self::Flac(tag) => get_flac_value(tag, FLAC_TITLE),
+        }
+    }
+
+    /// Return the album field if present.
+    #[must_use]
+    pub fn album(&self) -> Option<&str> {
+        match self {
+            Self::Id3(tag) => tag.album(),
+            Self::Flac(tag) => get_flac_value(tag, FLAC_ALBUM),
+        }
+    }
+
+    /// Return the genre field if present.
+    #[must_use]
+    pub fn genre(&self) -> Option<&str> {
+        match self {
+            Self::Id3(tag) => tag.genre(),
+            Self::Flac(tag) => get_flac_value(tag, FLAC_GENRE),
+        }
+    }
+
+    /// Return `true` when the tag container does not contain user-visible metadata.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        match self {
+            Self::Id3(tag) => tag.frames().next().is_none(),
+            Self::Flac(tag) => {
+                tag.vorbis_comments()
+                    .is_none_or(|vorbis_comments| vorbis_comments.comments.is_empty())
+                    && tag.pictures().next().is_none()
+            }
+        }
+    }
+
+    /// Return a short label describing the metadata backend.
+    #[must_use]
+    pub fn version_label(&self) -> String {
+        match self {
+            Self::Id3(tag) => tag.version().to_string(),
+            Self::Flac(_) => String::from("FLAC/Vorbis"),
+        }
+    }
+
+    /// Return the wrapped ID3 tag for ID3-backed formats.
+    #[must_use]
+    pub const fn get_id3(&self) -> Option<&Id3Tag> {
+        match self {
+            Self::Id3(tag) => Some(tag),
+            Self::Flac(_) => None,
+        }
+    }
 }
 
 impl TrackTags {
@@ -48,7 +137,7 @@ impl TrackTags {
     ///
     /// Fallback to parsing them from filename if tags are empty.
     #[must_use]
-    pub fn parse_tag_data(track: &Track, tag: &Tag) -> Self {
+    pub fn parse_tag_data(track: &Track, tag: &FileTags) -> Self {
         let mut artist = String::new();
         let mut title = String::new();
 
@@ -88,7 +177,7 @@ impl TrackTags {
             }
         }
         let album = normalize_str(tag.album().unwrap_or_default());
-        let genre = normalize_str(tag.genre_parsed().unwrap_or_default().as_ref());
+        let genre = normalize_str(tag.genre().unwrap_or_default());
         Self::new(current_name, artist, title, album, genre)
     }
 
@@ -122,13 +211,11 @@ impl TrackTags {
 }
 
 /// Print all tag data.
-pub fn print_tag_data(file_tags: &Tag) {
-    println!("\n{}", format!("Tags ({}):", file_tags.version()).cyan().bold());
-    file_tags
-        .frames()
-        .map(|frame| format!("{}: {}", frame.id(), frame.content()))
-        .sorted_unstable()
-        .for_each(|tag_string| println!("  {tag_string}"));
+pub fn print_tag_data(file_tags: &FileTags) {
+    match file_tags {
+        FileTags::Id3(tag) => print_id3_tag_data(tag),
+        FileTags::Flac(tag) => print_flac_tag_data(tag),
+    }
 }
 
 /// Try to read tag data from file.
@@ -143,19 +230,78 @@ pub fn print_tag_data(file_tags: &Tag) {
 /// the missing null delimiter is inserted so the UFID frame becomes valid,
 /// preserving all other tag data (including frames after the UFID).
 #[must_use]
-pub fn read_tags(track: &Track, verbose: bool) -> Option<Tag> {
-    match Tag::read_from_path(&track.path) {
-        Ok(tag) => Some(tag),
+pub fn read_tags(track: &Track, verbose: bool) -> Option<FileTags> {
+    match track.format {
+        FileFormat::Flac => read_flac_tags(track, verbose),
+        FileFormat::Mp3 | FileFormat::Aif => read_id3_tags(track, verbose),
+    }
+}
+
+/// Write updated tags using the backend that matches the file format.
+pub fn write_tags(track: &Track, file_tags: &mut FileTags) -> anyhow::Result<()> {
+    match file_tags {
+        FileTags::Id3(tag) => write_id3_tags(track, tag),
+        FileTags::Flac(tag) => write_flac_tags(track, tag),
+    }
+}
+
+/// Read FLAC Vorbis comments and picture metadata from a file.
+fn read_flac_tags(track: &Track, verbose: bool) -> Option<FileTags> {
+    match FlacTag::read_from_path(&track.path) {
+        Ok(tag) => {
+            let file_tags = FileTags::Flac(tag);
+            if verbose {
+                print_tag_data(&file_tags);
+            }
+            Some(file_tags)
+        }
+        Err(error) => {
+            eprintln!("\n{}", format!("Failed to read FLAC tags for: {track}\n{error}").red());
+            None
+        }
+    }
+}
+
+/// Print all ID3 frames in a stable order.
+fn print_id3_tag_data(tag: &Id3Tag) {
+    println!("\n{}", format!("Tags ({}):", tag.version()).cyan().bold());
+    tag.frames()
+        .map(|frame| format!("{}: {}", frame.id(), frame.content()))
+        .sorted_unstable()
+        .for_each(|tag_string| println!("  {tag_string}"));
+}
+
+/// Print FLAC Vorbis comments and picture count.
+fn print_flac_tag_data(tag: &FlacTag) {
+    println!("\n{}", "Tags (FLAC/Vorbis):".cyan().bold());
+    if let Some(vorbis_comments) = tag.vorbis_comments() {
+        vorbis_comments
+            .comments
+            .iter()
+            .flat_map(|(key, values)| values.iter().map(move |value| format!("{key}: {value}")))
+            .sorted_unstable()
+            .for_each(|tag_string| println!("  {tag_string}"));
+    }
+    let pictures = tag.pictures().count();
+    if pictures > 0 {
+        println!("  PICTURES: {pictures}");
+    }
+}
+
+/// Read ID3 tag data from an MP3 or AIFF file.
+fn read_id3_tags(track: &Track, verbose: bool) -> Option<FileTags> {
+    match Id3Tag::read_from_path(&track.path) {
+        Ok(tag) => Some(FileTags::Id3(tag)),
         Err(Error {
             kind: ErrorKind::NoTag, ..
-        }) => Some(Tag::new()),
+        }) => Some(FileTags::empty_id3()),
         Err(error) if is_malformed_frame_error(&error) => repair_malformed_frame(track, error, verbose),
         Err(error) => {
             eprintln!("\n{}", format!("Failed to read tags for: {track}\n{error}").red());
             if verbose && let Some(ref partial_tags) = error.partial_tag {
-                print_tag_data(partial_tags);
+                print_id3_tag_data(partial_tags);
             }
-            error.partial_tag
+            error.partial_tag.map(FileTags::Id3)
         }
     }
 }
@@ -182,7 +328,7 @@ fn is_malformed_frame_error(error: &Error) -> bool {
 /// which creates an empty `owner_identifier` (null-terminated)
 /// and keeps the remaining bytes as the data payload.
 /// This is a single-byte in-place change that preserves the frame size and all other tag data.
-fn repair_malformed_frame(track: &Track, error: Error, verbose: bool) -> Option<Tag> {
+fn repair_malformed_frame(track: &Track, error: Error, verbose: bool) -> Option<FileTags> {
     let frame_id = match &error.kind {
         ErrorKind::FrameParsing(fe) => fe.frame_id.clone(),
         _ => String::from("unknown"),
@@ -200,7 +346,7 @@ fn repair_malformed_frame(track: &Track, error: Error, verbose: bool) -> Option<
     match fix_malformed_frames_raw(&track.path) {
         Ok(fixed) => {
             // Re-read the now-fixed file.
-            match Tag::read_from_path(&track.path) {
+            match Id3Tag::read_from_path(&track.path) {
                 Ok(tag) => {
                     let summary = fixed
                         .iter()
@@ -212,16 +358,16 @@ fn repair_malformed_frame(track: &Track, error: Error, verbose: bool) -> Option<
                         .join(", ");
                     eprintln!("{}", format!("  Fixed {summary} in: {track}").green());
                     if verbose {
-                        print_tag_data(&tag);
+                        print_id3_tag_data(&tag);
                     }
-                    Some(tag)
+                    Some(FileTags::Id3(tag))
                 }
                 Err(reread_err) => {
                     eprintln!(
                         "{}",
                         format!("  Re-read after fix still failed for: {track}\n  {reread_err}").red()
                     );
-                    reread_err.partial_tag
+                    reread_err.partial_tag.map(FileTags::Id3)
                 }
             }
         }
@@ -230,9 +376,114 @@ fn repair_malformed_frame(track: &Track, error: Error, verbose: bool) -> Option<
                 "{}",
                 format!("  Failed to fix {frame_id} frame in: {track}\n  {err}").red()
             );
-            error.partial_tag
+            error.partial_tag.map(FileTags::Id3)
         }
     }
+}
+
+/// Write updated ID3 metadata while preserving binary frames.
+fn write_id3_tags(track: &Track, file_tags: &mut Id3Tag) -> anyhow::Result<()> {
+    // Save binary frames (GEOB/APIC) separately.
+    // The id3 crate has a bug where writing text frames together with large
+    // GEOB frames (e.g. Serato data) in a single write_to_path call can silently
+    // fail to persist the new text frames. The workaround is to write text frames
+    // first without binary frames, then add the binary frames back in a second write.
+    let binary_frames: Vec<_> = file_tags
+        .frames()
+        .filter(|frame| frame.id() == "GEOB" || frame.id() == "APIC")
+        .cloned()
+        .collect();
+    let has_binary_frames = !binary_frames.is_empty();
+
+    // Remove binary frames from the tag before writing text frames.
+    if has_binary_frames {
+        file_tags.remove("GEOB");
+        file_tags.remove("APIC");
+    }
+
+    // Remove genre first to try to get rid of old ID3v1 genre IDs.
+    file_tags.remove_genre();
+    file_tags.remove_disc();
+    file_tags.remove_total_discs();
+    file_tags.remove_track();
+    file_tags.remove_total_tracks();
+    file_tags.remove_all_lyrics();
+    file_tags.remove_all_synchronised_lyrics();
+    file_tags.write_to_path(&track.path, id3::Version::Id3v24)?;
+
+    file_tags.set_artist(track.tags.formatted_artist.clone());
+    file_tags.set_title(track.tags.formatted_title.clone());
+    file_tags.set_album(track.tags.formatted_album.clone());
+    file_tags.set_genre(track.tags.formatted_genre.clone());
+    file_tags.write_to_path(&track.path, id3::Version::Id3v24)?;
+
+    // Phase 2: Re-read the written tag and add binary frames back.
+    if has_binary_frames {
+        let mut written_tag = Id3Tag::read_from_path(&track.path)?;
+        for frame in binary_frames {
+            written_tag.add_frame(frame);
+        }
+        written_tag.write_to_path(&track.path, id3::Version::Id3v24)?;
+    }
+
+    Ok(())
+}
+
+/// Write updated FLAC Vorbis comments while preserving unrelated metadata blocks.
+fn write_flac_tags(track: &Track, file_tags: &mut FlacTag) -> anyhow::Result<()> {
+    // Remove only the fields we rewrite so custom Vorbis comments and other
+    // FLAC metadata blocks remain untouched.
+    let vorbis_comments = &mut file_tags.vorbis_comments_mut().comments;
+    vorbis_comments.retain(|key, _| {
+        ![FLAC_ARTIST, FLAC_TITLE, FLAC_ALBUM, FLAC_GENRE]
+            .iter()
+            .any(|target_key| key.eq_ignore_ascii_case(target_key))
+    });
+
+    set_flac_artist(file_tags, &track.tags.formatted_artist);
+    set_flac_title(file_tags, &track.tags.formatted_title);
+    set_flac_album(file_tags, &track.tags.formatted_album);
+    set_flac_genre(file_tags, &track.tags.formatted_genre);
+    file_tags.write_to_path(&track.path)?;
+    Ok(())
+}
+
+/// Set the FLAC artist comment when the new value is non-empty.
+fn set_flac_artist(file_tags: &mut FlacTag, value: &str) {
+    set_flac_value(file_tags, FLAC_ARTIST, value);
+}
+
+/// Set the FLAC title comment when the new value is non-empty.
+fn set_flac_title(file_tags: &mut FlacTag, value: &str) {
+    set_flac_value(file_tags, FLAC_TITLE, value);
+}
+
+/// Set the FLAC album comment when the new value is non-empty.
+fn set_flac_album(file_tags: &mut FlacTag, value: &str) {
+    set_flac_value(file_tags, FLAC_ALBUM, value);
+}
+
+/// Set the FLAC genre comment when the new value is non-empty.
+fn set_flac_genre(file_tags: &mut FlacTag, value: &str) {
+    set_flac_value(file_tags, FLAC_GENRE, value);
+}
+
+/// Set a FLAC Vorbis comment when the new value is non-empty.
+fn set_flac_value(file_tags: &mut FlacTag, key: &str, value: &str) {
+    if !value.is_empty() {
+        file_tags.set_vorbis(key, vec![value]);
+    }
+}
+
+/// Return the first FLAC Vorbis comment value for the given key.
+fn get_flac_value<'a>(tag: &'a FlacTag, key: &str) -> Option<&'a str> {
+    tag.vorbis_comments().and_then(|vorbis_comments| {
+        vorbis_comments
+            .comments
+            .iter()
+            .find(|(existing_key, _)| existing_key.eq_ignore_ascii_case(key))
+            .and_then(|(_, values)| values.first().map(String::as_str))
+    })
 }
 
 /// Patch malformed frames directly in the raw file bytes.
@@ -778,6 +1029,11 @@ mod test_parse_tag_data {
         Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/basic_tags/Basic Tags - Song - 16-44.mp3")
     }
 
+    /// Return the path to the basic tags FLAC test file.
+    fn basic_tags_flac_path() -> std::path::PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/basic_tags/Basic Tags - Song - 16-44.flac")
+    }
+
     /// Return the path to the no tags MP3 test file.
     fn no_tags_mp3_path() -> std::path::PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/no_tags/No Tags - Song - 16-44.mp3")
@@ -791,8 +1047,8 @@ mod test_parse_tag_data {
             return;
         }
         let track = Track::try_from_path(&path).expect("Failed to create Track from basic tags MP3");
-        let tag = Tag::read_from_path(&path).expect("Failed to read tags from basic tags MP3");
-        let tags = TrackTags::parse_tag_data(&track, &tag);
+        let tag = Id3Tag::read_from_path(&path).expect("Failed to read tags from basic tags MP3");
+        let tags = TrackTags::parse_tag_data(&track, &FileTags::Id3(tag));
         assert_eq!(
             tags.current_artist, "Basic Tags",
             "Expected current_artist to be 'Basic Tags', got '{}'",
@@ -816,6 +1072,28 @@ mod test_parse_tag_data {
     }
 
     #[test]
+    fn parses_artist_and_title_from_basic_flac_tags() {
+        let path = basic_tags_flac_path();
+        if !path.exists() {
+            println!("Test file not found, skipping: {}", path.display());
+            return;
+        }
+        let track = Track::try_from_path(&path).expect("Failed to create Track from basic tags FLAC");
+        let tag = read_tags(&track, false).expect("Failed to read tags from basic tags FLAC");
+        let tags = TrackTags::parse_tag_data(&track, &tag);
+        assert_eq!(
+            tags.current_artist, "Basic Tags",
+            "Expected current_artist to be 'Basic Tags', got '{}'",
+            tags.current_artist
+        );
+        assert_eq!(
+            tags.current_title, "Song - 16-44",
+            "Expected current_title to be 'Song - 16-44', got '{}'",
+            tags.current_title
+        );
+    }
+
+    #[test]
     fn parses_artist_and_title_from_filename_when_no_tags() {
         let path = no_tags_mp3_path();
         if !path.exists() {
@@ -823,8 +1101,7 @@ mod test_parse_tag_data {
             return;
         }
         let track = Track::try_from_path(&path).expect("Failed to create Track from no tags MP3");
-        let tag = Tag::new();
-        let tags = TrackTags::parse_tag_data(&track, &tag);
+        let tags = TrackTags::parse_tag_data(&track, &FileTags::empty_id3());
         let has_artist = !tags.current_artist.is_empty();
         let has_title = !tags.current_title.is_empty();
         assert!(
@@ -846,6 +1123,11 @@ mod test_read_tags {
         Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/basic_tags/Basic Tags - Song - 16-44.mp3")
     }
 
+    /// Return the path to the basic tags FLAC test file.
+    fn basic_tags_flac_path() -> std::path::PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/basic_tags/Basic Tags - Song - 16-44.flac")
+    }
+
     #[test]
     fn reads_tags_from_basic_mp3() {
         let path = basic_tags_mp3_path();
@@ -860,6 +1142,26 @@ mod test_read_tags {
         assert!(
             tag.artist().is_some(),
             "Expected tag to have an artist for basic tags MP3"
+        );
+    }
+
+    #[test]
+    fn reads_tags_from_basic_flac() {
+        let path = basic_tags_flac_path();
+        if !path.exists() {
+            println!("Test file not found, skipping: {}", path.display());
+            return;
+        }
+        let track = Track::try_from_path(&path).expect("Failed to create Track from basic tags FLAC");
+        let result = read_tags(&track, false);
+        assert!(
+            result.is_some(),
+            "Expected read_tags to return Some for basic tags FLAC"
+        );
+        let tag = result.expect("read_tags returned None for basic tags FLAC");
+        assert!(
+            tag.artist().is_some(),
+            "Expected tag to have an artist for basic tags FLAC"
         );
     }
 
@@ -919,7 +1221,7 @@ mod test_read_tags {
             println!("Test file not found, skipping: {}", path.display());
             return;
         }
-        let tag = Tag::read_from_path(&path).expect("Failed to read tags from basic tags MP3");
-        print_tag_data(&tag);
+        let tag = Id3Tag::read_from_path(&path).expect("Failed to read tags from basic tags MP3");
+        print_tag_data(&FileTags::Id3(tag));
     }
 }

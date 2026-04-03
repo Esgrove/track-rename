@@ -4,12 +4,12 @@ use std::str::FromStr;
 use anyhow::{Result, anyhow};
 
 /// Supported audio file formats.
-// TODO: add support for "flac" and "m4a"
 #[derive(Debug, Default, Clone, PartialEq, Ord, PartialOrd, Eq)]
 pub enum FileFormat {
     #[default]
     Mp3,
     Aif,
+    Flac,
 }
 
 impl FromStr for FileFormat {
@@ -19,6 +19,7 @@ impl FromStr for FileFormat {
         match s.to_lowercase().as_str() {
             "mp3" => Ok(Self::Mp3),
             "aif" | "aiff" => Ok(Self::Aif),
+            "flac" => Ok(Self::Flac),
             _ => Err(anyhow!("Unsupported file format: {s}")),
         }
     }
@@ -32,6 +33,7 @@ impl Display for FileFormat {
             match self {
                 Self::Mp3 => "mp3",
                 Self::Aif => "aif",
+                Self::Flac => "flac",
             }
         )
     }
@@ -52,6 +54,9 @@ mod test_file_format_parsing {
         assert_eq!(FileFormat::from_str("Aiff").unwrap(), FileFormat::Aif);
         assert_eq!(FileFormat::from_str("AIF").unwrap(), FileFormat::Aif);
         assert_eq!(FileFormat::from_str("AIFF").unwrap(), FileFormat::Aif);
+        assert_eq!(FileFormat::from_str("flac").unwrap(), FileFormat::Flac);
+        assert_eq!(FileFormat::from_str("Flac").unwrap(), FileFormat::Flac);
+        assert_eq!(FileFormat::from_str("FLAC").unwrap(), FileFormat::Flac);
     }
 
     #[test]
@@ -65,5 +70,6 @@ mod test_file_format_parsing {
     fn test_display() {
         assert_eq!(format!("{}", FileFormat::Mp3), "mp3");
         assert_eq!(format!("{}", FileFormat::Aif), "aif");
+        assert_eq!(format!("{}", FileFormat::Flac), "flac");
     }
 }
