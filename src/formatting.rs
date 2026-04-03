@@ -500,6 +500,7 @@ pub fn format_filename(artist: &str, title: &str) -> (String, String) {
     (formatted_artist.trim().to_string(), formatted_title.trim().to_string())
 }
 
+/// Apply album-specific normalization rules.
 pub fn format_album(album: &str) -> String {
     let mut formatted_album = album.trim().to_string();
 
@@ -517,6 +518,7 @@ pub fn format_album(album: &str) -> String {
     formatted_album
 }
 
+/// Collapse repeated whitespace and trim the string in place.
 pub fn fix_whitespace(text: &mut String) {
     let replaced = RE_MULTIPLE_SPACES.replace_all(text, " ");
     *text = replaced.trim().to_string();

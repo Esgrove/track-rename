@@ -17,8 +17,10 @@ use crate::utils;
 use crate::utils::{get_file_modified_time, path_to_string, path_to_string_relative};
 use crate::{formatting, genre};
 
+/// Current crate version used for processed-track state entries.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
+/// Default music root used when inferring genres from directory layout.
 pub static DJ_MUSIC_PATH: LazyLock<PathBuf> = LazyLock::new(|| ["Dropbox", "DJ MUSIC"].iter().collect());
 
 // Other audio file extensions that should trigger a warning message,
@@ -100,6 +102,7 @@ impl Track {
         })
     }
 
+    /// Try to construct a track from a filesystem path.
     #[must_use]
     pub fn try_from_path(path: &Path) -> Option<Self> {
         let extension = path.extension().and_then(|e| e.to_str()).unwrap_or_default().trim();
@@ -146,6 +149,7 @@ impl Track {
         FileTags::read(self, verbose)
     }
 
+    /// Read, normalize, and store the formatted tags for this track.
     pub fn format_tags(&mut self, file_tags: &FileTags) {
         let mut tags = TrackTags::parse_tag_data(self, file_tags);
         let (formatted_artist, formatted_title) =

@@ -26,23 +26,36 @@ const FLAC_GENRE: &str = "GENRE";
 /// Backend-specific (ID3/FLAC) tag container for supported audio formats.
 #[derive(Debug, Clone)]
 pub enum FileTags {
+    /// ID3 metadata read from MP3 or AIFF files.
     Id3(Id3Tag),
+    /// Vorbis comments and pictures read from FLAC files.
     Flac(FlacTag),
 }
 
 /// Track tag data with current and formatted field values.
 #[derive(Debug, Default, Clone)]
 pub struct TrackTags {
+    /// Artist value currently read from the file.
     pub current_artist: String,
+    /// Title value currently read from the file.
     pub current_title: String,
+    /// Album value currently read from the file.
     pub current_album: String,
+    /// Genre value currently read from the file.
     pub current_genre: String,
+    /// Current combined display name derived from artist and title.
     pub current_name: String,
+    /// Final combined display name after formatting.
     pub formatted_name: String,
+    /// Final formatted artist value.
     pub formatted_artist: String,
+    /// Final formatted title value.
     pub formatted_title: String,
+    /// Final formatted album value.
     pub formatted_album: String,
+    /// Final formatted genre value.
     pub formatted_genre: String,
+    /// Whether downstream processing marked the tags for update.
     pub update_needed: bool,
 }
 
@@ -150,6 +163,7 @@ impl FileTags {
 }
 
 impl TrackTags {
+    /// Create a tag snapshot from the current raw values.
     #[must_use]
     pub fn new(name: String, artist: String, title: String, album: String, genre: String) -> Self {
         Self {

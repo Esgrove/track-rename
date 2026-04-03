@@ -6,9 +6,12 @@ use anyhow::{Result, anyhow};
 /// Supported audio file formats.
 #[derive(Debug, Default, Clone, PartialEq, Ord, PartialOrd, Eq)]
 pub enum FileFormat {
+    /// MPEG Layer III audio with ID3 metadata.
     #[default]
     Mp3,
+    /// AIFF audio carrying ID3 metadata.
     Aif,
+    /// FLAC audio with Vorbis comments.
     Flac,
 }
 
