@@ -123,7 +123,7 @@ static REGEX_SUBSTITUTES: LazyLock<[(Regex, &'static str); 3]> = LazyLock::new(|
         ),
     ]
 });
-static REGEX_NAME_SUBSTITUTES: LazyLock<[(Regex, &'static str); 43]> = LazyLock::new(|| {
+static REGEX_NAME_SUBSTITUTES: LazyLock<[(Regex, &'static str); 44]> = LazyLock::new(|| {
     [
         // Matches "12 Inch" or "12Inch" with optional space, case-insensitive
         (
@@ -262,6 +262,10 @@ static REGEX_NAME_SUBSTITUTES: LazyLock<[(Regex, &'static str); 43]> = LazyLock:
         (
             Regex::new(r"(?i)\bIntro[:\s/+\-&]*outro\b").expect("Failed to compile intro outro regex"),
             "Intro",
+        ),
+        (
+            Regex::new(r"(?i)\bIntro DJ Dynamite Edit\b").expect("Failed to compile DJ Dynamite Edit regex"),
+            "DJ Dynamite Edit",
         ),
         (
             Regex::new(r"(?i)\bAca In\b").expect("Failed to compile aca in regex"),
