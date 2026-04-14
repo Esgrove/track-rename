@@ -17,7 +17,7 @@ anyhow = { version = "1.0.102", features = ["backtrace"] }
 base64 = "0.22.1"
 byteorder = "1.5.0"
 clap = { version = "4.6.0", features = ["derive"] }
-clap_complete = "4.6.1"
+clap_complete = "4.6.2"
 colored = "3.1.1"
 crossterm = "0.29.0"
 difference = "2.0.0"
@@ -27,7 +27,7 @@ id3 = { git = "https://github.com/Esgrove/rust-id3/" }
 itertools = "0.14.0"
 metaflac = "0.2.8"
 rand = "0.10.1"
-rayon = "1.11.0"
+rayon = "1.12.0"
 regex = "1.12.3"
 rusqlite = { version = "0.39.0", features = ["bundled"] }
 serde = { version = "1.0.228", features = ["derive"] }
