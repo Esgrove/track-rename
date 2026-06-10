@@ -206,6 +206,14 @@ impl TrackRenamer {
                 continue;
             }
 
+            if track.is_zero_size_file() {
+                track.not_processed = true;
+                track.show(self.tracks_count, max_index_width);
+                track.print_zero_size_warning();
+                track.print_divider(self.tracks_count, max_index_width);
+                continue;
+            }
+
             let needs_processing = self.config.no_state
                 || match self.state.get(&track.path) {
                     Ok(Some(state)) => {
@@ -643,6 +651,7 @@ mod test_track_renamer {
     use track_rename::utils::is_not_hidden;
 
     use std::env;
+    use std::fs::File;
     use std::fs::copy;
     use std::path::Path;
     use std::path::PathBuf;
@@ -711,6 +720,37 @@ mod test_track_renamer {
             let mut renamer = TrackRenamer::new_with_config(temp_file, Config::new_for_tests());
             renamer.run().expect("Rename failed");
         });
+    }
+
+    #[test]
+    fn test_zero_size_file_skips_processing() {
+        let temp_file = temp_test_file(Path::new("Dropbox Online - Placeholder.mp3"))
+            .expect("Failed to create zero-size temp file path");
+        File::create(&temp_file).expect("Failed to create zero-size temp file");
+
+        let mut config = Config::new_for_tests();
+        config.convert_failed = true;
+        config.log_failures = true;
+
+        let mut renamer = TrackRenamer::new_with_config(temp_file.clone(), config);
+        renamer.run().expect("Zero-size file should be skipped without failing");
+
+        assert_eq!(renamer.stats.failed, 0, "Zero-size file should not count as failed");
+        assert_eq!(renamer.stats.converted, 0, "Zero-size MP3 should not be converted");
+        assert!(
+            renamer.failed_files.is_empty(),
+            "Zero-size file should not be logged as failed"
+        );
+        assert!(
+            renamer.tracks[0].not_processed,
+            "Zero-size file should not be marked processed"
+        );
+        assert!(renamer.state.is_empty().expect("Failed to check state"));
+
+        fs::remove_file(&temp_file).expect("Failed to remove zero-size temp file");
+        if let Some(parent) = temp_file.parent() {
+            fs::remove_dir(parent).expect("Failed to remove zero-size temp directory");
+        }
     }
 
     /// Generic test function that takes a function or closure with one `PathBuf` as input argument.

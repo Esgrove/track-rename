@@ -72,6 +72,10 @@ fn main() -> Result<()> {
             println!();
         }
         println!("{}", track.to_string().bold().magenta());
+        if track.is_zero_size_file() {
+            track.print_zero_size_warning();
+            continue;
+        }
         if let Some(file_tags) = track.read_tags(args.verbose || args.debug) {
             // Don't print empty tags
             if file_tags.is_empty() {

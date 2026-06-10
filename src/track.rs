@@ -146,7 +146,30 @@ impl Track {
     /// Read tags for this track.
     #[must_use]
     pub fn read_tags(&self, verbose: bool) -> Option<FileTags> {
+        if self.is_zero_size_file() {
+            self.print_zero_size_warning();
+            return None;
+        }
+
         FileTags::read(self, verbose)
+    }
+
+    /// Return `true` when the file exists but has a zero-byte size.
+    #[must_use]
+    pub fn is_zero_size_file(&self) -> bool {
+        self.path.metadata().is_ok_and(|metadata| metadata.len() == 0)
+    }
+
+    /// Print a warning for files that are likely Dropbox online-only placeholders.
+    pub fn print_zero_size_warning(&self) {
+        eprintln!(
+            "{}",
+            format!(
+                "WARNING: Skipping zero-size file (likely a Dropbox online-only file that is not synced): {}",
+                self.path.display()
+            )
+            .yellow()
+        );
     }
 
     /// Read, normalize, and store the formatted tags for this track.
@@ -412,6 +435,7 @@ mod test_track_operations {
     use super::*;
 
     use std::env;
+    use std::fs::{self, File};
     use std::path::PathBuf;
 
     #[test]
@@ -595,6 +619,23 @@ mod test_track_operations {
         let path = Path::new("/users/test/noextension");
         let result = Track::try_from_path(path);
         assert!(result.is_none(), "Expected None for path with no extension");
+    }
+
+    #[test]
+    fn zero_size_file_is_detected_and_not_read() {
+        let path = env::temp_dir().join(format!("track-rename-zero-size-{}.mp3", std::process::id()));
+        let _ = fs::remove_file(&path);
+        File::create(&path).expect("Failed to create zero-size temp file");
+
+        let track = Track::try_from_path(&path).expect("Failed to create Track for zero-size temp file");
+
+        assert!(track.is_zero_size_file(), "Expected zero-size temp file to be detected");
+        assert!(
+            track.read_tags(false).is_none(),
+            "Expected zero-size temp file to be skipped"
+        );
+
+        fs::remove_file(&path).expect("Failed to remove zero-size temp file");
     }
 
     #[test]
