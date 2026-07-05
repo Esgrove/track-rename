@@ -531,8 +531,8 @@ dependencies = [
 
 [[package]]
 name = "id3"
-version = "1.16.4"
-source = "git+https://github.com/Esgrove/rust-id3/#7891eeef9bdf98cc3574e147db0dffbb525659c0"
+version = "1.17.0"
+source = "git+https://github.com/Esgrove/rust-id3/#d145acc6f4042b21a352afde0dd561511057e106"
 dependencies = [
  "bitflags",
  "byteorder",
