@@ -698,7 +698,7 @@ fn find_id3_header_offset(data: &[u8]) -> Option<usize> {
 
 /// Decode a synchsafe integer (each byte uses only 7 bits, MSB is always 0).
 fn decode_synchsafe(data: &[u8]) -> u32 {
-    debug_assert!(data.len() == 4);
+    debug_assert_eq!(data.len(), 4);
     (u32::from(data[0]) << 21) | (u32::from(data[1]) << 14) | (u32::from(data[2]) << 7) | u32::from(data[3])
 }
 
