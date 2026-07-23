@@ -5,7 +5,7 @@ use std::path::Path;
 use anyhow::Context;
 use colored::Colorize;
 use id3::Tag as Id3Tag;
-use id3::{Error, ErrorKind, FrameError, FrameErrorKind, TagLike};
+use id3::{Error, ErrorKind, FrameErrorKind, TagLike};
 use itertools::Itertools;
 use metaflac::Tag as FlacTag;
 
@@ -448,14 +448,11 @@ fn get_flac_value<'a>(tag: &'a FlacTag, key: &str) -> Option<&'a str> {
 /// Check if an id3 parsing error is caused by a missing null delimiter
 /// in a frame we know how to fix (UFID, PRIV, etc.).
 fn is_malformed_frame_error(error: &Error) -> bool {
-    matches!(
-        &error.kind,
-        ErrorKind::FrameParsing(FrameError {
-            frame_id,
-            kind: FrameErrorKind::DelimiterNotFound { .. },
-            ..
-        }) if FIXABLE_FRAMES.iter().any(|id| id == frame_id)
-    )
+    let ErrorKind::FrameParsing(frame_error) = &error.kind else {
+        return false;
+    };
+    matches!(frame_error.kind, FrameErrorKind::DelimiterNotFound { .. })
+        && FIXABLE_FRAMES.iter().any(|id| id == &frame_error.frame_id)
 }
 
 /// Attempt to repair a file with a malformed frame by patching raw bytes.
