@@ -42,6 +42,14 @@ jobs:
           toolchain: stable
           components: clippy
 
+      - name: Install ffmpeg (macOS)
+        if: runner.os == 'macOS'
+        run: brew install ffmpeg
+
+      - name: Install ffmpeg (Windows)
+        if: runner.os == 'Windows'
+        run: choco install ffmpeg --no-progress
+
       - name: Cache dependencies
         uses: actions/cache@v6
         with:
