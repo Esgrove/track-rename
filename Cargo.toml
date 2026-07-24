@@ -14,7 +14,7 @@ rust-version = "1.97"
 
 [dependencies]
 anyhow = { version = "1.0.104", features = ["backtrace"] }
-base64 = "0.22.1"
+base64 = "0.23.0"
 byteorder = "1.5.0"
 clap = { version = "4.6.4", features = ["derive"] }
 clap_complete = "4.6.7"
