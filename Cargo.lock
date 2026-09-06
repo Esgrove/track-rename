@@ -533,7 +533,7 @@ dependencies = [
 [[package]]
 name = "id3"
 version = "2.0.0"
-source = "git+https://github.com/Esgrove/rust-id3/#70035d8bf343989857513834adbaf8225042beb8"
+source = "git+https://github.com/Esgrove/rust-id3/#510daa45f0b57627f80fc55f731fe7dd2b2498e5"
 dependencies = [
  "bitflags",
  "byteorder",
@@ -1164,7 +1164,7 @@ checksum = "7d56353a2a665ad0f41a421187180aab746c8c325620617ad883a99a1cbe66d2"
 
 [[package]]
 name = "track-rename"
-version = "2.6.0"
+version = "2.6.1"
 dependencies = [
  "anyhow",
  "base64",
