@@ -44,6 +44,16 @@ enum FileStatus {
     Present,
 }
 
+/// Outcome of attempting to update a track's tags.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TagWriteOutcome {
+    Unchanged,
+    Written,
+    Preview,
+    Declined,
+    Failed,
+}
+
 /// Audio track tag and filename formatting.
 #[derive(Debug, Default)]
 pub struct TrackRenamer {
@@ -84,6 +94,13 @@ impl FileStatus {
             Ok(metadata) if metadata.len() == 0 => Self::Empty,
             Ok(_) => Self::Present,
         }
+    }
+}
+
+impl TagWriteOutcome {
+    /// Whether filename processing may continue after handling tags.
+    const fn allows_rename(self) -> bool {
+        !matches!(self, Self::Declined | Self::Failed)
     }
 }
 
@@ -304,14 +321,14 @@ impl TrackRenamer {
             return Ok(());
         }
 
-        self.fix_tags(track, &mut file_tags, headers);
+        let tag_outcome = self.fix_tags(track, &mut file_tags, headers);
 
         if !track.tags.formatted_genre.is_empty() {
             *self.genres.entry(track.tags.formatted_genre.clone()).or_insert(0) += 1;
         }
 
         let formatted_name_lower = formatted_name.to_lowercase();
-        if !self.config.tags_only {
+        if !self.config.tags_only && tag_outcome.allows_rename() {
             self.rename_file(track, &formatted_name, &formatted_name_lower, headers)?;
         }
         self.record_processed(formatted_name_lower, index);
@@ -436,10 +453,10 @@ impl TrackRenamer {
     }
 
     /// Show tag changes and write them to the file if confirmed.
-    fn fix_tags(&mut self, track: &mut Track, file_tags: &mut FileTags, headers: &OutputHeaders) {
+    fn fix_tags(&mut self, track: &mut Track, file_tags: &mut FileTags, headers: &OutputHeaders) -> TagWriteOutcome {
         let tags_changed = track.tags.changed();
         if !tags_changed && !self.config.write_all_tags {
-            return;
+            return TagWriteOutcome::Unchanged;
         }
         if tags_changed {
             track.show(self.tracks_count, headers.max_index_width);
@@ -447,17 +464,26 @@ impl TrackRenamer {
             println!("{}", headers.fix_tags);
             track.tags.show_diff();
         }
-        if !self.config.print_only && (self.config.force || utils::confirm()) && Self::write_tags(track, file_tags) {
+        let outcome = if self.config.print_only {
+            track.not_processed = true;
+            TagWriteOutcome::Preview
+        } else if !self.config.force && !utils::confirm() {
+            track.not_processed = true;
+            TagWriteOutcome::Declined
+        } else if Self::write_tags(track, file_tags) {
             if tags_changed {
                 track.tags_updated = true;
                 self.stats.tags_fixed += 1;
             }
+            TagWriteOutcome::Written
         } else {
             track.not_processed = true;
-        }
+            TagWriteOutcome::Failed
+        };
         if tags_changed {
             track.print_divider(self.tracks_count, headers.max_index_width);
         }
+        outcome
     }
 
     /// Rename the file to match the formatted name if needed.
@@ -892,6 +918,42 @@ mod test_track_renamer {
             let mut renamer = TrackRenamer::new_with_config(temp_file, Config::new_for_tests());
             renamer.run().expect("Rename failed");
         });
+    }
+
+    #[test]
+    fn failed_tag_write_does_not_attempt_rename() {
+        let source = Path::new("tests/files/missing_title/Missing Title - Song - 16-44.mp3");
+        let temp_file = temp_test_file(source).expect("Failed to create temp file path");
+        copy(source, &temp_file).expect("Failed to copy fixture");
+        let mut track = Track::try_from_path(&temp_file).expect("Failed to create track");
+        let file_tags = track.read_tags(false).expect("Failed to read tags");
+        track.path = temp_file.with_file_name("missing-source.mp3");
+
+        let mut renamer = TrackRenamer::new_with_config(temp_file.clone(), Config::new_for_tests());
+        renamer.tracks_count = 1;
+        let headers = OutputHeaders {
+            fix_tags: "Fix tags:".blue().bold(),
+            rename_file: "Rename file:".cyan().bold(),
+            max_index_width: 1,
+        };
+        renamer
+            .process_track(
+                0,
+                &mut track,
+                Prefetch {
+                    status: FileStatus::Present,
+                    needs_processing: Some(true),
+                    file_tags: Some(file_tags),
+                },
+                &headers,
+            )
+            .expect("A failed tag write should not attempt to rename the file");
+
+        assert!(track.not_processed);
+        assert_eq!(renamer.stats.to_rename, 0);
+        fs::remove_file(&temp_file).expect("Failed to remove temp fixture");
+        fs::remove_dir(temp_file.parent().expect("Temp fixture should have a parent"))
+            .expect("Failed to remove temp directory");
     }
 
     #[test]
