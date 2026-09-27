@@ -102,10 +102,17 @@ impl Markers {
             if name.is_empty() && cursor.position() as usize == cursor.get_ref().len() {
                 break;
             }
-            let entry_length = cursor.read_u32::<BigEndian>()?;
-            let mut entry_data = vec![0; entry_length as usize];
-            cursor.read_exact(&mut entry_data)?;
-            entries.push(Self::load(&entry_name, &entry_data)?);
+            let entry_length = cursor.read_u32::<BigEndian>()? as usize;
+            let start = cursor.position() as usize;
+            let end = start
+                .checked_add(entry_length)
+                .context("Marker entry length overflows")?;
+            let entry_data = cursor
+                .get_ref()
+                .get(start..end)
+                .context("Marker entry exceeds payload")?;
+            entries.push(Self::load(&entry_name, entry_data)?);
+            cursor.set_position(end as u64);
         }
 
         Ok(entries)
@@ -631,6 +638,17 @@ mod test_markers_parsing {
     use super::*;
     use std::io::Cursor;
     use std::path::Path;
+
+    #[test]
+    fn rejects_entry_length_larger_than_payload() {
+        let payload = [0x01, 0x01, b'C', b'U', b'E', 0x00, 0xff, 0xff, 0xff, 0xff];
+        let mut data = vec![0x01, 0x01];
+        data.extend(general_purpose::STANDARD.encode(payload).bytes());
+        data.push(0);
+
+        let error = Markers::parse(&data).expect_err("Oversized entry must be rejected");
+        assert!(error.to_string().contains("Marker entry exceeds payload"));
+    }
 
     #[test]
     fn rejects_null_terminator_before_base64_payload() {
