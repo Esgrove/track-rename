@@ -63,7 +63,7 @@ cargo test
 
 ## Benchmarks
 
-Performance-critical code paths are benchmarked with [Criterion](https://github.com/criterion-rs/criterion.rs).
+Performance-critical code paths are benchmarked with [Criterion](https://crates.io/crates/criterion).
 
 ```shell
 cargo bench
