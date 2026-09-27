@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use track_rename::tags::write_tags;
+use track_rename::tags::{FileTags, write_tags};
 use track_rename::track::Track;
 
 struct FixtureCase {
@@ -28,6 +28,15 @@ fn make_temp_fixture_copy(case: &FixtureCase) -> PathBuf {
     ));
     std::fs::copy(&source, &tmp).unwrap_or_else(|_| panic!("Failed to copy fixture: {}", source.display()));
     tmp
+}
+
+/// Count GEOB and APIC frames for ID3-backed tags.
+fn count_binary_frames(file_tags: &FileTags) -> usize {
+    file_tags.get_id3().map_or(0, |tag| {
+        tag.frames()
+            .filter(|frame| frame.id() == "GEOB" || frame.id() == "APIC")
+            .count()
+    })
 }
 
 fn assert_tags_match_fixture(
@@ -67,6 +76,7 @@ fn assert_roundtrip_for_fixture(case: &FixtureCase) {
     let tmp = make_temp_fixture_copy(case);
     let mut track = Track::try_from_path(&tmp).expect("Failed to create Track from fixture");
     let mut file_tags = track.read_tags(false).expect("Failed to read fixture tags");
+    let binary_frame_count = count_binary_frames(&file_tags);
 
     let artist = format!("{} {} Artist", case.fixture_directory, case.extension);
     let title = format!("{} {} Title", case.fixture_directory, case.extension);
@@ -105,6 +115,12 @@ fn assert_roundtrip_for_fixture(case: &FixtureCase) {
         reread_tags.genre(),
         Some(genre.as_str()),
         "Genre mismatch for {}",
+        source.display()
+    );
+    assert_eq!(
+        count_binary_frames(&reread_tags),
+        binary_frame_count,
+        "Binary frame count mismatch for {}",
         source.display()
     );
 

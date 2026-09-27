@@ -368,7 +368,6 @@ fn write_id3_tags(track: &Track, file_tags: &mut Id3Tag) -> anyhow::Result<()> {
     file_tags.remove_total_tracks();
     file_tags.remove_all_lyrics();
     file_tags.remove_all_synchronised_lyrics();
-    file_tags.write_to_path(&track.path, id3::Version::Id3v24)?;
 
     file_tags.set_artist(track.tags.formatted_artist.clone());
     file_tags.set_title(track.tags.formatted_title.clone());
