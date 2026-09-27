@@ -36,10 +36,7 @@ fn make_temp_copy(suffix: &str) -> std::path::PathBuf {
 /// Verify the test fixture: artist present, title missing.
 #[test]
 fn test_missing_title_tag_detected() {
-    if !test_file_exists() {
-        eprintln!("Test file not found, skipping: {TEST_FILE}");
-        return;
-    }
+    assert!(test_file_exists(), "Test fixture not found: {TEST_FILE}");
     let temp_path = make_temp_copy("missing_title");
     let tag = Tag::read_from_path(&temp_path).expect("Failed to read tags");
 
@@ -58,10 +55,7 @@ fn test_missing_title_tag_detected() {
 /// is still applied unconditionally as a safety net for files that do.
 #[test]
 fn test_write_roundtrip_with_geob() {
-    if !test_file_exists() {
-        eprintln!("Test file not found, skipping: {TEST_FILE}");
-        return;
-    }
+    assert!(test_file_exists(), "Test fixture not found: {TEST_FILE}");
     let temp_path = make_temp_copy("roundtrip_geob");
 
     let mut tag = Tag::read_from_path(&temp_path).expect("Failed to read tags");
@@ -88,10 +82,7 @@ fn test_write_roundtrip_with_geob() {
 /// A fresh tag with only text frames (no GEOB) round-trips correctly.
 #[test]
 fn test_fresh_text_only_tag_write_roundtrips() {
-    if !test_file_exists() {
-        eprintln!("Test file not found, skipping: {TEST_FILE}");
-        return;
-    }
+    assert!(test_file_exists(), "Test fixture not found: {TEST_FILE}");
     let temp_path = make_temp_copy("fresh_text");
 
     let mut tag = Tag::new();
@@ -117,10 +108,7 @@ fn test_fresh_text_only_tag_write_roundtrips() {
 /// GEOB frame triggers a parse error on the next read.
 #[test]
 fn test_two_phase_write_preserves_text_and_binary_frames() {
-    if !test_file_exists() {
-        eprintln!("Test file not found, skipping: {TEST_FILE}");
-        return;
-    }
+    assert!(test_file_exists(), "Test fixture not found: {TEST_FILE}");
     let temp_path = make_temp_copy("two_phase");
 
     // Read original and separate binary frames.
@@ -181,10 +169,7 @@ fn test_two_phase_write_preserves_text_and_binary_frames() {
 /// are already present and in the right order, so nothing is lost.
 #[test]
 fn test_two_phase_write_is_idempotent() {
-    if !test_file_exists() {
-        eprintln!("Test file not found, skipping: {TEST_FILE}");
-        return;
-    }
+    assert!(test_file_exists(), "Test fixture not found: {TEST_FILE}");
     let temp_path = make_temp_copy("idempotent");
 
     // --- first pass (simulates initial fix) ---
@@ -245,10 +230,7 @@ fn test_two_phase_write_is_idempotent() {
 /// and re-adding them also preserves everything.
 #[test]
 fn test_strip_and_restore_binary_frames() {
-    if !test_file_exists() {
-        eprintln!("Test file not found, skipping: {TEST_FILE}");
-        return;
-    }
+    assert!(test_file_exists(), "Test fixture not found: {TEST_FILE}");
     let temp_path = make_temp_copy("strip_restore");
 
     let old_tag = Tag::read_from_path(&temp_path).expect("Failed to read tags");

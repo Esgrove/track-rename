@@ -53,10 +53,7 @@ fn assert_tags_match_fixture(
     genre: Option<&str>,
 ) {
     let source = fixture_path(case);
-    if !source.exists() {
-        eprintln!("Test file not found, skipping: {}", source.display());
-        return;
-    }
+    assert!(source.exists(), "Test fixture not found: {}", source.display());
 
     let temp_path = make_temp_fixture_copy(case);
     let track = Track::try_from_path(&temp_path).expect("Failed to create Track from fixture");
@@ -76,10 +73,7 @@ fn assert_tags_match_fixture(
 /// with all binary frames preserved.
 fn assert_roundtrip_for_fixture(case: &FixtureCase) {
     let source = fixture_path(case);
-    if !source.exists() {
-        eprintln!("Test file not found, skipping: {}", source.display());
-        return;
-    }
+    assert!(source.exists(), "Test fixture not found: {}", source.display());
 
     let temp_path = make_temp_fixture_copy(case);
     let mut track = Track::try_from_path(&temp_path).expect("Failed to create Track from fixture");

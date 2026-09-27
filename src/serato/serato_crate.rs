@@ -824,10 +824,7 @@ mod test_write_crate {
     #[test]
     fn parse_real_crate_file() {
         let crate_path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/TEST.crate");
-        if !crate_path.exists() {
-            eprintln!("Test crate file not found, skipping: {}", crate_path.display());
-            return;
-        }
+        assert!(crate_path.exists(), "Test fixture not found: {}", crate_path.display());
 
         let parsed = SeratoCrate::from_file(&crate_path).expect("Failed to parse TEST.crate");
 

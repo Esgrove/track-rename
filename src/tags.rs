@@ -1141,10 +1141,7 @@ mod test_parse_tag_data {
     #[test]
     fn parses_artist_and_title_from_basic_tags() {
         let path = basic_tags_mp3_path();
-        if !path.exists() {
-            println!("Test file not found, skipping: {}", path.display());
-            return;
-        }
+        assert!(path.exists(), "Test fixture not found: {}", path.display());
         let track = Track::try_from_path(&path).expect("Failed to create Track from basic tags MP3");
         let tag = track.read_tags(false).expect("Failed to read tags from basic tags MP3");
         let tags = TrackTags::parse_tag_data(&track, &tag);
@@ -1173,10 +1170,7 @@ mod test_parse_tag_data {
     #[test]
     fn parses_artist_and_title_from_basic_flac_tags() {
         let path = basic_tags_flac_path();
-        if !path.exists() {
-            println!("Test file not found, skipping: {}", path.display());
-            return;
-        }
+        assert!(path.exists(), "Test fixture not found: {}", path.display());
         let track = Track::try_from_path(&path).expect("Failed to create Track from basic tags FLAC");
         let tag = track
             .read_tags(false)
@@ -1197,10 +1191,7 @@ mod test_parse_tag_data {
     #[test]
     fn parses_numeric_id3_genre_to_human_readable_name() {
         let path = basic_tags_mp3_path();
-        if !path.exists() {
-            println!("Test file not found, skipping: {}", path.display());
-            return;
-        }
+        assert!(path.exists(), "Test fixture not found: {}", path.display());
 
         let track = Track::try_from_path(&path).expect("Failed to create Track from basic tags MP3");
         let mut tag = Id3Tag::new();
@@ -1215,10 +1206,7 @@ mod test_parse_tag_data {
     #[test]
     fn parses_artist_and_title_from_filename_when_no_tags() {
         let path = no_tags_mp3_path();
-        if !path.exists() {
-            println!("Test file not found, skipping: {}", path.display());
-            return;
-        }
+        assert!(path.exists(), "Test fixture not found: {}", path.display());
         let track = Track::try_from_path(&path).expect("Failed to create Track from no tags MP3");
         let tags = TrackTags::parse_tag_data(&track, &FileTags::empty_id3());
         let has_artist = !tags.current_artist.is_empty();
@@ -1306,10 +1294,7 @@ mod test_read_tags {
     #[test]
     fn reads_tags_from_basic_mp3() {
         let path = basic_tags_mp3_path();
-        if !path.exists() {
-            println!("Test file not found, skipping: {}", path.display());
-            return;
-        }
+        assert!(path.exists(), "Test fixture not found: {}", path.display());
         let track = Track::try_from_path(&path).expect("Failed to create Track from basic tags MP3");
         let result = track.read_tags(false);
         assert!(result.is_some(), "Expected read_tags to return Some for basic tags MP3");
@@ -1323,10 +1308,7 @@ mod test_read_tags {
     #[test]
     fn reads_tags_from_basic_flac() {
         let path = basic_tags_flac_path();
-        if !path.exists() {
-            println!("Test file not found, skipping: {}", path.display());
-            return;
-        }
+        assert!(path.exists(), "Test fixture not found: {}", path.display());
         let track = Track::try_from_path(&path).expect("Failed to create Track from basic tags FLAC");
         let result = track.read_tags(false);
         assert!(
@@ -1348,10 +1330,7 @@ mod test_read_tags {
     #[test]
     fn reads_empty_tags_from_no_tags_mp3() {
         let path = no_tags_mp3_path();
-        if !path.exists() {
-            println!("Test file not found, skipping: {}", path.display());
-            return;
-        }
+        assert!(path.exists(), "Test fixture not found: {}", path.display());
         let track = Track::try_from_path(&path).expect("Failed to create Track from no tags MP3");
         let result = track.read_tags(false);
         assert!(
@@ -1368,10 +1347,7 @@ mod test_read_tags {
     #[test]
     fn reads_tags_from_extended_mp3_in_verbose_mode() {
         let path = extended_tags_mp3_path();
-        if !path.exists() {
-            println!("Test file not found, skipping: {}", path.display());
-            return;
-        }
+        assert!(path.exists(), "Test fixture not found: {}", path.display());
         let track = Track::try_from_path(&path).expect("Failed to create Track from extended tags MP3");
         let result = track.read_tags(true);
         assert!(
@@ -1392,10 +1368,7 @@ mod test_read_tags {
     #[test]
     fn prints_tag_data_without_panic() {
         let path = basic_tags_mp3_path();
-        if !path.exists() {
-            println!("Test file not found, skipping: {}", path.display());
-            return;
-        }
+        assert!(path.exists(), "Test fixture not found: {}", path.display());
         let tag = Id3Tag::read_from_path(&path).expect("Failed to read tags from basic tags MP3");
         print_tag_data(&FileTags::Id3(tag));
     }

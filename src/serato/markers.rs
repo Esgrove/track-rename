@@ -661,10 +661,7 @@ mod test_markers_parsing {
     fn parses_markers_from_extended_tags_file() {
         let test_path =
             Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/extended_tags/Extended Tags - Song - 16-44.mp3");
-        if !test_path.exists() {
-            eprintln!("Test file not found, skipping: {}", test_path.display());
-            return;
-        }
+        assert!(test_path.exists(), "Test fixture not found: {}", test_path.display());
         let tag = id3::Tag::read_from_path(&test_path).expect("Failed to read ID3 tags from test file");
 
         let mut found_markers = false;

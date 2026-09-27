@@ -329,10 +329,7 @@ mod test_serato_data {
     #[test]
     fn parses_serato_data_from_real_file() {
         let test_path = extended_tags_mp3_path();
-        if !test_path.exists() {
-            eprintln!("Test file not found, skipping: {}", test_path.display());
-            return;
-        }
+        assert!(test_path.exists(), "Test fixture not found: {}", test_path.display());
         let tag = id3::Tag::read_from_path(&test_path).expect("Failed to read ID3 tags from test file");
         let serato_data = SeratoData::parse(&tag);
         assert!(
@@ -360,10 +357,7 @@ mod test_serato_data {
     fn returns_none_for_file_without_serato_data() {
         let test_path =
             Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/basic_tags/Basic Tags - Song - 16-44.mp3");
-        if !test_path.exists() {
-            eprintln!("Test file not found, skipping: {}", test_path.display());
-            return;
-        }
+        assert!(test_path.exists(), "Test fixture not found: {}", test_path.display());
         let tag = id3::Tag::read_from_path(&test_path).expect("Failed to read ID3 tags from test file");
         let serato_data = SeratoData::parse(&tag);
         assert!(
@@ -375,10 +369,7 @@ mod test_serato_data {
     #[test]
     fn display_contains_all_tag_sections() {
         let test_path = extended_tags_mp3_path();
-        if !test_path.exists() {
-            eprintln!("Test file not found, skipping: {}", test_path.display());
-            return;
-        }
+        assert!(test_path.exists(), "Test fixture not found: {}", test_path.display());
         let tag = id3::Tag::read_from_path(&test_path).expect("Failed to read ID3 tags from test file");
         let serato_data = SeratoData::parse(&tag).expect("SeratoData should be present in test file");
 

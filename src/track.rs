@@ -591,10 +591,7 @@ mod test_track_operations {
     #[test]
     fn valid_mp3_path_returns_some() {
         let path = basic_tags_mp3_path();
-        if !path.exists() {
-            println!("Test file not found, skipping: {}", path.display());
-            return;
-        }
+        assert!(path.exists(), "Test fixture not found: {}", path.display());
         let result = Track::try_from_path(&path);
         assert!(result.is_some(), "Expected Some for valid MP3 path");
         let track = result.expect("Track::try_from_path returned None for valid MP3");
@@ -605,10 +602,7 @@ mod test_track_operations {
     #[test]
     fn valid_aif_path_returns_some_with_correct_format() {
         let path = basic_tags_aif_path();
-        if !path.exists() {
-            println!("Test file not found, skipping: {}", path.display());
-            return;
-        }
+        assert!(path.exists(), "Test fixture not found: {}", path.display());
         let result = Track::try_from_path(&path);
         assert!(result.is_some(), "Expected Some for valid AIF path");
         let track = result.expect("Track::try_from_path returned None for valid AIF");
@@ -619,10 +613,7 @@ mod test_track_operations {
     #[test]
     fn valid_flac_path_returns_some_with_correct_format() {
         let path = basic_tags_flac_path();
-        if !path.exists() {
-            println!("Test file not found, skipping: {}", path.display());
-            return;
-        }
+        assert!(path.exists(), "Test fixture not found: {}", path.display());
         let result = Track::try_from_path(&path);
         assert!(result.is_some(), "Expected Some for valid FLAC path");
         let track = result.expect("Track::try_from_path returned None for valid FLAC");
@@ -664,10 +655,7 @@ mod test_track_operations {
     #[test]
     fn format_tags_populates_formatted_fields() {
         let path = basic_tags_mp3_path();
-        if !path.exists() {
-            println!("Test file not found, skipping: {}", path.display());
-            return;
-        }
+        assert!(path.exists(), "Test fixture not found: {}", path.display());
         let mut track = Track::try_from_path(&path).expect("Failed to create Track from basic tags MP3");
         let tag = track.read_tags(false).expect("Failed to read tags from basic tags MP3");
         track.format_tags(&tag);
@@ -689,10 +677,7 @@ mod test_track_operations {
     #[test]
     fn formatted_filename_contains_separator() {
         let path = basic_tags_mp3_path();
-        if !path.exists() {
-            println!("Test file not found, skipping: {}", path.display());
-            return;
-        }
+        assert!(path.exists(), "Test fixture not found: {}", path.display());
         let mut track = Track::try_from_path(&path).expect("Failed to create Track from basic tags MP3");
         let tag = track.read_tags(false).expect("Failed to read tags from basic tags MP3");
         track.format_tags(&tag);
@@ -707,10 +692,7 @@ mod test_track_operations {
     #[test]
     fn formatted_filename_with_extension_ends_with_mp3() {
         let path = basic_tags_mp3_path();
-        if !path.exists() {
-            println!("Test file not found, skipping: {}", path.display());
-            return;
-        }
+        assert!(path.exists(), "Test fixture not found: {}", path.display());
         let mut track = Track::try_from_path(&path).expect("Failed to create Track from basic tags MP3");
         let tag = track.read_tags(false).expect("Failed to read tags from basic tags MP3");
         track.format_tags(&tag);
@@ -726,10 +708,7 @@ mod test_track_operations {
     #[test]
     fn path_with_new_name_uses_same_parent_directory() {
         let path = basic_tags_mp3_path();
-        if !path.exists() {
-            println!("Test file not found, skipping: {}", path.display());
-            return;
-        }
+        assert!(path.exists(), "Test fixture not found: {}", path.display());
         let track = Track::try_from_path(&path).expect("Failed to create Track from basic tags MP3");
         let new_path = track.path_with_new_name("new_name.mp3");
         assert!(
