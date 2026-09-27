@@ -31,27 +31,27 @@ impl Statistics {
 }
 
 impl fmt::Display for Statistics {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.no_changes() {
-            write!(f, "{}", "All Good".green())?;
+            write!(formatter, "{}", "All Good".green())?;
         } else {
-            writeln!(f, "{}", "Updated:".bold())?;
-            writeln!(f, "Fix tags:    {} / {}", self.tags_fixed, self.tags)?;
-            writeln!(f, "Renamed:     {} / {}", self.renamed, self.to_rename)?;
+            writeln!(formatter, "{}", "Updated:".bold())?;
+            writeln!(formatter, "Fix tags:    {} / {}", self.tags_fixed, self.tags)?;
+            writeln!(formatter, "Renamed:     {} / {}", self.renamed, self.to_rename)?;
             if self.converted > 0 {
-                writeln!(f, "Converted:   {}", self.converted)?;
+                writeln!(formatter, "Converted:   {}", self.converted)?;
             }
             if self.to_remove > 0 {
-                writeln!(f, "Deleted:     {} / {}", self.removed, self.to_remove)?;
+                writeln!(formatter, "Deleted:     {} / {}", self.removed, self.to_remove)?;
             }
             if self.overwritten > 0 {
-                writeln!(f, "Overwritten: {}", self.overwritten)?;
+                writeln!(formatter, "Overwritten: {}", self.overwritten)?;
             }
             if self.duplicates > 0 {
-                writeln!(f, "Duplicate:   {}", self.duplicates)?;
+                writeln!(formatter, "Duplicate:   {}", self.duplicates)?;
             }
             if self.failed > 0 {
-                writeln!(f, "Failed:      {}", self.failed)?;
+                writeln!(formatter, "Failed:      {}", self.failed)?;
             }
         }
         Ok(())

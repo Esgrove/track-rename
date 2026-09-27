@@ -34,8 +34,8 @@ fn bench_serato_tags(criterion: &mut Criterion) {
 /// Benchmark reading and writing Serato crate files.
 fn bench_serato_crate(criterion: &mut Criterion) {
     let test_crate = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/TEST.crate");
-    let temp_dir = std::env::temp_dir().join("track-rename-bench-crate");
-    std::fs::create_dir_all(&temp_dir).expect("Failed to create temp dir");
+    let temp_directory = std::env::temp_dir().join("track-rename-bench-crate");
+    std::fs::create_dir_all(&temp_directory).expect("Failed to create temp directory");
 
     let mut group = criterion.benchmark_group("serato_crate");
     group.bench_function("from_file/test_crate", |bencher| {
@@ -44,7 +44,7 @@ fn bench_serato_crate(criterion: &mut Criterion) {
 
     for track_count in [1_000, 10_000] {
         let serato_crate = synthetic_crate(track_count);
-        let crate_path = temp_dir.join(format!("bench_{track_count}.crate"));
+        let crate_path = temp_directory.join(format!("bench_{track_count}.crate"));
         serato_crate
             .write_to_file(&crate_path)
             .expect("Failed to write benchmark crate");

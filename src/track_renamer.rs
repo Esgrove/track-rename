@@ -391,8 +391,8 @@ impl TrackRenamer {
 
     /// Return true if the track has changed or has not been processed with this version.
     fn needs_processing(&self, track: &Track) -> bool {
-        self.check_state(track).unwrap_or_else(|err| {
-            eprintln!("Failed to read state for {}: {err}", track.path.display());
+        self.check_state(track).unwrap_or_else(|error| {
+            eprintln!("Failed to read state for {}: {error}", track.path.display());
             true
         })
     }
@@ -559,8 +559,11 @@ impl TrackRenamer {
         }
         if self.config.genre_statistics {
             println!("{}", format!("Genres ({}):", self.genres.len()).cyan().bold());
-            let mut genre_list: Vec<(&String, &usize)> =
-                self.genres.iter().sorted_unstable_by(|a, b| b.1.cmp(a.1)).collect();
+            let mut genre_list: Vec<(&String, &usize)> = self
+                .genres
+                .iter()
+                .sorted_unstable_by(|(_, first_count), (_, second_count)| second_count.cmp(first_count))
+                .collect();
 
             Self::print_top_genres(&genre_list);
             genre_list.sort_unstable();
@@ -583,22 +586,14 @@ impl TrackRenamer {
         let mut track_list = utils::collect_tracks(&self.root);
 
         if self.config.sort_files {
-            // Sort by filename, ignoring parent dir
+            // Sort by filename, ignoring parent directory
             track_list.par_sort_unstable();
         } else {
             // Sort by full path so directories are in sorted order
-            track_list.par_sort_unstable_by(|a, b| a.path.cmp(&b.path));
+            track_list.par_sort_unstable_by(|first, second| first.path.cmp(&second.path));
         }
 
         track_list
-    }
-
-    /// Print running index.
-    #[inline]
-    fn print_running_index(total_tracks: usize, number: usize, max_index_width: usize) {
-        print!("\r{number:>max_index_width$}/{total_tracks}");
-        // Progress output is best effort, e.g. stdout may be a closed pipe.
-        let _ = io::stdout().flush();
     }
 
     /// Count and print the total number of each file extension in the file list.
@@ -609,7 +604,7 @@ impl TrackRenamer {
             .map(|track| track.format.to_string())
             .counts()
             .into_iter()
-            .sorted_unstable_by(|a, b| b.1.cmp(&a.1))
+            .sorted_unstable_by(|(_, first_count), (_, second_count)| second_count.cmp(first_count))
             .for_each(|(format, count)| println!("{format}: {count}"));
     }
 
@@ -681,8 +676,8 @@ impl TrackRenamer {
             return;
         }
 
-        let subcrates_dir = match serato_crate::default_subcrates_dir() {
-            Ok(dir) => dir,
+        let subcrates_directory = match serato_crate::default_subcrates_directory() {
+            Ok(directory) => directory,
             Err(error) => {
                 if self.config.verbose {
                     eprintln!(
@@ -694,17 +689,21 @@ impl TrackRenamer {
             }
         };
 
-        if !subcrates_dir.is_dir() {
+        if !subcrates_directory.is_dir() {
             if self.config.verbose {
                 eprintln!(
                     "{}",
-                    format!("Serato Subcrates directory not found: {}", subcrates_dir.display()).yellow()
+                    format!(
+                        "Serato Subcrates directory not found: {}",
+                        subcrates_directory.display()
+                    )
+                    .yellow()
                 );
             }
             return;
         }
 
-        let crate_path = subcrates_dir.join(serato_crate::crate_filename_from_name("Duplicates"));
+        let crate_path = subcrates_directory.join(serato_crate::crate_filename_from_name("Duplicates"));
         let new_paths = duplicate_tracks
             .iter()
             .flat_map(|(_, tracks)| tracks.iter().map(|track| track.path.clone()));
@@ -759,7 +758,7 @@ impl TrackRenamer {
         let total: usize = self.tag_versions.values().sum();
         self.tag_versions
             .iter()
-            .sorted_unstable_by(|a, b| b.1.cmp(a.1))
+            .sorted_unstable_by(|(_, first_count), (_, second_count)| second_count.cmp(first_count))
             .map(|(tag, count)| {
                 format!(
                     "{tag}   {count:>width$} ({:.1}%)",
@@ -768,6 +767,14 @@ impl TrackRenamer {
                 )
             })
             .for_each(|string| println!("{string}"));
+    }
+
+    /// Print running index.
+    #[inline]
+    fn print_running_index(total_tracks: usize, number: usize, max_index_width: usize) {
+        print!("\r{number:>max_index_width$}/{total_tracks}");
+        // Progress output is best effort, e.g. stdout may be a closed pipe.
+        let _ = io::stdout().flush();
     }
 
     /// Print the top 20 genres by track count.
@@ -784,7 +791,7 @@ impl TrackRenamer {
         }
     }
 
-    /// Write a txt log file for failed tracks to current working directory.
+    /// Write the sorted genre list to `genres.txt` in the current working directory.
     fn write_genre_log(genres: &[(&String, &usize)]) -> Result<()> {
         let filepath = Path::new("genres.txt");
         let mut file = File::create(filepath).context("Failed to create output file")?;
@@ -825,14 +832,15 @@ mod test_track_renamer {
     use rand::RngExt;
     use rand::distr::Alphanumeric;
 
-    static NO_TAGS_DIR: LazyLock<PathBuf> = LazyLock::new(|| ["tests", "files", "no_tags"].iter().collect());
-    static BASIC_TAGS_DIR: LazyLock<PathBuf> = LazyLock::new(|| ["tests", "files", "basic_tags"].iter().collect());
-    static EXTENDED_TAGS_DIR: LazyLock<PathBuf> =
+    static NO_TAGS_DIRECTORY: LazyLock<PathBuf> = LazyLock::new(|| ["tests", "files", "no_tags"].iter().collect());
+    static BASIC_TAGS_DIRECTORY: LazyLock<PathBuf> =
+        LazyLock::new(|| ["tests", "files", "basic_tags"].iter().collect());
+    static EXTENDED_TAGS_DIRECTORY: LazyLock<PathBuf> =
         LazyLock::new(|| ["tests", "files", "extended_tags"].iter().collect());
 
     #[test]
     fn test_no_tags() {
-        run_test_on_files(&NO_TAGS_DIR, |temp_file| {
+        run_test_on_files(&NO_TAGS_DIRECTORY, |temp_file| {
             let track = Track::try_from_path(&temp_file).expect("Failed to create Track for temp file");
             let file_tags = track.read_tags(true).expect("Tags should be present");
             assert!(file_tags.artist().is_none());
@@ -843,7 +851,7 @@ mod test_track_renamer {
 
     #[test]
     fn test_basic_tags() {
-        run_test_on_files(&BASIC_TAGS_DIR, |temp_file| {
+        run_test_on_files(&BASIC_TAGS_DIRECTORY, |temp_file| {
             let track = Track::try_from_path(&temp_file).expect("Failed to create Track for temp file");
             let file_tags = track.read_tags(true).expect("Tags should be present");
             assert!(!file_tags.artist().expect("Artist should be present").is_empty());
@@ -854,7 +862,7 @@ mod test_track_renamer {
 
     #[test]
     fn test_extended_tags() {
-        run_test_on_files(&EXTENDED_TAGS_DIR, |temp_file| {
+        run_test_on_files(&EXTENDED_TAGS_DIRECTORY, |temp_file| {
             let track = Track::try_from_path(&temp_file).expect("Failed to create Track for temp file");
             let file_tags = track.read_tags(true).expect("Tags should be present");
             assert!(!file_tags.artist().expect("Artist should be present").is_empty());
@@ -865,7 +873,7 @@ mod test_track_renamer {
 
     #[test]
     fn test_rename_no_tags() {
-        run_test_on_files(&NO_TAGS_DIR, |temp_file| {
+        run_test_on_files(&NO_TAGS_DIRECTORY, |temp_file| {
             let mut renamer = TrackRenamer::new_with_config(temp_file, Config::new_for_tests());
             renamer.run().expect("Rename failed");
         });
@@ -873,7 +881,7 @@ mod test_track_renamer {
 
     #[test]
     fn test_rename_basic_tags() {
-        run_test_on_files(&BASIC_TAGS_DIR, |temp_file| {
+        run_test_on_files(&BASIC_TAGS_DIRECTORY, |temp_file| {
             let mut renamer = TrackRenamer::new_with_config(temp_file, Config::new_for_tests());
             renamer.run().expect("Rename failed");
         });
@@ -881,7 +889,7 @@ mod test_track_renamer {
 
     #[test]
     fn test_rename_extended_tags() {
-        run_test_on_files(&EXTENDED_TAGS_DIR, |temp_file| {
+        run_test_on_files(&EXTENDED_TAGS_DIRECTORY, |temp_file| {
             let mut renamer = TrackRenamer::new_with_config(temp_file, Config::new_for_tests());
             renamer.run().expect("Rename failed");
         });
@@ -920,7 +928,7 @@ mod test_track_renamer {
 
     #[test]
     fn test_duplicates_match_processed_and_unprocessed_tracks_ignoring_case() {
-        let source = BASIC_TAGS_DIR.join("Basic Tags - Song - 16-44.mp3");
+        let source = BASIC_TAGS_DIRECTORY.join("Basic Tags - Song - 16-44.mp3");
         let mut probe = Track::try_from_path(&source).expect("Failed to create Track for fixture");
         let file_tags = probe.read_tags(false).expect("Tags should be present");
         probe.format_tags(&file_tags);
@@ -997,9 +1005,9 @@ mod test_track_renamer {
             .map(char::from)
             .collect();
 
-        let temp_dir = format!("track-rename-{random_string}");
-        let temp_dir_path = env::temp_dir().join(temp_dir);
-        fs::create_dir_all(&temp_dir_path).expect("Failed to create temp subdir");
+        let temp_directory_name = format!("track-rename-{random_string}");
+        let temp_directory_path = env::temp_dir().join(temp_directory_name);
+        fs::create_dir_all(&temp_directory_path).expect("Failed to create temp subdirectory");
 
         let test_file_name = format!(
             "{} ({}).{}",
@@ -1008,7 +1016,7 @@ mod test_track_renamer {
             extension.to_string_lossy()
         );
 
-        let temp_file_path = temp_dir_path.join(test_file_name);
+        let temp_file_path = temp_directory_path.join(test_file_name);
         Some(temp_file_path)
     }
 }

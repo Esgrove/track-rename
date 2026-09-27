@@ -9,72 +9,6 @@ pub fn colorize_bool(value: bool) -> ColoredString {
     if value { "true".green() } else { "false".yellow() }
 }
 
-/// Create a coloured diff for the given strings.
-pub fn color_diff(old: &str, new: &str, stacked: bool) -> (String, String) {
-    let changeset = Changeset::new(old, new, "");
-    let mut old_diff = String::new();
-    let mut new_diff = String::new();
-
-    if stacked {
-        // Find the starting index of the first matching sequence for a nicer visual alignment.
-        // For example:
-        //   Constantine - Onde As Satisfaction (Club Tool).aif
-        //        Darude - Onde As Satisfaction (Constantine Club Tool).aif
-        // Instead of:
-        //   Constantine - Onde As Satisfaction (Club Tool).aif
-        //   Darude - Onde As Satisfaction (Constantine Club Tool).aif
-        for diff in &changeset.diffs {
-            if let Difference::Same(text) = diff {
-                if text.chars().all(char::is_whitespace) || text.chars().count() < 2 {
-                    continue;
-                }
-
-                let old_first_match_index = old.find(text);
-                let new_first_match_index = new.find(text);
-
-                // Add leading whitespace so that the first matching sequence lines up.
-                if let (Some(old_index), Some(new_index)) = (old_first_match_index, new_first_match_index) {
-                    match old_index.cmp(&new_index) {
-                        Ordering::Greater => {
-                            new_diff = " ".repeat(old_index.saturating_sub(new_index));
-                        }
-                        Ordering::Less => {
-                            old_diff = " ".repeat(new_index.saturating_sub(old_index));
-                        }
-                        Ordering::Equal => {}
-                    }
-                    break;
-                }
-            }
-        }
-    }
-
-    for diff in changeset.diffs {
-        match diff {
-            Difference::Same(ref text) => {
-                old_diff.push_str(text);
-                new_diff.push_str(text);
-            }
-            Difference::Add(ref text) => {
-                if text.chars().all(char::is_whitespace) {
-                    new_diff.push_str(&text.on_green().to_string());
-                } else {
-                    new_diff.push_str(&text.green().to_string());
-                }
-            }
-            Difference::Rem(ref text) => {
-                if text.chars().all(char::is_whitespace) {
-                    old_diff.push_str(&text.on_red().to_string());
-                } else {
-                    old_diff.push_str(&text.red().to_string());
-                }
-            }
-        }
-    }
-
-    (old_diff, new_diff)
-}
-
 /// Print a single line diff of the changes.
 pub fn print_diff(old: &str, new: &str) {
     let (old_diff, new_diff) = color_diff(old, new, false);
@@ -204,6 +138,72 @@ macro_rules! print_dimmed {
     ($($arg:tt)*) => {
         $crate::output::print_dimmed(&format!($($arg)*))
     };
+}
+
+/// Create a coloured diff for the given strings.
+fn color_diff(old: &str, new: &str, stacked: bool) -> (String, String) {
+    let changeset = Changeset::new(old, new, "");
+    let mut old_diff = String::new();
+    let mut new_diff = String::new();
+
+    if stacked {
+        // Find the starting index of the first matching sequence for a nicer visual alignment.
+        // For example:
+        //   Constantine - Onde As Satisfaction (Club Tool).aif
+        //        Darude - Onde As Satisfaction (Constantine Club Tool).aif
+        // Instead of:
+        //   Constantine - Onde As Satisfaction (Club Tool).aif
+        //   Darude - Onde As Satisfaction (Constantine Club Tool).aif
+        for diff in &changeset.diffs {
+            if let Difference::Same(text) = diff {
+                if text.chars().all(char::is_whitespace) || text.chars().count() < 2 {
+                    continue;
+                }
+
+                let old_first_match_index = old.find(text);
+                let new_first_match_index = new.find(text);
+
+                // Add leading whitespace so that the first matching sequence lines up.
+                if let (Some(old_index), Some(new_index)) = (old_first_match_index, new_first_match_index) {
+                    match old_index.cmp(&new_index) {
+                        Ordering::Greater => {
+                            new_diff = " ".repeat(old_index.saturating_sub(new_index));
+                        }
+                        Ordering::Less => {
+                            old_diff = " ".repeat(new_index.saturating_sub(old_index));
+                        }
+                        Ordering::Equal => {}
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    for diff in changeset.diffs {
+        match diff {
+            Difference::Same(ref text) => {
+                old_diff.push_str(text);
+                new_diff.push_str(text);
+            }
+            Difference::Add(ref text) => {
+                if text.chars().all(char::is_whitespace) {
+                    new_diff.push_str(&text.on_green().to_string());
+                } else {
+                    new_diff.push_str(&text.green().to_string());
+                }
+            }
+            Difference::Rem(ref text) => {
+                if text.chars().all(char::is_whitespace) {
+                    old_diff.push_str(&text.on_red().to_string());
+                } else {
+                    old_diff.push_str(&text.red().to_string());
+                }
+            }
+        }
+    }
+
+    (old_diff, new_diff)
 }
 
 #[cfg(test)]

@@ -30,6 +30,7 @@ enum RenamerCommand {
     },
 }
 
+/// Command line arguments for trackrename.
 #[derive(Parser)]
 #[command(author, about, version)]
 pub struct RenamerArgs {

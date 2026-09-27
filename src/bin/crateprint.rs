@@ -28,9 +28,10 @@ enum CrateprintCommand {
     },
 }
 
+/// Command line arguments for crateprint.
 #[derive(Parser)]
 #[command(author, version, about = "Print Serato crate contents", name = "crateprint")]
-pub struct Args {
+struct Args {
     #[command(subcommand)]
     command: Option<CrateprintCommand>,
 
@@ -66,18 +67,18 @@ fn main() -> Result<()> {
         );
     }
 
-    let input_path = if let Some(p) = &args.path {
-        dunce::canonicalize(p)
-            .with_context(|| format!("Input path does not exist or is not accessible: '{}'", p.display()))?
+    let input_path = if let Some(path) = &args.path {
+        dunce::canonicalize(path)
+            .with_context(|| format!("Input path does not exist or is not accessible: '{}'", path.display()))?
     } else {
-        let default = serato_crate::default_subcrates_dir()?;
-        if !default.exists() {
+        let default_directory = serato_crate::default_subcrates_directory()?;
+        if !default_directory.exists() {
             anyhow::bail!(
                 "Default Serato Subcrates directory not found: '{}'\nProvide a path as an argument.",
-                default.display()
+                default_directory.display()
             );
         }
-        default
+        default_directory
     };
 
     if input_path.is_file() {

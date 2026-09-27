@@ -44,7 +44,7 @@ impl SeratoCrate {
             version: DEFAULT_VERSION.to_string(),
             columns: DEFAULT_COLUMNS
                 .iter()
-                .map(|(n, w)| (n.to_string(), w.to_string()))
+                .map(|(column_name, column_width)| (column_name.to_string(), column_width.to_string()))
                 .collect(),
             tracks: Vec::new(),
         }
@@ -110,7 +110,7 @@ impl SeratoCrate {
     /// Merge track paths into the crate, skipping paths that already exist.
     pub fn merge_tracks(&mut self, paths: impl IntoIterator<Item = PathBuf>) {
         let existing: std::collections::HashSet<&PathBuf> = self.tracks.iter().collect();
-        let new_paths: Vec<PathBuf> = paths.into_iter().filter(|p| !existing.contains(p)).collect();
+        let new_paths: Vec<PathBuf> = paths.into_iter().filter(|path| !existing.contains(path)).collect();
         self.tracks.extend(new_paths);
     }
 
@@ -125,9 +125,9 @@ impl SeratoCrate {
         data.extend(make_tag(*b"vrsn", &encode_utf16be(&self.version)));
 
         // Column definitions.
-        for (col_name, col_width) in &self.columns {
-            let mut ovct_content = make_tag(*b"tvcn", &encode_utf16be(col_name));
-            ovct_content.extend(make_tag(*b"tvcw", &encode_utf16be(col_width)));
+        for (column_name, column_width) in &self.columns {
+            let mut ovct_content = make_tag(*b"tvcn", &encode_utf16be(column_name));
+            ovct_content.extend(make_tag(*b"tvcw", &encode_utf16be(column_width)));
             data.extend(make_tag(*b"ovct", &ovct_content));
         }
 
@@ -146,22 +146,22 @@ impl SeratoCrate {
     /// The filename is derived from the crate name, with ` > ` hierarchy
     /// separators encoded as `%%`.
     /// Returns the path of the written file.
-    pub fn write_to_default_dir(&self) -> Result<PathBuf> {
-        let subcrates_dir = default_subcrates_dir()?;
+    pub fn write_to_default_directory(&self) -> Result<PathBuf> {
+        let subcrates_directory = default_subcrates_directory()?;
         ensure!(
-            subcrates_dir.is_dir(),
+            subcrates_directory.is_dir(),
             "Serato Subcrates directory does not exist: {}",
-            subcrates_dir.display()
+            subcrates_directory.display()
         );
-        self.write_to_dir(&subcrates_dir)
+        self.write_to_directory(&subcrates_directory)
     }
 
     /// Write this crate to the given directory.
     ///
     /// Returns the path of the written file.
-    pub fn write_to_dir(&self, dir: &Path) -> Result<PathBuf> {
+    pub fn write_to_directory(&self, directory: &Path) -> Result<PathBuf> {
         let filename = crate_filename_from_name(&self.name);
-        let path = dir.join(filename);
+        let path = directory.join(filename);
         self.write_to_file(&path)?;
         Ok(path)
     }
@@ -181,9 +181,9 @@ impl SeratoCrate {
 }
 
 impl fmt::Display for SeratoCrate {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
-            f,
+            formatter,
             "{}: {} track{}",
             self.name.bold().cyan(),
             self.tracks.len(),
@@ -193,15 +193,19 @@ impl fmt::Display for SeratoCrate {
 }
 
 /// List all `.crate` files in the given directory, sorted alphabetically.
-pub fn list_crates(dir: &Path) -> Result<Vec<PathBuf>> {
-    ensure!(dir.is_dir(), "Not a directory: {}", dunce::simplified(dir).display());
+pub fn list_crates(directory: &Path) -> Result<Vec<PathBuf>> {
+    ensure!(
+        directory.is_dir(),
+        "Not a directory: {}",
+        dunce::simplified(directory).display()
+    );
 
-    let mut crates: Vec<PathBuf> = fs::read_dir(dir)
-        .with_context(|| format!("Failed to read directory: {}", dir.display()))?
+    let mut crates: Vec<PathBuf> = fs::read_dir(directory)
+        .with_context(|| format!("Failed to read directory: {}", directory.display()))?
         .filter_map(|entry| {
             let entry = entry.ok()?;
             let path = entry.path();
-            if path.extension().is_some_and(|ext| ext == "crate") {
+            if path.extension().is_some_and(|extension| extension == "crate") {
                 Some(path)
             } else {
                 None
@@ -214,7 +218,7 @@ pub fn list_crates(dir: &Path) -> Result<Vec<PathBuf>> {
 }
 
 /// Return the default Serato Subcrates directory path.
-pub fn default_subcrates_dir() -> Result<PathBuf> {
+pub fn default_subcrates_directory() -> Result<PathBuf> {
     let home = dirs::home_dir().context("Failed to determine home directory")?;
     Ok(home.join("Music/_Serato_/Subcrates"))
 }
@@ -225,7 +229,7 @@ pub fn default_subcrates_dir() -> Result<PathBuf> {
 #[must_use]
 pub fn crate_name_from_path(path: &Path) -> String {
     path.file_stem()
-        .map(|s| s.to_string_lossy().replace("%%", " > "))
+        .map(|stem| stem.to_string_lossy().replace("%%", " > "))
         .unwrap_or_default()
 }
 
@@ -239,22 +243,22 @@ pub fn crate_filename_from_name(name: &str) -> String {
 
 /// Build a TLV (tag-length-value) entry from a 4-byte tag name and value bytes.
 fn make_tag(name: [u8; 4], value: &[u8]) -> Vec<u8> {
-    let mut buf = Vec::with_capacity(8 + value.len());
-    buf.extend_from_slice(&name);
-    let len = u32::try_from(value.len()).expect("tag value exceeds u32::MAX");
-    buf.extend_from_slice(&len.to_be_bytes());
-    buf.extend_from_slice(value);
-    buf
+    let mut buffer = Vec::with_capacity(8 + value.len());
+    buffer.extend_from_slice(&name);
+    let length = u32::try_from(value.len()).expect("tag value exceeds u32::MAX");
+    buffer.extend_from_slice(&length.to_be_bytes());
+    buffer.extend_from_slice(value);
+    buffer
 }
 
 /// Encode a string as UTF-16 big-endian bytes.
 fn encode_utf16be(string: &str) -> Vec<u8> {
     // For ASCII-dominant strings (file paths), each char is one UTF-16 code unit (2 bytes).
-    let mut buf = Vec::with_capacity(string.len() * 2);
+    let mut buffer = Vec::with_capacity(string.len() * 2);
     for code_unit in string.encode_utf16() {
-        buf.extend_from_slice(&code_unit.to_be_bytes());
+        buffer.extend_from_slice(&code_unit.to_be_bytes());
     }
-    buf
+    buffer
 }
 
 /// Convert an absolute file path to the format stored in Serato crate files.
@@ -283,7 +287,7 @@ fn read_tag(data: &[u8], offset: &mut usize) -> Result<(String, Vec<u8>)> {
         .context("Invalid tag name")?
         .to_string();
 
-    let len = u32::from_be_bytes(
+    let length = u32::from_be_bytes(
         data[*offset + 4..*offset + 8]
             .try_into()
             .context("Failed to read tag length")?,
@@ -292,14 +296,14 @@ fn read_tag(data: &[u8], offset: &mut usize) -> Result<(String, Vec<u8>)> {
     *offset += 8;
 
     ensure!(
-        *offset + len <= data.len(),
-        "Tag '{tag}' at offset {} declares {len} bytes but only {} remain",
+        *offset + length <= data.len(),
+        "Tag '{tag}' at offset {} declares {length} bytes but only {} remain",
         *offset - 8,
         data.len() - *offset
     );
 
-    let value = data[*offset..*offset + len].to_vec();
-    *offset += len;
+    let value = data[*offset..*offset + length].to_vec();
+    *offset += length;
     Ok((tag, value))
 }
 
@@ -310,13 +314,13 @@ fn decode_utf16be(data: &[u8]) -> Result<String> {
         "UTF-16BE data has odd length: {}",
         data.len()
     );
-    let u16s: Vec<u16> = data
+    let code_units: Vec<u16> = data
         .as_chunks::<2>()
         .0
         .iter()
-        .map(|c| u16::from_be_bytes([c[0], c[1]]))
+        .map(|chunk| u16::from_be_bytes(*chunk))
         .collect();
-    String::from_utf16(&u16s).context("Invalid UTF-16BE data")
+    String::from_utf16(&code_units).context("Invalid UTF-16BE data")
 }
 
 /// Parse a column definition (`ovct`) block.
@@ -324,17 +328,17 @@ fn decode_utf16be(data: &[u8]) -> Result<String> {
 /// Expected sub-tags: `tvcn` (column name) and `tvcw` (column width).
 fn parse_column_definition(data: &[u8]) -> (String, String) {
     let mut offset = 0;
-    let mut col_name: Option<String> = None;
-    let mut col_width: Option<String> = None;
+    let mut column_name: Option<String> = None;
+    let mut column_width: Option<String> = None;
 
     while offset + 8 <= data.len() {
         if let Ok((tag, value)) = read_tag(data, &mut offset) {
             match tag.as_str() {
                 "tvcn" => {
-                    col_name = decode_utf16be(&value).ok();
+                    column_name = decode_utf16be(&value).ok();
                 }
                 "tvcw" => {
-                    col_width = decode_utf16be(&value).ok();
+                    column_width = decode_utf16be(&value).ok();
                 }
                 _ => {}
             }
@@ -343,7 +347,7 @@ fn parse_column_definition(data: &[u8]) -> (String, String) {
         }
     }
 
-    (col_name.unwrap_or_default(), col_width.unwrap_or_default())
+    (column_name.unwrap_or_default(), column_width.unwrap_or_default())
 }
 
 /// Parse a track entry (`otrk`) block.
@@ -437,7 +441,8 @@ mod test_crate_data {
 
     #[test]
     fn read_tag_not_enough_data() {
-        let data = [0x76, 0x72, 0x73]; // only 3 bytes
+        // Only 3 bytes
+        let data = [0x76, 0x72, 0x73];
         let mut offset = 0;
         assert!(read_tag(&data, &mut offset).is_err());
     }
@@ -511,10 +516,10 @@ mod test_crate_data {
 
     #[test]
     fn parse_column_definition_basic() {
-        let col_name = encode_utf16be("song");
-        let col_width = encode_utf16be("250");
-        let mut block = make_tag(*b"tvcn", &col_name);
-        block.extend(make_tag(*b"tvcw", &col_width));
+        let column_name = encode_utf16be("song");
+        let column_width = encode_utf16be("250");
+        let mut block = make_tag(*b"tvcn", &column_name);
+        block.extend(make_tag(*b"tvcw", &column_width));
 
         let result = parse_column_definition(&block);
         assert_eq!(result, ("song".to_string(), "250".to_string()));
@@ -567,10 +572,10 @@ mod test_crate_data {
         let mut data = make_tag(*b"vrsn", &version_str);
 
         // Add an ovct block.
-        let col_name = encode_utf16be("song");
-        let col_width = encode_utf16be("250");
-        let mut ovct_content = make_tag(*b"tvcn", &col_name);
-        ovct_content.extend(make_tag(*b"tvcw", &col_width));
+        let column_name = encode_utf16be("song");
+        let column_width = encode_utf16be("250");
+        let mut ovct_content = make_tag(*b"tvcn", &column_name);
+        ovct_content.extend(make_tag(*b"tvcw", &column_width));
         data.extend(make_tag(*b"ovct", &ovct_content));
 
         // Add one track.
@@ -580,8 +585,7 @@ mod test_crate_data {
         data.extend(make_tag(*b"otrk", &ptrk));
 
         // Write to a temp file and parse.
-        let dir = std::env::temp_dir();
-        let crate_path = dir.join("TEST%%SUB.crate");
+        let crate_path = std::env::temp_dir().join("TEST%%SUB.crate");
         fs::write(&crate_path, &data).expect("Should write temp crate");
 
         let parsed = SeratoCrate::from_file(&crate_path).expect("Should parse temp crate");
@@ -622,7 +626,7 @@ mod test_crate_data {
     }
 
     #[test]
-    fn nonexistent_dir() {
+    fn nonexistent_directory() {
         let result = list_crates(Path::new("/nonexistent/dir/abc123"));
         assert!(result.is_err());
     }
@@ -712,8 +716,7 @@ mod test_write_crate {
         let bytes = original.to_bytes();
 
         // Write to a temp file and read back.
-        let dir = std::env::temp_dir();
-        let crate_path = dir.join("Roundtrip.crate");
+        let crate_path = std::env::temp_dir().join("Roundtrip.crate");
         fs::write(&crate_path, &bytes).expect("Failed to write temp crate file");
 
         let parsed = SeratoCrate::from_file(&crate_path).expect("Failed to parse roundtrip crate");
@@ -734,8 +737,7 @@ mod test_write_crate {
         let mut serato_crate = SeratoCrate::new("WriteTest");
         serato_crate.add_track(PathBuf::from("/Users/test/Music/song.mp3"));
 
-        let dir = std::env::temp_dir();
-        let crate_path = dir.join("WriteTest.crate");
+        let crate_path = std::env::temp_dir().join("WriteTest.crate");
         serato_crate.write_to_file(&crate_path).expect("Failed to write crate");
 
         assert!(crate_path.exists());
@@ -751,10 +753,12 @@ mod test_write_crate {
         let mut serato_crate = SeratoCrate::new("DirWriteTest");
         serato_crate.add_track(PathBuf::from("/Users/test/Music/song.mp3"));
 
-        let dir = std::env::temp_dir();
-        let result_path = serato_crate.write_to_dir(&dir).expect("Failed to write crate to dir");
+        let directory = std::env::temp_dir();
+        let result_path = serato_crate
+            .write_to_directory(&directory)
+            .expect("Failed to write crate to directory");
 
-        assert_eq!(result_path, dir.join("DirWriteTest.crate"));
+        assert_eq!(result_path, directory.join("DirWriteTest.crate"));
         assert!(result_path.exists());
 
         let _ = fs::remove_file(&result_path);
@@ -764,8 +768,7 @@ mod test_write_crate {
     fn write_empty_crate() {
         let serato_crate = SeratoCrate::new("Empty");
 
-        let dir = std::env::temp_dir();
-        let crate_path = dir.join("Empty.crate");
+        let crate_path = std::env::temp_dir().join("Empty.crate");
         serato_crate
             .write_to_file(&crate_path)
             .expect("Failed to write empty crate");
@@ -807,7 +810,7 @@ mod test_write_crate {
         let track_filenames: Vec<String> = parsed
             .tracks
             .iter()
-            .filter_map(|p| p.file_name().map(|f| f.to_string_lossy().to_string()))
+            .filter_map(|path| path.file_name().map(|name| name.to_string_lossy().to_string()))
             .collect();
 
         assert_eq!(

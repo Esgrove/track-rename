@@ -29,9 +29,9 @@ pub struct BpmLock {
 /// Used for track, cues, and loops.
 #[derive(Debug, Clone)]
 pub struct Color {
-    r: u8,
-    b: u8,
-    g: u8,
+    red: u8,
+    green: u8,
+    blue: u8,
 }
 
 /// A cue point.
@@ -63,27 +63,28 @@ pub struct Loop {
 }
 
 impl Markers {
+    /// Parse all marker entries from base64 encoded Serato Markers2 tag data.
     pub fn parse(data: &[u8]) -> Result<Vec<Self>> {
-        let b64_data_start = 2;
-        let b64_data_end = data
+        let base64_data_start = 2;
+        let base64_data_end = data
             .iter()
-            .position(|&x| x == b'\x00')
+            .position(|&byte| byte == b'\x00')
             .ok_or_else(|| anyhow!("No null terminator found"))?;
-        let b64data = &data[b64_data_start..b64_data_end];
+        let base64_data = &data[base64_data_start..base64_data_end];
 
         // Remove linefeed characters
-        let mut b64_data_cleaned = Vec::with_capacity(b64data.len());
-        b64_data_cleaned.extend(b64data.iter().filter(|&&b| b != b'\n'));
+        let mut base64_data_cleaned = Vec::with_capacity(base64_data.len());
+        base64_data_cleaned.extend(base64_data.iter().filter(|&&byte| byte != b'\n'));
 
-        match b64_data_cleaned.len() % 4 {
-            1 => b64_data_cleaned.extend_from_slice(b"A=="),
-            2 => b64_data_cleaned.extend_from_slice(b"=="),
-            3 => b64_data_cleaned.extend_from_slice(b"="),
+        match base64_data_cleaned.len() % 4 {
+            1 => base64_data_cleaned.extend_from_slice(b"A=="),
+            2 => base64_data_cleaned.extend_from_slice(b"=="),
+            3 => base64_data_cleaned.extend_from_slice(b"="),
             _ => {}
         }
 
         let payload = general_purpose::STANDARD
-            .decode(&b64_data_cleaned)
+            .decode(&base64_data_cleaned)
             .context("Failed to decode base64 data")?;
 
         let mut cursor = Cursor::new(payload);
@@ -99,8 +100,8 @@ impl Markers {
             if name.is_empty() && cursor.position() as usize == cursor.get_ref().len() {
                 break;
             }
-            let entry_len = cursor.read_u32::<BigEndian>()?;
-            let mut entry_data = vec![0; entry_len as usize];
+            let entry_length = cursor.read_u32::<BigEndian>()?;
+            let mut entry_data = vec![0; entry_length as usize];
             cursor.read_exact(&mut entry_data)?;
             entries.push(Self::load(&entry_name, &entry_data)?);
         }
@@ -108,6 +109,7 @@ impl Markers {
         Ok(entries)
     }
 
+    /// Parse a single marker entry based on its entry name.
     fn load(entry_name: &str, data: &[u8]) -> Result<Self> {
         match entry_name {
             "BPMLOCK" => Ok(Self::BpmLock(BpmLock::load(data)?)),
@@ -120,6 +122,7 @@ impl Markers {
 }
 
 impl BpmLock {
+    /// Parse BPM lock entry data consisting of a single boolean byte.
     fn load(data: &[u8]) -> Result<Self> {
         if data.len() != 1 {
             return Err(anyhow!("Invalid data length for BpmLock"));
@@ -132,9 +135,9 @@ impl Color {
     /// Create a new `RgbColor` from an RGB array [u8; 3].
     pub const fn new(bytes: [u8; 3]) -> Self {
         Self {
-            r: bytes[0],
-            g: bytes[1],
-            b: bytes[2],
+            red: bytes[0],
+            green: bytes[1],
+            blue: bytes[2],
         }
     }
 
@@ -142,30 +145,34 @@ impl Color {
     /// Ignores the alpha channel.
     pub const fn new_argb(bytes: [u8; 4]) -> Self {
         Self {
-            r: bytes[1],
-            g: bytes[2],
-            b: bytes[3],
+            red: bytes[1],
+            green: bytes[2],
+            blue: bytes[3],
         }
     }
 
-    #[inline]
-    pub fn format(&self, text: &str) -> ColoredString {
-        text.truecolor(self.r, self.g, self.b)
-    }
-
+    /// Parse track color entry data consisting of four bytes where the first byte is ignored.
     fn load(data: &[u8]) -> Result<Self> {
         if data.len() != 4 {
             return Err(anyhow!("Invalid data length for Color"));
         }
         Ok(Self {
-            r: data[1],
-            g: data[2],
-            b: data[3],
+            red: data[1],
+            green: data[2],
+            blue: data[3],
         })
+    }
+
+    /// Colorize text with this color.
+    #[inline]
+    pub fn format(&self, text: &str) -> ColoredString {
+        text.truecolor(self.red, self.green, self.blue)
     }
 }
 
 impl Cue {
+    /// Parse cue point entry data.
+    ///
     /// | Offset |            Length | Raw Value     | Decoded   | Type                    | Description
     /// | ------ | ----------------- | ------------- | --------- | ----------------------- | -----------
     /// | `00`   |              `01` | `00`          |           |                         |
@@ -208,6 +215,8 @@ impl Cue {
 }
 
 impl Loop {
+    /// Parse saved loop entry data.
+    ///
     /// | Offset   |              Length | Raw Value     | Decoded   | Type                    | Description
     /// | -------- | ------------------- | ------------- | --------- | ----------------------- | -----------
     /// | `00`     |                `01` | `00`          |           |                         |
@@ -251,48 +260,48 @@ impl Loop {
 }
 
 impl Display for Markers {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::BpmLock(bpm_lock) => write!(f, "{bpm_lock}"),
-            Self::Color(color) => write!(f, "{color}"),
-            Self::Cue(cue) => write!(f, "{cue}"),
-            Self::Loop(loop_var) => write!(f, "{loop_var}"),
+            Self::BpmLock(bpm_lock) => write!(formatter, "{bpm_lock}"),
+            Self::Color(color) => write!(formatter, "{color}"),
+            Self::Cue(cue) => write!(formatter, "{cue}"),
+            Self::Loop(loop_var) => write!(formatter, "{loop_var}"),
         }
     }
 }
 
 impl Display for BpmLock {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "BPM Lock: {}", self.enabled)
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        write!(formatter, "BPM Lock: {}", self.enabled)
     }
 }
 
 impl Display for Color {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         write!(
-            f,
+            formatter,
             "Color: {}",
-            format!("[{},{},{}]", self.r, self.g, self.b).truecolor(self.r, self.g, self.b)
+            format!("[{},{},{}]", self.red, self.green, self.blue).truecolor(self.red, self.green, self.blue)
         )
     }
 }
 
 impl Display for Cue {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         let seconds = self.position as f32 * 0.001;
         let position = format!("{seconds:>7.3}s");
         let title = format!("Cue {}", self.index + 1);
         let text = self.color.format(&self.name);
-        write!(f, "{title}: {text:<12} {position}")
+        write!(formatter, "{title}: {text:<12} {position}")
     }
 }
 
 impl Display for Loop {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let msg = self.color.format(format!("Loop {}", self.index + 1).as_str());
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        let message = self.color.format(format!("Loop {}", self.index + 1).as_str());
         write!(
-            f,
-            "{msg}: {} [{:.2}s - {:.2}s] {}",
+            formatter,
+            "{message}: {} [{:.2}s - {:.2}s] {}",
             if self.name.is_empty() {
                 super::format_position_timestamp(self.start_position)
             } else {
@@ -322,49 +331,49 @@ mod test_color {
     #[test]
     fn creates_color_from_rgb_array() {
         let color = Color::new([255, 128, 0]);
-        assert_eq!(color.r, 255);
-        assert_eq!(color.g, 128);
-        assert_eq!(color.b, 0);
+        assert_eq!(color.red, 255);
+        assert_eq!(color.green, 128);
+        assert_eq!(color.blue, 0);
     }
 
     #[test]
     fn creates_color_from_all_zeros() {
         let color = Color::new([0, 0, 0]);
-        assert_eq!(color.r, 0);
-        assert_eq!(color.g, 0);
-        assert_eq!(color.b, 0);
+        assert_eq!(color.red, 0);
+        assert_eq!(color.green, 0);
+        assert_eq!(color.blue, 0);
     }
 
     #[test]
     fn creates_color_from_all_max() {
         let color = Color::new([255, 255, 255]);
-        assert_eq!(color.r, 255);
-        assert_eq!(color.g, 255);
-        assert_eq!(color.b, 255);
+        assert_eq!(color.red, 255);
+        assert_eq!(color.green, 255);
+        assert_eq!(color.blue, 255);
     }
 
     #[test]
     fn creates_color_ignoring_alpha_channel() {
         let color = Color::new_argb([0, 255, 128, 0]);
-        assert_eq!(color.r, 255);
-        assert_eq!(color.g, 128);
-        assert_eq!(color.b, 0);
+        assert_eq!(color.red, 255);
+        assert_eq!(color.green, 128);
+        assert_eq!(color.blue, 0);
     }
 
     #[test]
     fn ignores_nonzero_alpha() {
         let color = Color::new_argb([200, 10, 20, 30]);
-        assert_eq!(color.r, 10);
-        assert_eq!(color.g, 20);
-        assert_eq!(color.b, 30);
+        assert_eq!(color.red, 10);
+        assert_eq!(color.green, 20);
+        assert_eq!(color.blue, 30);
     }
 
     #[test]
     fn creates_color_with_max_alpha() {
         let color = Color::new_argb([255, 100, 150, 200]);
-        assert_eq!(color.r, 100);
-        assert_eq!(color.g, 150);
-        assert_eq!(color.b, 200);
+        assert_eq!(color.red, 100);
+        assert_eq!(color.green, 150);
+        assert_eq!(color.blue, 200);
     }
 
     #[test]
@@ -421,9 +430,9 @@ mod test_color {
     #[test]
     fn loads_color_from_four_bytes() {
         let color = Color::load(&[0x00, 0xFF, 0x80, 0x40]).expect("Should parse color");
-        assert_eq!(color.r, 0xFF);
-        assert_eq!(color.g, 0x80);
-        assert_eq!(color.b, 0x40);
+        assert_eq!(color.red, 0xFF);
+        assert_eq!(color.green, 0x80);
+        assert_eq!(color.blue, 0x40);
     }
 
     #[test]
@@ -445,21 +454,13 @@ mod test_cue_and_loop {
 
     #[test]
     fn loads_cue_with_empty_name() {
-        let cue_data: Vec<u8> = vec![
-            0x00, // padding
-            0x00, // index = 0
-            0x00, 0x00, 0x03, 0xe8, // position = 1000 ms
-            0x00, // padding
-            0xCC, 0x00, 0x00, // RGB color
-            0x00, 0x00, // padding
-            0x00, // null-terminated empty name
-        ];
+        let cue_data = build_cue_data(0, 1000, [0xCC, 0x00, 0x00], b"\0");
         let cue = Cue::load(&cue_data).expect("Should parse valid cue data with empty name");
         assert_eq!(cue.index, 0);
         assert_eq!(cue.position, 1000);
-        assert_eq!(cue.color.r, 0xCC);
-        assert_eq!(cue.color.g, 0x00);
-        assert_eq!(cue.color.b, 0x00);
+        assert_eq!(cue.color.red, 0xCC);
+        assert_eq!(cue.color.green, 0x00);
+        assert_eq!(cue.color.blue, 0x00);
         // Empty name should be replaced with a position timestamp
         assert!(
             !cue.name.is_empty(),
@@ -469,23 +470,14 @@ mod test_cue_and_loop {
 
     #[test]
     fn loads_cue_with_name() {
-        let mut cue_data: Vec<u8> = vec![
-            0x00, // padding
-            0x02, // index = 2
-            0x00, 0x00, 0x07, 0xD0, // position = 2000 ms
-            0x00, // padding
-            0x00, 0xFF, 0x00, // RGB color (green)
-            0x00, 0x00, // padding
-        ];
-        // Add name "Drop" + null terminator
-        cue_data.extend_from_slice(b"Drop\x00");
+        let cue_data = build_cue_data(2, 2000, [0x00, 0xFF, 0x00], b"Drop\0");
 
         let cue = Cue::load(&cue_data).expect("Should parse cue with named cue point");
         assert_eq!(cue.index, 2);
         assert_eq!(cue.position, 2000);
-        assert_eq!(cue.color.r, 0x00);
-        assert_eq!(cue.color.g, 0xFF);
-        assert_eq!(cue.color.b, 0x00);
+        assert_eq!(cue.color.red, 0x00);
+        assert_eq!(cue.color.green, 0xFF);
+        assert_eq!(cue.color.blue, 0x00);
         assert_eq!(cue.name, "Drop");
     }
 
@@ -498,24 +490,14 @@ mod test_cue_and_loop {
 
     #[test]
     fn loads_loop_with_empty_name() {
-        let loop_data: Vec<u8> = vec![
-            0x00, // padding
-            0x00, // index = 0
-            0x00, 0x00, 0x01, 0xF4, // start_position = 500 ms
-            0x00, 0x00, 0x07, 0xD0, // end_position = 2000 ms
-            0xFF, 0xFF, 0xFF, 0xFF, // padding
-            0x00, 0x27, 0xAA, 0xE1, // ARGB color
-            0x00, // padding
-            0x01, // locked = true
-            0x00, // null-terminated empty name
-        ];
+        let loop_data = build_loop_data(true);
         let loop_entry = Loop::load(&loop_data).expect("Should parse valid loop data");
         assert_eq!(loop_entry.index, 0);
         assert_eq!(loop_entry.start_position, 500);
         assert_eq!(loop_entry.end_position, 2000);
-        assert_eq!(loop_entry.color.r, 0x27);
-        assert_eq!(loop_entry.color.g, 0xAA);
-        assert_eq!(loop_entry.color.b, 0xE1);
+        assert_eq!(loop_entry.color.red, 0x27);
+        assert_eq!(loop_entry.color.green, 0xAA);
+        assert_eq!(loop_entry.color.blue, 0xE1);
         assert!(loop_entry.locked, "Loop should be locked");
     }
 
@@ -528,15 +510,7 @@ mod test_cue_and_loop {
 
     #[test]
     fn displays_cue_marker() {
-        let cue_data: Vec<u8> = vec![
-            0x00, // padding
-            0x00, // index = 0
-            0x00, 0x00, 0x03, 0xe8, // position = 1000 ms
-            0x00, // padding
-            0xCC, 0x00, 0x00, // RGB color
-            0x00, 0x00, // padding
-            0x00, // null-terminated empty name
-        ];
+        let cue_data = build_cue_data(0, 1000, [0xCC, 0x00, 0x00], b"\0");
         let cue = Cue::load(&cue_data).expect("Should parse valid cue data");
         let marker = Markers::Cue(cue);
         let display_output = format!("{marker}");
@@ -546,31 +520,39 @@ mod test_cue_and_loop {
         );
     }
 
-    /// Helper to build a valid loop byte array with the given lock state.
-    fn build_loop_data(locked: bool) -> Vec<u8> {
-        vec![
-            0x00, // padding
-            0x00, // index = 0
-            0x00,
-            0x00,
-            0x01,
-            0xF4, // start_position = 500 ms
-            0x00,
-            0x00,
-            0x07,
-            0xD0, // end_position = 2000 ms
-            0xFF,
-            0xFF,
-            0xFF,
-            0xFF, // padding
-            0x00,
-            0x27,
-            0xAA,
-            0xE1, // ARGB color
-            0x00, // padding
-            u8::from(locked),
-            0x00, // null-terminated empty name
+    /// Helper to build cue entry bytes with padding between the fields.
+    fn build_cue_data(index: u8, position: u32, color: [u8; 3], name: &[u8]) -> Vec<u8> {
+        let padding: &[u8] = &[0x00];
+        [
+            padding,
+            &[index],
+            &position.to_be_bytes(),
+            padding,
+            &color,
+            &[0x00, 0x00],
+            name,
         ]
+        .concat()
+    }
+
+    /// Helper to build loop entry bytes for index 0 from 500 ms to 2000 ms with the given lock state.
+    fn build_loop_data(locked: bool) -> Vec<u8> {
+        let padding: &[u8] = &[0x00];
+        let start_position: u32 = 500;
+        let end_position: u32 = 2000;
+        let argb_color = [0x00, 0x27, 0xAA, 0xE1];
+        [
+            padding,
+            &[0x00],
+            &start_position.to_be_bytes(),
+            &end_position.to_be_bytes(),
+            &[0xFF; 4],
+            &argb_color,
+            padding,
+            &[u8::from(locked)],
+            b"\0",
+        ]
+        .concat()
     }
 
     #[test]

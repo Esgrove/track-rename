@@ -9,7 +9,7 @@ use crate::RenamerArgs;
 
 use track_rename::output::colorize_bool;
 
-const CONFIG_FILE_DIR: &str = ".config";
+const CONFIG_FILE_DIRECTORY: &str = ".config";
 const CONFIG_FILE_NAME: &str = "track-rename.toml";
 
 /// Renamer settings combined from CLI options and user config file.
@@ -102,8 +102,8 @@ impl UserConfig {
 
     /// Get user config file if it exists.
     fn user_config_file_path() -> anyhow::Result<PathBuf> {
-        let home_dir = dirs::home_dir().context("Failed to get home directory path")?;
-        let config_path = home_dir.join(CONFIG_FILE_DIR).join(CONFIG_FILE_NAME);
+        let home_directory = dirs::home_dir().context("Failed to get home directory path")?;
+        let config_path = home_directory.join(CONFIG_FILE_DIRECTORY).join(CONFIG_FILE_NAME);
         if config_path.exists() {
             Ok(config_path)
         } else {
@@ -113,25 +113,29 @@ impl UserConfig {
 }
 
 impl fmt::Display for Config {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         // Serialize the struct to a serde_json::Value in place of reflection
         // to automatically handle each member variable.
-        writeln!(f, "{}", "Config:".bold())?;
-        writeln!(f, "  force: {}", colorize_bool(self.force))?;
-        writeln!(f, "  rename_files: {}", colorize_bool(self.rename_files))?;
-        writeln!(f, "  sort_files: {}", colorize_bool(self.sort_files))?;
-        writeln!(f, "  print_only: {}", colorize_bool(self.print_only))?;
-        writeln!(f, "  silent: {}", colorize_bool(self.silent))?;
-        writeln!(f, "  tags_only: {}", colorize_bool(self.tags_only))?;
-        writeln!(f, "  verbose: {}", colorize_bool(self.verbose))?;
-        writeln!(f, "  debug: {}", colorize_bool(self.debug))?;
-        writeln!(f, "  test_mode: {}", colorize_bool(self.test_mode))?;
-        writeln!(f, "  log_failures: {}", colorize_bool(self.log_failures))?;
-        writeln!(f, "  convert_failed: {}", colorize_bool(self.convert_failed))?;
-        writeln!(f, "  write_all_tags: {}", colorize_bool(self.write_all_tags))?;
-        writeln!(f, "  genre_statistics: {}", colorize_bool(self.genre_statistics))?;
+        writeln!(formatter, "{}", "Config:".bold())?;
+        writeln!(formatter, "  force: {}", colorize_bool(self.force))?;
+        writeln!(formatter, "  rename_files: {}", colorize_bool(self.rename_files))?;
+        writeln!(formatter, "  sort_files: {}", colorize_bool(self.sort_files))?;
+        writeln!(formatter, "  print_only: {}", colorize_bool(self.print_only))?;
+        writeln!(formatter, "  silent: {}", colorize_bool(self.silent))?;
+        writeln!(formatter, "  tags_only: {}", colorize_bool(self.tags_only))?;
+        writeln!(formatter, "  verbose: {}", colorize_bool(self.verbose))?;
+        writeln!(formatter, "  debug: {}", colorize_bool(self.debug))?;
+        writeln!(formatter, "  test_mode: {}", colorize_bool(self.test_mode))?;
+        writeln!(formatter, "  log_failures: {}", colorize_bool(self.log_failures))?;
+        writeln!(formatter, "  convert_failed: {}", colorize_bool(self.convert_failed))?;
+        writeln!(formatter, "  write_all_tags: {}", colorize_bool(self.write_all_tags))?;
+        writeln!(
+            formatter,
+            "  genre_statistics: {}",
+            colorize_bool(self.genre_statistics)
+        )?;
         if self.excluded_tracks.is_empty() {
-            writeln!(f, "  excluded_tracks: []")?;
+            writeln!(formatter, "  excluded_tracks: []")?;
         } else {
             let excluded_tracks: String = self
                 .excluded_tracks
@@ -139,20 +143,24 @@ impl fmt::Display for Config {
                 .map(|name| format!("    {}", name.yellow()))
                 .collect::<Vec<_>>()
                 .join("\n");
-            writeln!(f, "  excluded_tracks:\n{excluded_tracks}")?;
+            writeln!(formatter, "  excluded_tracks:\n{excluded_tracks}")?;
         }
         Ok(())
     }
 }
 
 impl fmt::Display for UserConfig {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "{}", "UserConfig:".bold())?;
-        writeln!(f, "  convert_failed: {}", colorize_bool(self.convert_failed))?;
-        writeln!(f, "  genre_statistics: {}", colorize_bool(self.genre_statistics))?;
-        writeln!(f, "  log_failures: {}", colorize_bool(self.log_failures))?;
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(formatter, "{}", "UserConfig:".bold())?;
+        writeln!(formatter, "  convert_failed: {}", colorize_bool(self.convert_failed))?;
+        writeln!(
+            formatter,
+            "  genre_statistics: {}",
+            colorize_bool(self.genre_statistics)
+        )?;
+        writeln!(formatter, "  log_failures: {}", colorize_bool(self.log_failures))?;
         if self.exclude.is_empty() {
-            writeln!(f, "  exclude: []")
+            writeln!(formatter, "  exclude: []")
         } else {
             let excluded_files: String = self
                 .exclude
@@ -160,7 +168,7 @@ impl fmt::Display for UserConfig {
                 .map(|name| format!("    {}", name.yellow()))
                 .collect::<Vec<_>>()
                 .join("\n");
-            writeln!(f, "  exclude:\n{excluded_files}")
+            writeln!(formatter, "  exclude:\n{excluded_files}")
         }
     }
 }

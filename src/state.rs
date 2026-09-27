@@ -10,7 +10,7 @@ use crate::track::TrackMetadata;
 use crate::track::VERSION;
 use crate::utils;
 
-const STATE_DIR: &str = "track-rename";
+const STATE_DIRECTORY: &str = "track-rename";
 #[cfg(not(test))]
 const STATE_DB_NAME: &str = "state.db";
 #[cfg(test)]
@@ -19,7 +19,7 @@ const STATE_DB_NAME: &str = "test_state.db";
 static DB_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
     dirs::data_dir()
         .expect("Failed to get data directory path")
-        .join(STATE_DIR)
+        .join(STATE_DIRECTORY)
         .join(STATE_DB_NAME)
 });
 
@@ -141,7 +141,7 @@ impl State {
         match result {
             Ok(metadata) => Ok(Some(metadata)),
             Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-            Err(err) => Err(err).context("Failed to get track"),
+            Err(error) => Err(error).context("Failed to get track"),
         }
     }
 
@@ -252,7 +252,7 @@ impl State {
         match stmt.query_row(params![path_str], |_| Ok(())) {
             Ok(()) => Ok(true),
             Err(rusqlite::Error::QueryReturnedNoRows) => Ok(false),
-            Err(err) => Err(err).context("Failed to check if path exists"),
+            Err(error) => Err(error).context("Failed to check if path exists"),
         }
     }
 }
@@ -264,8 +264,9 @@ impl Default for State {
 }
 
 impl fmt::Debug for State {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("State")
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("State")
             .field("db_path", &self.db_path)
             .finish_non_exhaustive()
     }

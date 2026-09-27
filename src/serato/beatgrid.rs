@@ -4,16 +4,36 @@ use std::fmt::Display;
 use anyhow::Result;
 use anyhow::anyhow;
 
+/// A single beatgrid marker.
 #[derive(Debug, Clone)]
 pub enum BeatGridMarker {
+    /// Last marker of the beatgrid with the BPM value.
     Terminal { position: f32, bpm: f32 },
+    /// Intermediate marker with the number of beats until the next marker.
     NonTerminal { position: f32, beats_till_next: u32 },
 }
 
+/// Serato beatgrid tag containing all beatgrid markers.
 #[derive(Debug, Clone, Default)]
 pub struct BeatGrid {
-    pub num_markers: u32,
+    pub marker_count: u32,
     pub markers: Vec<BeatGridMarker>,
+}
+
+impl Display for BeatGridMarker {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Terminal { position, bpm } => {
+                write!(formatter, "{position:.3}s {bpm:.3} BPM")
+            }
+            Self::NonTerminal {
+                position,
+                beats_till_next,
+            } => {
+                writeln!(formatter, "{position:.3}s {beats_till_next} beats")
+            }
+        }
+    }
 }
 
 impl BeatGrid {
@@ -56,9 +76,9 @@ impl BeatGrid {
             return Err(anyhow!("Data is too short to contain valid beatgrid information"));
         }
 
-        let num_markers_bytes = [data[2], data[3], data[4], data[5]];
-        let num_markers = u32::from_be_bytes(num_markers_bytes);
-        if num_markers == 0 {
+        let marker_count_bytes = [data[2], data[3], data[4], data[5]];
+        let marker_count = u32::from_be_bytes(marker_count_bytes);
+        if marker_count == 0 {
             return Ok(Self::default());
         }
 
@@ -66,10 +86,10 @@ impl BeatGrid {
             return Err(anyhow!("Data is too short to contain valid beatgrid information"));
         }
 
-        let mut markers = Vec::with_capacity((num_markers as usize).min((data.len() - 6) / 8));
+        let mut markers = Vec::with_capacity((marker_count as usize).min((data.len() - 6) / 8));
         let mut offset = 6;
 
-        for _ in 0..num_markers {
+        for _ in 0..marker_count {
             if offset + 8 > data.len() {
                 return Err(anyhow!("Data is too short to contain all beatgrid markers"));
             }
@@ -94,38 +114,22 @@ impl BeatGrid {
             offset += 8;
         }
 
-        Ok(Self { num_markers, markers })
+        Ok(Self { marker_count, markers })
     }
 }
 
 impl Display for BeatGrid {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if self.num_markers == 0 {
-            write!(f, "Empty")
-        } else if self.num_markers == 1 {
-            write!(f, "Beatgrid {}", self.markers[0])
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        if self.marker_count == 0 {
+            write!(formatter, "Empty")
+        } else if self.marker_count == 1 {
+            write!(formatter, "Beatgrid {}", self.markers[0])
         } else {
-            writeln!(f, "Beatgrid ({}):", self.num_markers)?;
+            writeln!(formatter, "Beatgrid ({}):", self.marker_count)?;
             for marker in &self.markers {
-                write!(f, "  {marker}")?;
+                write!(formatter, "  {marker}")?;
             }
             Ok(())
-        }
-    }
-}
-
-impl Display for BeatGridMarker {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::Terminal { position, bpm } => {
-                write!(f, "{position:.3}s {bpm:.3} BPM")
-            }
-            Self::NonTerminal {
-                position,
-                beats_till_next,
-            } => {
-                writeln!(f, "{position:.3}s {beats_till_next} beats")
-            }
         }
     }
 }
@@ -133,6 +137,11 @@ impl Display for BeatGridMarker {
 #[cfg(test)]
 mod test_beatgrid_parse {
     use super::*;
+
+    /// Beatgrid payload version header.
+    const HEADER: &[u8] = &[0x01, 0x00];
+    /// Single footer byte after the markers.
+    const FOOTER: u8 = 0x00;
 
     #[test]
     fn data_too_short_returns_error() {
@@ -148,10 +157,10 @@ mod test_beatgrid_parse {
 
     #[test]
     fn zero_markers_returns_empty_beatgrid() {
-        // Header (2 bytes) + num_markers = 0 (4 bytes)
+        // Header (2 bytes) + marker count = 0 (4 bytes)
         let data: Vec<u8> = vec![0x01, 0x00, 0x00, 0x00, 0x00, 0x00];
         let beatgrid = BeatGrid::parse(&data).expect("should parse zero-marker beatgrid");
-        assert_eq!(beatgrid.num_markers, 0);
+        assert_eq!(beatgrid.marker_count, 0);
         assert!(beatgrid.markers.is_empty());
     }
 
@@ -162,16 +171,13 @@ mod test_beatgrid_parse {
         let position_bytes = position.to_be_bytes();
         let bpm_bytes = bpm.to_be_bytes();
 
-        let mut data: Vec<u8> = vec![
-            0x01, 0x00, // header
-            0x00, 0x00, 0x00, 0x01, // num_markers = 1
-        ];
+        let mut data = [HEADER, &1_u32.to_be_bytes()].concat();
         data.extend_from_slice(&position_bytes);
         data.extend_from_slice(&bpm_bytes);
-        data.push(0x00); // footer byte
+        data.push(FOOTER);
 
         let beatgrid = BeatGrid::parse(&data).expect("should parse single terminal marker");
-        assert_eq!(beatgrid.num_markers, 1);
+        assert_eq!(beatgrid.marker_count, 1);
         assert_eq!(beatgrid.markers.len(), 1);
 
         match &beatgrid.markers[0] {
@@ -201,18 +207,15 @@ mod test_beatgrid_parse {
         let second_position: f32 = 10.0;
         let terminal_bpm: f32 = 120.0;
 
-        let mut data: Vec<u8> = vec![
-            0x01, 0x00, // header
-            0x00, 0x00, 0x00, 0x02, // num_markers = 2
-        ];
+        let mut data = [HEADER, &2_u32.to_be_bytes()].concat();
         data.extend_from_slice(&first_position.to_be_bytes());
         data.extend_from_slice(&beats_till_next.to_be_bytes());
         data.extend_from_slice(&second_position.to_be_bytes());
         data.extend_from_slice(&terminal_bpm.to_be_bytes());
-        data.push(0x00); // footer byte
+        data.push(FOOTER);
 
         let beatgrid = BeatGrid::parse(&data).expect("should parse two markers");
-        assert_eq!(beatgrid.num_markers, 2);
+        assert_eq!(beatgrid.marker_count, 2);
         assert_eq!(beatgrid.markers.len(), 2);
 
         match &beatgrid.markers[0] {
@@ -250,12 +253,8 @@ mod test_beatgrid_parse {
 
     #[test]
     fn marker_data_truncated_returns_error() {
-        // Header says 1 marker but data is too short to contain it
-        let data: Vec<u8> = vec![
-            0x01, 0x00, // header
-            0x00, 0x00, 0x00, 0x01, // num_markers = 1
-            0x00, 0x00, // only 2 bytes of marker data (need 8 + footer)
-        ];
+        // Header says 1 marker but only 2 of the 8 marker bytes are present and the footer is missing
+        let data = [HEADER, &1_u32.to_be_bytes(), &[0x00, 0x00]].concat();
         assert!(BeatGrid::parse(&data).is_err());
     }
 }
@@ -263,6 +262,11 @@ mod test_beatgrid_parse {
 #[cfg(test)]
 mod test_beatgrid_display {
     use super::*;
+
+    /// Beatgrid payload version header.
+    const HEADER: &[u8] = &[0x01, 0x00];
+    /// Single footer byte after the markers.
+    const FOOTER: u8 = 0x00;
 
     #[test]
     fn empty_beatgrid_displays_empty() {
@@ -278,13 +282,10 @@ mod test_beatgrid_display {
         let position_bytes = position.to_be_bytes();
         let bpm_bytes = bpm.to_be_bytes();
 
-        let mut data: Vec<u8> = vec![
-            0x01, 0x00, // header
-            0x00, 0x00, 0x00, 0x01, // num_markers = 1
-        ];
+        let mut data = [HEADER, &1_u32.to_be_bytes()].concat();
         data.extend_from_slice(&position_bytes);
         data.extend_from_slice(&bpm_bytes);
-        data.push(0x00); // footer
+        data.push(FOOTER);
 
         let beatgrid = BeatGrid::parse(&data).expect("should parse single marker");
         let display_output = format!("{beatgrid}");
@@ -298,15 +299,12 @@ mod test_beatgrid_display {
         let second_position: f32 = 10.0;
         let terminal_bpm: f32 = 120.0;
 
-        let mut data: Vec<u8> = vec![
-            0x01, 0x00, // header
-            0x00, 0x00, 0x00, 0x02, // num_markers = 2
-        ];
+        let mut data = [HEADER, &2_u32.to_be_bytes()].concat();
         data.extend_from_slice(&first_position.to_be_bytes());
         data.extend_from_slice(&beats_till_next.to_be_bytes());
         data.extend_from_slice(&second_position.to_be_bytes());
         data.extend_from_slice(&terminal_bpm.to_be_bytes());
-        data.push(0x00); // footer
+        data.push(FOOTER);
 
         let beatgrid = BeatGrid::parse(&data).expect("should parse two markers");
         let display_output = format!("{beatgrid}");

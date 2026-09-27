@@ -54,6 +54,37 @@ pub struct SeratoData {
     pub overview: Option<Overview>,
 }
 
+impl FromStr for SeratoTag {
+    type Err = anyhow::Error;
+
+    fn from_str(description: &str) -> Result<Self, Self::Err> {
+        match description {
+            "Serato Analysis" => Ok(Self::Analysis),
+            "Serato Autotags" => Ok(Self::Autotags),
+            "Serato BeatGrid" => Ok(Self::BeatGrid),
+            "Serato Markers2" => Ok(Self::Markers),
+            "Serato Overview" => Ok(Self::Overview),
+            _ => Err(anyhow!("Unknown tag description: {description}")),
+        }
+    }
+}
+
+impl Display for SeratoTag {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            formatter,
+            "{}",
+            match self {
+                Self::Analysis => "SeratoAnalysis",
+                Self::Autotags => "SeratoAutotags",
+                Self::BeatGrid => "SeratoBeatGrid",
+                Self::Markers => "SeratoMarkers",
+                Self::Overview => "SeratoOverview",
+            }
+        )
+    }
+}
+
 impl SeratoData {
     /// Parse Serato custom tags from tag data.
     #[must_use]
@@ -108,66 +139,35 @@ impl SeratoData {
     }
 }
 
-impl FromStr for SeratoTag {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "Serato Analysis" => Ok(Self::Analysis),
-            "Serato Autotags" => Ok(Self::Autotags),
-            "Serato BeatGrid" => Ok(Self::BeatGrid),
-            "Serato Markers2" => Ok(Self::Markers),
-            "Serato Overview" => Ok(Self::Overview),
-            _ => Err(anyhow!("Unknown tag description: {s}")),
-        }
-    }
-}
-
-impl Display for SeratoTag {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Self::Analysis => "SeratoAnalysis",
-                Self::Autotags => "SeratoAutotags",
-                Self::BeatGrid => "SeratoBeatGrid",
-                Self::Markers => "SeratoMarkers",
-                Self::Overview => "SeratoOverview",
-            }
-        )
-    }
-}
-
 impl Display for SeratoData {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        writeln!(f, "{}", "Serato tags:".cyan().bold())?;
+    fn fmt(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        writeln!(formatter, "{}", "Serato tags:".cyan().bold())?;
         if let Some(autotags) = &self.autotags {
-            writeln!(f, "{}: {}", SeratoTag::Autotags, autotags)?;
+            writeln!(formatter, "{}: {}", SeratoTag::Autotags, autotags)?;
         } else {
-            writeln!(f, "{}: None", SeratoTag::Autotags)?;
+            writeln!(formatter, "{}: None", SeratoTag::Autotags)?;
         }
         if let Some(analysis) = &self.analysis {
-            writeln!(f, "{}: {}", SeratoTag::Analysis, analysis)?;
+            writeln!(formatter, "{}: {}", SeratoTag::Analysis, analysis)?;
         } else {
-            writeln!(f, "{}: None", SeratoTag::Analysis)?;
+            writeln!(formatter, "{}: None", SeratoTag::Analysis)?;
         }
         if let Some(beatgrid) = &self.beatgrid {
-            writeln!(f, "{}: {}", SeratoTag::BeatGrid, beatgrid)?;
+            writeln!(formatter, "{}: {}", SeratoTag::BeatGrid, beatgrid)?;
         } else {
-            writeln!(f, "{}: None", SeratoTag::BeatGrid)?;
+            writeln!(formatter, "{}: None", SeratoTag::BeatGrid)?;
         }
         if let Some(overview) = &self.overview {
-            write!(f, "{}:\n{}", SeratoTag::Overview, overview)?;
+            write!(formatter, "{}:\n{}", SeratoTag::Overview, overview)?;
         } else {
-            writeln!(f, "{}: None", SeratoTag::Overview)?;
+            writeln!(formatter, "{}: None", SeratoTag::Overview)?;
         }
         if self.markers.is_empty() {
-            writeln!(f, "{}: None", SeratoTag::Markers)?;
+            writeln!(formatter, "{}: None", SeratoTag::Markers)?;
         } else {
-            writeln!(f, "{}:", SeratoTag::Markers)?;
+            writeln!(formatter, "{}:", SeratoTag::Markers)?;
             for marker in &self.markers {
-                writeln!(f, "  {marker}")?;
+                writeln!(formatter, "  {marker}")?;
             }
         }
 

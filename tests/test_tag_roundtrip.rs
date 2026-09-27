@@ -21,14 +21,16 @@ use id3::{Tag, TagLike, Version};
 /// but no title tag. Generated from the `extended_tags` test file by removing TIT2.
 const TEST_FILE: &str = "tests/files/missing_title/Missing Title - Song - 16-44.mp3";
 
+/// Return true if the test fixture file is present.
 fn test_file_exists() -> bool {
     std::path::Path::new(TEST_FILE).exists()
 }
 
+/// Copy the test fixture to a unique temporary file and return its path.
 fn make_temp_copy(suffix: &str) -> std::path::PathBuf {
-    let tmp = std::env::temp_dir().join(format!("track_rename_test_{suffix}.mp3"));
-    std::fs::copy(TEST_FILE, &tmp).expect("Failed to copy test file");
-    tmp
+    let temp_path = std::env::temp_dir().join(format!("track_rename_test_{suffix}.mp3"));
+    std::fs::copy(TEST_FILE, &temp_path).expect("Failed to copy test file");
+    temp_path
 }
 
 /// Verify the test fixture: artist present, title missing.
@@ -38,14 +40,14 @@ fn test_missing_title_tag_detected() {
         eprintln!("Test file not found, skipping: {TEST_FILE}");
         return;
     }
-    let tmp = make_temp_copy("missing_title");
-    let tag = Tag::read_from_path(&tmp).expect("Failed to read tags");
+    let temp_path = make_temp_copy("missing_title");
+    let tag = Tag::read_from_path(&temp_path).expect("Failed to read tags");
 
     assert_eq!(tag.artist(), Some("Missing Title"), "Artist tag should be present");
     assert_eq!(tag.title(), None, "Title tag should be missing");
     assert_eq!(tag.album(), Some("Missing Title"), "Album tag should match fixture");
 
-    std::fs::remove_file(&tmp).expect("Failed to remove temp file");
+    std::fs::remove_file(&temp_path).expect("Failed to remove temp file");
 }
 
 /// Verify that a naive read-modify-write round-trip preserves new text frames.
@@ -60,27 +62,27 @@ fn test_write_roundtrip_with_geob() {
         eprintln!("Test file not found, skipping: {TEST_FILE}");
         return;
     }
-    let tmp = make_temp_copy("roundtrip_geob");
+    let temp_path = make_temp_copy("roundtrip_geob");
 
-    let mut tag = Tag::read_from_path(&tmp).expect("Failed to read tags");
-    let has_geob = tag.frames().any(|f| f.id() == "GEOB");
+    let mut tag = Tag::read_from_path(&temp_path).expect("Failed to read tags");
+    let has_geob = tag.frames().any(|frame| frame.id() == "GEOB");
     assert!(has_geob, "Test file should contain GEOB (Serato) frames");
 
     tag.set_title("Song (16-44)");
     tag.set_album("Test Album");
-    tag.write_to_path(&tmp, Version::Id3v24)
+    tag.write_to_path(&temp_path, Version::Id3v24)
         .expect("write_to_path should not return an error");
 
-    let tag2 = Tag::read_from_path(&tmp).expect("Failed to re-read tags");
-    assert_eq!(tag2.artist(), Some("Missing Title"));
-    assert_eq!(tag2.title(), Some("Song (16-44)"));
-    assert_eq!(tag2.album(), Some("Test Album"));
+    let reread_tag = Tag::read_from_path(&temp_path).expect("Failed to re-read tags");
+    assert_eq!(reread_tag.artist(), Some("Missing Title"));
+    assert_eq!(reread_tag.title(), Some("Song (16-44)"));
+    assert_eq!(reread_tag.album(), Some("Test Album"));
     assert!(
-        tag2.frames().any(|f| f.id() == "GEOB"),
+        reread_tag.frames().any(|frame| frame.id() == "GEOB"),
         "GEOB frames should be preserved"
     );
 
-    std::fs::remove_file(&tmp).expect("Failed to remove temp file");
+    std::fs::remove_file(&temp_path).expect("Failed to remove temp file");
 }
 
 /// A fresh tag with only text frames (no GEOB) round-trips correctly.
@@ -90,20 +92,21 @@ fn test_fresh_text_only_tag_write_roundtrips() {
         eprintln!("Test file not found, skipping: {TEST_FILE}");
         return;
     }
-    let tmp = make_temp_copy("fresh_text");
+    let temp_path = make_temp_copy("fresh_text");
 
     let mut tag = Tag::new();
     tag.set_artist("Missing Title");
     tag.set_title("Song (16-44)");
     tag.set_album("Test Album");
-    tag.write_to_path(&tmp, Version::Id3v24).expect("Failed to write tags");
+    tag.write_to_path(&temp_path, Version::Id3v24)
+        .expect("Failed to write tags");
 
-    let tag2 = Tag::read_from_path(&tmp).expect("Failed to re-read tags");
-    assert_eq!(tag2.artist(), Some("Missing Title"));
-    assert_eq!(tag2.title(), Some("Song (16-44)"));
-    assert_eq!(tag2.album(), Some("Test Album"));
+    let reread_tag = Tag::read_from_path(&temp_path).expect("Failed to re-read tags");
+    assert_eq!(reread_tag.artist(), Some("Missing Title"));
+    assert_eq!(reread_tag.title(), Some("Song (16-44)"));
+    assert_eq!(reread_tag.album(), Some("Test Album"));
 
-    std::fs::remove_file(&tmp).expect("Failed to remove temp file");
+    std::fs::remove_file(&temp_path).expect("Failed to remove temp file");
 }
 
 /// The two-phase write workaround:
@@ -118,16 +121,16 @@ fn test_two_phase_write_preserves_text_and_binary_frames() {
         eprintln!("Test file not found, skipping: {TEST_FILE}");
         return;
     }
-    let tmp = make_temp_copy("two_phase");
+    let temp_path = make_temp_copy("two_phase");
 
     // Read original and separate binary frames.
-    let old_tag = Tag::read_from_path(&tmp).expect("Failed to read tags");
+    let old_tag = Tag::read_from_path(&temp_path).expect("Failed to read tags");
     let binary_frames: Vec<_> = old_tag
         .frames()
-        .filter(|f| f.id() == "GEOB" || f.id() == "APIC")
+        .filter(|frame| frame.id() == "GEOB" || frame.id() == "APIC")
         .cloned()
         .collect();
-    let original_geob_count = binary_frames.iter().filter(|f| f.id() == "GEOB").count();
+    let original_geob_count = binary_frames.iter().filter(|frame| frame.id() == "GEOB").count();
     assert!(original_geob_count > 0, "Test file should have GEOB frames");
 
     // Phase 1: write text frames only (no GEOB/APIC).
@@ -141,37 +144,37 @@ fn test_two_phase_write_preserves_text_and_binary_frames() {
     text_tag.set_title("Song (16-44)");
     text_tag.set_album("Test Album");
     text_tag
-        .write_to_path(&tmp, Version::Id3v24)
+        .write_to_path(&temp_path, Version::Id3v24)
         .expect("Phase 1 write failed");
 
     // Verify text frames survived phase 1.
-    let check = Tag::read_from_path(&tmp).expect("Failed to re-read after phase 1");
+    let check = Tag::read_from_path(&temp_path).expect("Failed to re-read after phase 1");
     assert_eq!(check.artist(), Some("Missing Title"));
     assert_eq!(check.title(), Some("Song (16-44)"));
     assert_eq!(check.album(), Some("Test Album"));
 
     // Phase 2: re-read, add binary frames back, write again.
-    let mut full_tag = Tag::read_from_path(&tmp).expect("Failed to re-read for phase 2");
+    let mut full_tag = Tag::read_from_path(&temp_path).expect("Failed to re-read for phase 2");
     for frame in &binary_frames {
         full_tag.add_frame(frame.clone());
     }
     full_tag
-        .write_to_path(&tmp, Version::Id3v24)
+        .write_to_path(&temp_path, Version::Id3v24)
         .expect("Phase 2 write failed");
 
     // Verify text frames AND binary frames are present.
-    let final_tag = Tag::read_from_path(&tmp).expect("Failed to read final tags");
+    let final_tag = Tag::read_from_path(&temp_path).expect("Failed to read final tags");
     assert_eq!(final_tag.artist(), Some("Missing Title"));
     assert_eq!(final_tag.title(), Some("Song (16-44)"));
     assert_eq!(final_tag.album(), Some("Test Album"));
 
-    let final_geob_count = final_tag.frames().filter(|f| f.id() == "GEOB").count();
+    let final_geob_count = final_tag.frames().filter(|frame| frame.id() == "GEOB").count();
     assert_eq!(
         original_geob_count, final_geob_count,
         "Serato GEOB frames should be preserved after two-phase write"
     );
 
-    std::fs::remove_file(&tmp).expect("Failed to remove temp file");
+    std::fs::remove_file(&temp_path).expect("Failed to remove temp file");
 }
 
 /// Running the two-phase write a second time should be a no-op: all tags
@@ -182,13 +185,13 @@ fn test_two_phase_write_is_idempotent() {
         eprintln!("Test file not found, skipping: {TEST_FILE}");
         return;
     }
-    let tmp = make_temp_copy("idempotent");
+    let temp_path = make_temp_copy("idempotent");
 
     // --- first pass (simulates initial fix) ---
-    let old_tag = Tag::read_from_path(&tmp).expect("Failed to read tags");
+    let old_tag = Tag::read_from_path(&temp_path).expect("Failed to read tags");
     let binary_frames: Vec<_> = old_tag
         .frames()
-        .filter(|f| f.id() == "GEOB" || f.id() == "APIC")
+        .filter(|frame| frame.id() == "GEOB" || frame.id() == "APIC")
         .cloned()
         .collect();
 
@@ -202,40 +205,40 @@ fn test_two_phase_write_is_idempotent() {
     text_tag.set_title("Song (16-44)");
     text_tag.set_album("Test Album");
     text_tag
-        .write_to_path(&tmp, Version::Id3v24)
+        .write_to_path(&temp_path, Version::Id3v24)
         .expect("First pass phase 1 write failed");
 
-    let mut full_tag = Tag::read_from_path(&tmp).expect("Failed to re-read after first pass phase 1");
+    let mut full_tag = Tag::read_from_path(&temp_path).expect("Failed to re-read after first pass phase 1");
     for frame in &binary_frames {
         full_tag.add_frame(frame.clone());
     }
     full_tag
-        .write_to_path(&tmp, Version::Id3v24)
+        .write_to_path(&temp_path, Version::Id3v24)
         .expect("First pass phase 2 write failed");
 
     // --- second pass (simulates running the tool again) ---
-    let tag_pass2 = Tag::read_from_path(&tmp).expect("Failed to read tags on second pass");
+    let second_pass_tag = Tag::read_from_path(&temp_path).expect("Failed to read tags on second pass");
 
     assert_eq!(
-        tag_pass2.artist(),
+        second_pass_tag.artist(),
         Some("Missing Title"),
         "Artist should be present on second pass"
     );
     assert_eq!(
-        tag_pass2.title(),
+        second_pass_tag.title(),
         Some("Song (16-44)"),
         "Title should be present on second pass — must not be flagged as missing again"
     );
     assert_eq!(
-        tag_pass2.album(),
+        second_pass_tag.album(),
         Some("Test Album"),
         "Album should be present on second pass"
     );
 
-    let has_geob = tag_pass2.frames().any(|f| f.id() == "GEOB");
+    let has_geob = second_pass_tag.frames().any(|frame| frame.id() == "GEOB");
     assert!(has_geob, "Serato GEOB frames should still be present on second pass");
 
-    std::fs::remove_file(&tmp).expect("Failed to remove temp file");
+    std::fs::remove_file(&temp_path).expect("Failed to remove temp file");
 }
 
 /// Stripping binary frames from the in-memory tag, writing, re-reading
@@ -246,45 +249,45 @@ fn test_strip_and_restore_binary_frames() {
         eprintln!("Test file not found, skipping: {TEST_FILE}");
         return;
     }
-    let tmp = make_temp_copy("strip_restore");
+    let temp_path = make_temp_copy("strip_restore");
 
-    let old_tag = Tag::read_from_path(&tmp).expect("Failed to read tags");
+    let old_tag = Tag::read_from_path(&temp_path).expect("Failed to read tags");
     let binary_frames: Vec<_> = old_tag
         .frames()
-        .filter(|f| f.id() == "GEOB" || f.id() == "APIC")
+        .filter(|frame| frame.id() == "GEOB" || frame.id() == "APIC")
         .cloned()
         .collect();
 
     // Strip GEOB/APIC from the tag in memory, set new fields, write.
-    let mut tag = Tag::read_from_path(&tmp).expect("Failed to read tags");
+    let mut tag = Tag::read_from_path(&temp_path).expect("Failed to read tags");
     tag.remove("GEOB");
     tag.remove("APIC");
     tag.set_title("Song (16-44)");
     tag.set_album("Test Album");
-    tag.write_to_path(&tmp, Version::Id3v24)
+    tag.write_to_path(&temp_path, Version::Id3v24)
         .expect("Text-only write failed");
 
-    let check = Tag::read_from_path(&tmp).expect("Failed to re-read");
+    let check = Tag::read_from_path(&temp_path).expect("Failed to re-read");
     assert_eq!(check.artist(), Some("Missing Title"));
     assert_eq!(check.title(), Some("Song (16-44)"));
     assert_eq!(check.album(), Some("Test Album"));
 
     // Re-add binary frames.
-    let mut tag = Tag::read_from_path(&tmp).expect("Failed to re-read for binary add");
+    let mut tag = Tag::read_from_path(&temp_path).expect("Failed to re-read for binary add");
     for frame in &binary_frames {
         tag.add_frame(frame.clone());
     }
-    tag.write_to_path(&tmp, Version::Id3v24)
+    tag.write_to_path(&temp_path, Version::Id3v24)
         .expect("Binary frame write failed");
 
-    let final_tag = Tag::read_from_path(&tmp).expect("Failed to read final tags");
+    let final_tag = Tag::read_from_path(&temp_path).expect("Failed to read final tags");
     assert_eq!(final_tag.artist(), Some("Missing Title"));
     assert_eq!(final_tag.title(), Some("Song (16-44)"));
     assert_eq!(final_tag.album(), Some("Test Album"));
     assert!(
-        final_tag.frames().any(|f| f.id() == "GEOB"),
+        final_tag.frames().any(|frame| frame.id() == "GEOB"),
         "GEOB frames should be restored"
     );
 
-    std::fs::remove_file(&tmp).expect("Failed to remove temp file");
+    std::fs::remove_file(&temp_path).expect("Failed to remove temp file");
 }

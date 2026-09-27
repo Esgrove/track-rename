@@ -1,5 +1,6 @@
 use track_rename::formatting;
 
+/// Input artist and title with the expected formatted results.
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq)]
 struct FormattingTestData {
     artist: &'static str,
@@ -674,6 +675,7 @@ static FILE_FORMATTING_TEST_DATA: &[FormattingTestData] = &[
     },
 ];
 
+/// Format each test case and assert the result matches the expected artist and title.
 fn run_tag_formatting_tests(test_data: &[FormattingTestData]) {
     for data in test_data {
         let (formatted_artist, formatted_title) = formatting::format_tags_for_artist_and_title(data.artist, data.title);

@@ -4,30 +4,33 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use track_rename::tags::{FileTags, write_tags};
 use track_rename::track::Track;
 
+/// A test fixture file identified by directory, base name and extension.
 struct FixtureCase {
     fixture_directory: &'static str,
     base_name: &'static str,
     extension: &'static str,
 }
 
+/// Return the path of the fixture file for the given case.
 fn fixture_path(case: &FixtureCase) -> PathBuf {
     Path::new("tests/files")
         .join(case.fixture_directory)
         .join(format!("{}.{}", case.base_name, case.extension))
 }
 
+/// Copy the fixture file to a unique temporary file and return its path.
 fn make_temp_fixture_copy(case: &FixtureCase) -> PathBuf {
     let source = fixture_path(case);
     let unique_suffix = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("System clock should be after UNIX_EPOCH")
         .as_nanos();
-    let tmp = std::env::temp_dir().join(format!(
+    let temp_path = std::env::temp_dir().join(format!(
         "track_rename_test_{}_{}_{}.{}",
         case.fixture_directory, case.extension, unique_suffix, case.extension
     ));
-    std::fs::copy(&source, &tmp).unwrap_or_else(|_| panic!("Failed to copy fixture: {}", source.display()));
-    tmp
+    std::fs::copy(&source, &temp_path).unwrap_or_else(|_| panic!("Failed to copy fixture: {}", source.display()));
+    temp_path
 }
 
 /// Count GEOB and APIC frames for ID3-backed tags.
@@ -39,6 +42,7 @@ fn count_binary_frames(file_tags: &FileTags) -> usize {
     })
 }
 
+/// Read tags from a temporary copy of the fixture and compare them to the expected values.
 fn assert_tags_match_fixture(
     case: &FixtureCase,
     artist: Option<&str>,
@@ -52,8 +56,8 @@ fn assert_tags_match_fixture(
         return;
     }
 
-    let tmp = make_temp_fixture_copy(case);
-    let track = Track::try_from_path(&tmp).expect("Failed to create Track from fixture");
+    let temp_path = make_temp_fixture_copy(case);
+    let track = Track::try_from_path(&temp_path).expect("Failed to create Track from fixture");
     let tag = track.read_tags(false).expect("Failed to read fixture tags");
 
     assert_eq!(tag.artist(), artist, "Artist mismatch for {}", source.display());
@@ -63,9 +67,11 @@ fn assert_tags_match_fixture(
 
     drop(tag);
     drop(track);
-    std::fs::remove_file(&tmp).expect("Failed to remove temp fixture file");
+    std::fs::remove_file(&temp_path).expect("Failed to remove temp fixture file");
 }
 
+/// Write new tags to a temporary copy of the fixture and verify they are read back unchanged,
+/// with all binary frames preserved.
 fn assert_roundtrip_for_fixture(case: &FixtureCase) {
     let source = fixture_path(case);
     if !source.exists() {
@@ -73,8 +79,8 @@ fn assert_roundtrip_for_fixture(case: &FixtureCase) {
         return;
     }
 
-    let tmp = make_temp_fixture_copy(case);
-    let mut track = Track::try_from_path(&tmp).expect("Failed to create Track from fixture");
+    let temp_path = make_temp_fixture_copy(case);
+    let mut track = Track::try_from_path(&temp_path).expect("Failed to create Track from fixture");
     let mut file_tags = track.read_tags(false).expect("Failed to read fixture tags");
     let binary_frame_count = count_binary_frames(&file_tags);
 
@@ -90,7 +96,7 @@ fn assert_roundtrip_for_fixture(case: &FixtureCase) {
 
     write_tags(&track, &mut file_tags).expect("Failed to write updated tags");
 
-    let reread_track = Track::try_from_path(&tmp).expect("Failed to recreate Track from updated fixture");
+    let reread_track = Track::try_from_path(&temp_path).expect("Failed to recreate Track from updated fixture");
     let reread_tags = reread_track.read_tags(false).expect("Failed to re-read updated tags");
 
     assert_eq!(
@@ -128,7 +134,7 @@ fn assert_roundtrip_for_fixture(case: &FixtureCase) {
     drop(reread_track);
     drop(file_tags);
     drop(track);
-    std::fs::remove_file(&tmp).expect("Failed to remove temp fixture file");
+    std::fs::remove_file(&temp_path).expect("Failed to remove temp fixture file");
 }
 
 #[test]

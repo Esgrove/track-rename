@@ -18,20 +18,20 @@ pub enum FileFormat {
 impl FromStr for FileFormat {
     type Err = anyhow::Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
+    fn from_str(extension: &str) -> Result<Self, Self::Err> {
+        match extension.to_lowercase().as_str() {
             "mp3" => Ok(Self::Mp3),
             "aif" | "aiff" => Ok(Self::Aif),
             "flac" => Ok(Self::Flac),
-            _ => Err(anyhow!("Unsupported file format: {s}")),
+            _ => Err(anyhow!("Unsupported file format: {extension}")),
         }
     }
 }
 
 impl Display for FileFormat {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
-            f,
+            formatter,
             "{}",
             match self {
                 Self::Mp3 => "mp3",

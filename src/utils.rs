@@ -183,10 +183,10 @@ pub fn rename_track(path: &Path, new_path: &Path, test_mode: bool) -> anyhow::Re
     Ok(())
 }
 
-/// Resolve optional input path or otherwise use current working dir.
+/// Resolve optional input path or otherwise use current working directory.
 pub fn resolve_input_path(path: Option<&Path>) -> anyhow::Result<PathBuf> {
     let filepath = match path {
-        Some(p) => p.to_path_buf(),
+        Some(input_path) => input_path.to_path_buf(),
         None => std::env::current_dir().context("Failed to get current working directory")?,
     };
     if !filepath.exists() {
@@ -215,7 +215,7 @@ pub fn write_log_for_failed_files(paths: &[String]) -> anyhow::Result<()> {
 pub fn is_not_hidden(path: &Path) -> bool {
     path.file_name()
         .and_then(|name| name.to_str())
-        .is_none_or(|s| !s.starts_with('.'))
+        .is_none_or(|name| !name.starts_with('.'))
 }
 
 /// Get filename string for given Path.
@@ -376,7 +376,7 @@ mod test_file_operations {
         assert!(
             tracks
                 .iter()
-                .all(|track| track.path.extension().is_some_and(|ext| ext != "crate"))
+                .all(|track| track.path.extension().is_some_and(|extension| extension != "crate"))
         );
     }
 

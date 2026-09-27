@@ -4,6 +4,7 @@ use std::fmt::Display;
 use anyhow::Result;
 use anyhow::anyhow;
 
+/// Serato analysis version number.
 #[derive(Debug, Clone, Default)]
 pub struct AnalysisVersion {
     pub major_version: u8,
@@ -35,8 +36,8 @@ impl AnalysisVersion {
 }
 
 impl Display for AnalysisVersion {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Version {}.{}", self.major_version, self.minor_version)
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        write!(formatter, "Version {}.{}", self.major_version, self.minor_version)
     }
 }
 

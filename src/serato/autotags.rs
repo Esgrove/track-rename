@@ -3,6 +3,7 @@ use std::fmt::Display;
 
 use anyhow::anyhow;
 
+/// Serato autotags with BPM and gain values.
 #[derive(Debug, Clone, Default)]
 pub struct AutoTags {
     /// Beats per minute
@@ -35,12 +36,12 @@ impl AutoTags {
             .trim_end_matches('\x00')
             .trim()
             .chars()
-            .filter(|c| c.is_numeric() || *c == '.')
+            .filter(|character| character.is_numeric() || *character == '.')
             .collect();
 
         let bpm: f32 = bpm_str
             .parse()
-            .map_err(|e| anyhow!("Failed to parse BPM as f32: {e} {bpm_str:?}"))?;
+            .map_err(|error| anyhow!("Failed to parse BPM as f32: {error} {bpm_str:?}"))?;
 
         // Parse Auto Gain
         let auto_gain_str: String = std::str::from_utf8(&data[9..16])
@@ -48,13 +49,13 @@ impl AutoTags {
             .replace('\x00', "")
             .trim()
             .chars()
-            .filter(|c| c.is_numeric() || *c == '.' || *c == '-')
+            .filter(|character| character.is_numeric() || *character == '.' || *character == '-')
             .collect();
 
         let auto_gain: f32 = auto_gain_str
             .trim_end_matches('.')
             .parse()
-            .map_err(|e| anyhow!("Failed to parse Auto Gain as f32: {e} {auto_gain_str:?}"))?;
+            .map_err(|error| anyhow!("Failed to parse Auto Gain as f32: {error} {auto_gain_str:?}"))?;
 
         // Parse Gain dB (only if data is long enough)
         let gain: f32 = if data.len() >= 22 {
@@ -63,13 +64,13 @@ impl AutoTags {
                 .replace('\x00', "")
                 .trim()
                 .chars()
-                .filter(|c| c.is_numeric() || *c == '.' || *c == '-')
+                .filter(|character| character.is_numeric() || *character == '.' || *character == '-')
                 .collect();
 
             gain_str
                 .trim_end_matches('.')
                 .parse()
-                .map_err(|e| anyhow!("Failed to parse Gain dB as f32: {e} {gain_str:?}"))?
+                .map_err(|error| anyhow!("Failed to parse Gain dB as f32: {error} {gain_str:?}"))?
         } else {
             0.0
         };
@@ -79,9 +80,9 @@ impl AutoTags {
 }
 
 impl Display for AutoTags {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         write!(
-            f,
+            formatter,
             "BPM: {:.3}, Auto Gain: {:.3} dB, Gain: {:.3} dB",
             self.bpm, self.auto_gain, self.gain
         )
@@ -92,15 +93,13 @@ impl Display for AutoTags {
 mod test_autotags {
     use super::*;
 
+    /// Autotags payload version header.
+    const HEADER: &[u8] = &[0x01, 0x01];
+
     #[test]
     fn parses_full_autotags_data() {
         // Header (2 bytes) + BPM "128.00\0" (7 bytes) + Auto gain "-3.257\0" (7 bytes) + Gain "0.000\0" (6 bytes)
-        let data: Vec<u8> = vec![
-            0x01, 0x01, // header
-            0x31, 0x32, 0x38, 0x2e, 0x30, 0x30, 0x00, // "128.00\0"
-            0x2d, 0x33, 0x2e, 0x32, 0x35, 0x37, 0x00, // "-3.257\0"
-            0x30, 0x2e, 0x30, 0x30, 0x30, 0x00, // "0.000\0"
-        ];
+        let data = [HEADER, b"128.00\0", b"-3.257\0", b"0.000\0"].concat();
         let autotags = AutoTags::parse(&data).expect("Should parse valid autotags data");
         let epsilon = 0.001;
         assert!((autotags.bpm - 128.0).abs() < epsilon, "BPM should be 128.0");
@@ -114,11 +113,7 @@ mod test_autotags {
     #[test]
     fn parses_without_gain_field() {
         // Only 16 bytes: header + BPM + auto gain, no gain field
-        let data: Vec<u8> = vec![
-            0x01, 0x01, // header
-            0x31, 0x32, 0x38, 0x2e, 0x30, 0x30, 0x00, // "128.00\0"
-            0x2d, 0x33, 0x2e, 0x32, 0x35, 0x37, 0x00, // "-3.257\0"
-        ];
+        let data = [HEADER, b"128.00\0", b"-3.257\0"].concat();
         let autotags = AutoTags::parse(&data).expect("Should parse autotags without gain");
         let epsilon = 0.001;
         assert!((autotags.bpm - 128.0).abs() < epsilon, "BPM should be 128.0");
@@ -149,12 +144,7 @@ mod test_autotags {
     #[test]
     fn parses_positive_auto_gain() {
         // Header + BPM "115.00\0" + Auto gain "2.500\0\0" (padded) + Gain "1.200\0"
-        let data: Vec<u8> = vec![
-            0x01, 0x01, // header
-            0x31, 0x31, 0x35, 0x2e, 0x30, 0x30, 0x00, // "115.00\0"
-            0x32, 0x2e, 0x35, 0x30, 0x30, 0x00, 0x00, // "2.500\0\0"
-            0x31, 0x2e, 0x32, 0x30, 0x30, 0x00, // "1.200\0"
-        ];
+        let data = [HEADER, b"115.00\0", b"2.500\0\0", b"1.200\0"].concat();
         let autotags = AutoTags::parse(&data).expect("Should parse positive auto gain");
         let epsilon = 0.001;
         assert!((autotags.bpm - 115.0).abs() < epsilon, "BPM should be 115.0");
@@ -164,12 +154,7 @@ mod test_autotags {
 
     #[test]
     fn formats_all_fields() {
-        let data: Vec<u8> = vec![
-            0x01, 0x01, // header
-            0x31, 0x32, 0x38, 0x2e, 0x30, 0x30, 0x00, // "128.00\0"
-            0x2d, 0x33, 0x2e, 0x32, 0x35, 0x37, 0x00, // "-3.257\0"
-            0x30, 0x2e, 0x30, 0x30, 0x30, 0x00, // "0.000\0"
-        ];
+        let data = [HEADER, b"128.00\0", b"-3.257\0", b"0.000\0"].concat();
         let autotags = AutoTags::parse(&data).expect("Should parse valid autotags data");
         let display_output = format!("{autotags}");
         assert!(
@@ -188,11 +173,7 @@ mod test_autotags {
 
     #[test]
     fn formats_default_gain_when_missing() {
-        let data: Vec<u8> = vec![
-            0x01, 0x01, // header
-            0x31, 0x32, 0x38, 0x2e, 0x30, 0x30, 0x00, // "128.00\0"
-            0x2d, 0x33, 0x2e, 0x32, 0x35, 0x37, 0x00, // "-3.257\0"
-        ];
+        let data = [HEADER, b"128.00\0", b"-3.257\0"].concat();
         let autotags = AutoTags::parse(&data).expect("Should parse autotags without gain");
         let display_output = format!("{autotags}");
         assert!(

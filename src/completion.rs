@@ -12,7 +12,7 @@ pub fn generate_shell_completion(
     command_name: &str,
 ) -> anyhow::Result<()> {
     if install {
-        let output_directory = get_shell_completion_dir(shell, command_name)?;
+        let output_directory = get_shell_completion_directory(shell, command_name)?;
         let path = clap_complete::generate_to(shell, &mut command, command_name, output_directory)?;
         if verbose {
             println!("Completion file generated to: {}", path.display());
@@ -27,8 +27,8 @@ pub fn generate_shell_completion(
 ///
 /// First checks if the user-specific directory exists,
 /// then checks for the global directory.
-/// If neither exist, creates and uses the user-specific dir.
-fn get_shell_completion_dir(shell: Shell, name: &str) -> anyhow::Result<PathBuf> {
+/// If neither exist, creates and uses the user-specific directory.
+fn get_shell_completion_directory(shell: Shell, name: &str) -> anyhow::Result<PathBuf> {
     let home = dirs::home_dir().expect("Failed to get home directory");
 
     // Special handling for oh-my-zsh.
@@ -36,13 +36,13 @@ fn get_shell_completion_dir(shell: Shell, name: &str) -> anyhow::Result<PathBuf>
     if shell == Shell::Zsh {
         let omz_plugins = home.join(".oh-my-zsh/custom/plugins");
         if omz_plugins.exists() {
-            let plugin_dir = omz_plugins.join(name);
-            std::fs::create_dir_all(&plugin_dir)?;
-            return Ok(plugin_dir);
+            let plugin_directory = omz_plugins.join(name);
+            std::fs::create_dir_all(&plugin_directory)?;
+            return Ok(plugin_directory);
         }
     }
 
-    let user_dir = match shell {
+    let user_directory = match shell {
         Shell::PowerShell => {
             if cfg!(windows) {
                 home.join(r"Documents\PowerShell\completions")
@@ -57,26 +57,26 @@ fn get_shell_completion_dir(shell: Shell, name: &str) -> anyhow::Result<PathBuf>
         _ => anyhow::bail!("Unsupported shell"),
     };
 
-    if user_dir.exists() {
-        return Ok(user_dir);
+    if user_directory.exists() {
+        return Ok(user_directory);
     }
 
-    let global_dir = match shell {
+    let global_directory = match shell {
         Shell::Bash => PathBuf::from("/etc/bash_completion.d"),
         Shell::Fish => PathBuf::from("/usr/share/fish/completions"),
         Shell::Zsh => PathBuf::from("/usr/share/zsh/site-functions"),
         // PowerShell and Elvish don't have standard global directories;
         // fall through to creating the user directory.
         _ => {
-            std::fs::create_dir_all(&user_dir)?;
-            return Ok(user_dir);
+            std::fs::create_dir_all(&user_directory)?;
+            return Ok(user_directory);
         }
     };
 
-    if global_dir.exists() {
-        return Ok(global_dir);
+    if global_directory.exists() {
+        return Ok(global_directory);
     }
 
-    std::fs::create_dir_all(&user_dir)?;
-    Ok(user_dir)
+    std::fs::create_dir_all(&user_directory)?;
+    Ok(user_directory)
 }

@@ -42,9 +42,9 @@ impl Overview {
         let mut offset = 2;
 
         while offset + 16 <= data.len() {
-            let mut freq_block = [0u8; 16];
-            freq_block.copy_from_slice(&data[offset..offset + 16]);
-            frequency_info.push(freq_block);
+            let mut frequency_block = [0u8; 16];
+            frequency_block.copy_from_slice(&data[offset..offset + 16]);
+            frequency_info.push(frequency_block);
             offset += 16;
         }
 
@@ -53,14 +53,14 @@ impl Overview {
 
     /// Convert waveform overview to a minimized text representation for terminal display.
     fn draw_waveform(&self) -> Result<String> {
-        let (terminal_width, _) = terminal::size().map_err(|e| anyhow!("Failed to get terminal size: {e}"))?;
+        let (terminal_width, _) = terminal::size().map_err(|error| anyhow!("Failed to get terminal size: {error}"))?;
         let levels = self.waveform_levels(terminal_width);
 
         let mut waveform = String::new();
         // Iterate in reverse so first values of the vertical block go to the bottom of the waveform
-        for y in (0..WAVEFORM_HEIGHT).rev() {
+        for row in (0..WAVEFORM_HEIGHT).rev() {
             for column in &levels {
-                let (symbol, color) = match column[y] {
+                let (symbol, color) = match column[row] {
                     value if value <= 0.06 => ('░', "blue"),
                     value if value <= 0.20 => ('░', "cyan"),
                     value if value <= 0.42 => ('▒', "green"),
@@ -84,8 +84,8 @@ impl Overview {
             .blocks
             .iter()
             .map(|block| {
-                std::array::from_fn(|y| {
-                    block[bands_per_row * y..bands_per_row * (y + 1)]
+                std::array::from_fn(|row| {
+                    block[bands_per_row * row..bands_per_row * (row + 1)]
                         .iter()
                         .map(|&value| u16::from(value))
                         .sum::<u16>()
@@ -102,26 +102,28 @@ impl Overview {
         let resampled: Vec<[u16; WAVEFORM_HEIGHT]> = averaged
             .chunks_exact(columns_per_output)
             .map(|group| {
-                std::array::from_fn(|y| group.iter().map(|column| column[y]).sum::<u16>() / columns_per_output as u16)
+                std::array::from_fn(|row| {
+                    group.iter().map(|column| column[row]).sum::<u16>() / columns_per_output as u16
+                })
             })
             .collect();
 
         let max_value = resampled.iter().flatten().copied().max().unwrap_or(0).max(1);
         resampled
             .iter()
-            .map(|column| std::array::from_fn(|y| f32::from(column[y]) / f32::from(max_value)))
+            .map(|column| std::array::from_fn(|row| f32::from(column[row]) / f32::from(max_value)))
             .collect()
     }
 }
 
 impl Display for Overview {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         match self.draw_waveform() {
             Ok(view) => {
-                write!(f, "{view}")
+                write!(formatter, "{view}")
             }
             Err(error) => {
-                write!(f, "Error: {error}")
+                write!(formatter, "Error: {error}")
             }
         }
     }

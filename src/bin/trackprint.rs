@@ -28,9 +28,10 @@ enum TrackprintCommand {
     },
 }
 
+/// Command line arguments for trackprint.
 #[derive(Parser)]
 #[command(author, version, about = "Print tag data", name = "trackprint")]
-pub struct Args {
+struct Args {
     #[command(subcommand)]
     command: Option<TrackprintCommand>,
 
@@ -92,6 +93,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
+/// Resolve input paths and collect all supported audio tracks, sorted by name.
 fn collect_input_tracks(paths: &[PathBuf]) -> Result<Vec<Track>> {
     let resolved_paths = if paths.is_empty() {
         vec![utils::resolve_input_path(None)?]

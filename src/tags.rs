@@ -79,12 +79,6 @@ impl FileTags {
         }
     }
 
-    /// Create an empty ID3-backed tag container.
-    #[must_use]
-    pub fn empty_id3() -> Self {
-        Self::Id3(Id3Tag::new())
-    }
-
     /// Read tags without printing anything or repairing malformed frames.
     ///
     /// Returns `None` on any error so the caller can fall back to [`FileTags::read`] for reporting and repair.
@@ -100,6 +94,11 @@ impl FileTags {
                 Err(_) => None,
             },
         }
+    }
+
+    /// Create an empty ID3-backed tag container.
+    fn empty_id3() -> Self {
+        Self::Id3(Id3Tag::new())
     }
 
     /// Return the artist field if present.
@@ -502,9 +501,9 @@ fn repair_malformed_frame(track: &Track, error: Error, verbose: bool) -> Option<
                 Ok(tag) => {
                     let summary = fixed
                         .iter()
-                        .map(|(id, n)| {
-                            let label = if *n == 1 { "frame" } else { "frames" };
-                            format!("{n} {id} {label}")
+                        .map(|(frame_id, count)| {
+                            let label = if *count == 1 { "frame" } else { "frames" };
+                            format!("{count} {frame_id} {label}")
                         })
                         .collect::<Vec<_>>()
                         .join(", ");
@@ -514,19 +513,19 @@ fn repair_malformed_frame(track: &Track, error: Error, verbose: bool) -> Option<
                     }
                     Some(FileTags::Id3(tag))
                 }
-                Err(reread_err) => {
+                Err(reread_error) => {
                     eprintln!(
                         "{}",
-                        format!("  Re-read after fix still failed for: {track}\n  {reread_err}").red()
+                        format!("  Re-read after fix still failed for: {track}\n  {reread_error}").red()
                     );
-                    reread_err.partial_tag.map(FileTags::Id3)
+                    reread_error.partial_tag.map(FileTags::Id3)
                 }
             }
         }
-        Err(err) => {
+        Err(fix_error) => {
             eprintln!(
                 "{}",
-                format!("  Failed to fix {frame_id} frame in: {track}\n  {err}").red()
+                format!("  Failed to fix {frame_id} frame in: {track}\n  {fix_error}").red()
             );
             error.partial_tag.map(FileTags::Id3)
         }
@@ -553,33 +552,31 @@ fn fix_malformed_frames_raw(path: &Path) -> anyhow::Result<Vec<(String, usize)>>
     let id3 = &data[id3_offset..];
     anyhow::ensure!(id3.len() >= 10, "Not enough data for an ID3v2 header");
 
-    let version = id3[3]; // 2, 3, or 4
+    // Major version number: 2, 3, or 4
+    let version = id3[3];
     let flags = id3[5];
 
     let tag_size = decode_synchsafe(&id3[6..10]) as usize;
-    let tag_end_abs = id3_offset + 10 + tag_size;
+    let tag_end = id3_offset + 10 + tag_size;
     anyhow::ensure!(
-        data.len() >= tag_end_abs,
+        data.len() >= tag_end,
         "File truncated: tag declares {} bytes but file is {} bytes",
-        tag_end_abs,
+        tag_end,
         data.len()
     );
 
     // Frame header geometry differs between ID3 versions.
-    let (frame_id_len, frame_header_len): (usize, usize) = match version {
+    let (frame_id_length, frame_header_length): (usize, usize) = match version {
         2 => (3, 6),
         3 | 4 => (4, 10),
-        v => anyhow::bail!("Unsupported ID3v2.{v} version"),
+        unsupported => anyhow::bail!("Unsupported ID3v2.{unsupported} version"),
     };
 
     // Skip extended header if the flag is set.
     let mut offset: usize = id3_offset + 10;
     if flags & 0x40 != 0 {
-        anyhow::ensure!(
-            offset + 4 <= tag_end_abs,
-            "Extended header flag set but not enough data"
-        );
-        let ext_size = if version == 4 {
+        anyhow::ensure!(offset + 4 <= tag_end, "Extended header flag set but not enough data");
+        let extended_header_size = if version == 4 {
             // v2.4: synchsafe, size includes itself.
             decode_synchsafe(&data[offset..offset + 4]) as usize
         } else {
@@ -591,22 +588,22 @@ fn fix_malformed_frames_raw(path: &Path) -> anyhow::Result<Vec<(String, usize)>>
             ) as usize
                 + 4
         };
-        offset += ext_size;
+        offset += extended_header_size;
     }
 
     let fixable: Vec<&[u8]> = if version == 2 {
-        FIXABLE_FRAMES_V2.iter().map(|s| s.as_bytes()).collect()
+        FIXABLE_FRAMES_V2.iter().map(|name| name.as_bytes()).collect()
     } else {
-        FIXABLE_FRAMES.iter().map(|s| s.as_bytes()).collect()
+        FIXABLE_FRAMES.iter().map(|name| name.as_bytes()).collect()
     };
     let mut fixed: HashMap<String, usize> = HashMap::new();
 
     // Walk frames.
-    while offset + frame_header_len <= tag_end_abs {
-        let frame_id = &data[offset..offset + frame_id_len];
+    while offset + frame_header_length <= tag_end {
+        let frame_id = &data[offset..offset + frame_id_length];
 
         // All-zero bytes mean we've reached padding.
-        if frame_id.iter().all(|&b| b == 0) {
+        if frame_id.iter().all(|&byte| byte == 0) {
             break;
         }
 
@@ -622,10 +619,10 @@ fn fix_malformed_frames_raw(path: &Path) -> anyhow::Result<Vec<(String, usize)>>
             u32::from_be_bytes(data[offset + 4..offset + 8].try_into().context("Frame size bytes")?) as usize
         };
 
-        let content_start = offset + frame_header_len;
+        let content_start = offset + frame_header_length;
         let content_end = content_start + frame_size;
 
-        if content_end > tag_end_abs {
+        if content_end > tag_end {
             // Corrupted frame — stop scanning but don't fail; the id3 crate
             // will deal with whatever comes after our fix.
             break;
@@ -636,12 +633,12 @@ fn fix_malformed_frames_raw(path: &Path) -> anyhow::Result<Vec<(String, usize)>>
 
             // Only fix frames that have no null byte at all (the actual bug).
             if !content.contains(&0x00) {
-                let id_str = String::from_utf8_lossy(frame_id).to_string();
+                let frame_name = String::from_utf8_lossy(frame_id).to_string();
                 // Replace the first byte with 0x00.  This turns the spurious
                 // encoding byte into a null terminator, giving an empty
                 // owner_identifier and keeping the rest as the data payload.
                 data[content_start] = 0x00;
-                *fixed.entry(id_str).or_insert(0) += 1;
+                *fixed.entry(frame_name).or_insert(0) += 1;
             }
         }
 
@@ -653,7 +650,7 @@ fn fix_malformed_frames_raw(path: &Path) -> anyhow::Result<Vec<(String, usize)>>
     std::fs::write(path, &data).with_context(|| format!("Failed to write patched file: {}", path.display()))?;
 
     let mut result: Vec<(String, usize)> = fixed.into_iter().collect();
-    result.sort_by(|a, b| a.0.cmp(&b.0));
+    result.sort_by(|(first_id, _), (second_id, _)| first_id.cmp(second_id));
     Ok(result)
 }
 
@@ -671,28 +668,37 @@ fn find_id3_header_offset(data: &[u8]) -> Option<usize> {
     }
 
     // AIFF (FORM, big-endian) or WAV (RIFF, little-endian) container.
-    let (root_tag, big_endian) = if data.len() >= 12 && &data[0..4] == b"FORM" {
-        (b"FORM", true)
+    let big_endian = if data.len() >= 12 && &data[0..4] == b"FORM" {
+        true
     } else if data.len() >= 12 && &data[0..4] == b"RIFF" {
-        (b"RIFF", false)
+        false
     } else {
         return None;
     };
-    let _ = root_tag; // validated above
 
     // Root chunk size (bytes 4..8) — we mostly care about scanning to EOF.
     // Skip past root header (tag 4 + size 4 + format 4 = 12 bytes).
-    let mut pos: usize = 12;
+    let mut position: usize = 12;
 
-    while pos + 8 <= data.len() {
-        let chunk_tag = &data[pos..pos + 4];
+    while position + 8 <= data.len() {
+        let chunk_tag = &data[position..position + 4];
         let chunk_size = if big_endian {
-            u32::from_be_bytes([data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7]]) as usize
+            u32::from_be_bytes([
+                data[position + 4],
+                data[position + 5],
+                data[position + 6],
+                data[position + 7],
+            ]) as usize
         } else {
-            u32::from_le_bytes([data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7]]) as usize
+            u32::from_le_bytes([
+                data[position + 4],
+                data[position + 5],
+                data[position + 6],
+                data[position + 7],
+            ]) as usize
         };
 
-        let chunk_data_start = pos + 8;
+        let chunk_data_start = position + 8;
 
         if chunk_tag == b"ID3 " {
             // The chunk data should start with an ID3v2 header.
@@ -703,7 +709,7 @@ fn find_id3_header_offset(data: &[u8]) -> Option<usize> {
 
         // Advance to the next chunk (chunks are word-aligned in AIFF/WAV).
         let padded_size = chunk_size + (chunk_size % 2);
-        pos = chunk_data_start + padded_size;
+        position = chunk_data_start + padded_size;
     }
 
     None
@@ -769,7 +775,8 @@ mod test_tag_internals {
 
     #[test]
     fn data_too_short_returns_none() {
-        let data = b"ID3abcde"; // only 8 bytes, need at least 10
+        // Only 8 bytes, need at least 10
+        let data = b"ID3abcde";
         let result = find_id3_header_offset(data);
         assert_eq!(result, None);
     }
@@ -793,7 +800,8 @@ mod test_tag_internals {
         data.extend_from_slice(&[0u8; 8]);
         // ID3 chunk
         data.extend_from_slice(b"ID3 ");
-        let id3_payload_offset = data.len() + 4; // after the size field
+        // ID3 payload starts after the size field
+        let id3_payload_offset = data.len() + 4;
         data.extend_from_slice(&20u32.to_be_bytes());
         // ID3 header marker inside the chunk
         data.extend_from_slice(b"ID3");

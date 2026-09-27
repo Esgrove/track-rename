@@ -74,14 +74,14 @@ fn bench_read_tags(criterion: &mut Criterion) {
 
 /// Benchmark writing tags, including preserving binary Serato frames.
 fn bench_write_tags(criterion: &mut Criterion) {
-    let temp_dir = std::env::temp_dir().join("track-rename-bench-write");
-    std::fs::create_dir_all(&temp_dir).expect("Failed to create temp dir");
+    let temp_directory = std::env::temp_dir().join("track-rename-bench-write");
+    std::fs::create_dir_all(&temp_directory).expect("Failed to create temp directory");
 
     let mut group = criterion.benchmark_group("write_tags");
     group.sample_size(20);
     for extension in ["mp3", "aif", "flac"] {
         let source = fixtures_root().join(format!("extended_tags/Extended Tags - Song - 16-44.{extension}"));
-        let target = temp_dir.join(format!("Extended Tags - Song - 16-44.{extension}"));
+        let target = temp_directory.join(format!("Extended Tags - Song - 16-44.{extension}"));
         group.bench_function(extension, |bencher| {
             bencher.iter_batched(
                 || {

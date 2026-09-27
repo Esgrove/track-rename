@@ -409,9 +409,9 @@ pub fn format_tags_for_artist_and_title(artist: &str, title: &str) -> (String, S
     let mut formatted_title = title.to_string();
 
     // Remove an extra file extension from the end
-    for ext in &FILE_EXTENSIONS {
-        strip_suffix_ignore_ascii_case(&mut formatted_artist, ext);
-        strip_suffix_ignore_ascii_case(&mut formatted_title, ext);
+    for extension in &FILE_EXTENSIONS {
+        strip_suffix_ignore_ascii_case(&mut formatted_artist, extension);
+        strip_suffix_ignore_ascii_case(&mut formatted_title, extension);
     }
 
     for (pattern, replacement) in &COMMON_SUBSTITUTES {
@@ -570,6 +570,7 @@ fn balance_parenthesis(title: &mut String) {
     }
 }
 
+/// Trim the text and remove a trailing closing parenthesis that has no opening pair.
 fn remove_unmatched_closing_parenthesis(input: &mut String) {
     *input = input.trim().to_string();
     if input.ends_with(')') && !input.contains('(') {
@@ -623,6 +624,10 @@ fn move_article_to_front(name: &mut String) {
     }
 }
 
+/// Move a "feat." section from the title to the end of the artist.
+///
+/// Featuring artists already present in the artist string are removed
+/// before the combined "feat." section is appended.
 fn move_feat_from_title_to_artist(artist: &mut String, title: &mut String) {
     if let Some(feat_match) = RE_FEAT.find(title.as_str()) {
         let feat = feat_match.as_str().trim_end_matches(['(', ')', '-']).to_string();
@@ -659,6 +664,7 @@ fn move_feat_from_title_to_artist(artist: &mut String, title: &mut String) {
     }
 }
 
+/// Insert closing parentheses for unclosed opening parentheses.
 fn add_missing_closing_parentheses(text: &mut String) {
     let mut open_count: usize = 0;
     let mut result = String::new();
@@ -688,6 +694,7 @@ fn add_missing_closing_parentheses(text: &mut String) {
     *text = result;
 }
 
+/// Insert opening parentheses for unopened closing parentheses.
 fn add_missing_opening_parentheses(text: &mut String) {
     let mut open_count: usize = 0;
     let mut result = String::new();
@@ -717,6 +724,9 @@ fn add_missing_opening_parentheses(text: &mut String) {
     *text = result.chars().rev().collect();
 }
 
+/// Replace the first " - " separator with parentheses around the mix name.
+///
+/// For example, "Title - Club Edit" becomes "Title (Club Edit)".
 fn use_parenthesis_for_mix(title: &mut String) {
     if title.contains(" - ")
         && let Some(mut index) = title.find(" - ")
@@ -727,7 +737,7 @@ fn use_parenthesis_for_mix(title: &mut String) {
         index += 2;
 
         // Check for " (" after the replaced part
-        if let Some(insert_index) = title[index..].find(" (").map(|i| i + index) {
+        if let Some(insert_index) = title[index..].find(" (").map(|position| position + index) {
             title.insert(insert_index, ')');
         } else {
             // Add a closing parenthesis at the end
@@ -736,6 +746,9 @@ fn use_parenthesis_for_mix(title: &mut String) {
     }
 }
 
+/// Flatten nested parentheses into consecutive groups.
+///
+/// For example, "(Remix (Edit))" becomes "(Remix) (Edit)".
 fn fix_nested_parentheses(text: &mut String) {
     // Initialize a stack to keep track of parentheses
     let mut stack = Vec::new();
@@ -757,7 +770,7 @@ fn fix_nested_parentheses(text: &mut String) {
                 // If the stack is not empty, pop an element from the stack
                 if stack.pop().is_some() {
                     // Add the closing parenthesis only if the stack is empty or the top element is not '('
-                    if stack.is_empty() || stack.last().is_none_or(|&c| c != '(') {
+                    if stack.is_empty() || stack.last().is_none_or(|&top| top != '(') {
                         result.push(char);
                     }
                 }
@@ -781,6 +794,7 @@ fn fix_nested_parentheses(text: &mut String) {
         .replace("() ", "");
 }
 
+/// Remove the parentheses around a "(feat. ...)" section in the artist.
 fn extract_feat_from_parentheses(artist: &mut String) {
     let start_pattern = "(feat. ";
     if let Some(start) = artist.find(start_pattern)
@@ -791,6 +805,7 @@ fn extract_feat_from_parentheses(artist: &mut String) {
     }
 }
 
+/// Remove a trailing BPM and key annotation such as " (128 Am)" from the title.
 fn remove_bpm_in_parentheses_from_end(text: &mut String) {
     // Skip some valid titles
     let suffixes = [" (4u)", "33rpm)", "45rpm)", " mix)", " dub)", " eq)", " rip)"];
@@ -805,8 +820,8 @@ fn remove_bpm_in_parentheses_from_end(text: &mut String) {
         &RE_BPM_WITH_TEXT_PARENTHESES,
         &RE_BPM_WITH_EXTRA_TEXT,
     ];
-    for re in regexes {
-        if let Cow::Owned(result) = re.replace_all(text, "") {
+    for regex in regexes {
+        if let Cow::Owned(result) = regex.replace_all(text, "") {
             let trimmed = result.trim();
             if !trimmed.is_empty() {
                 *text = trimmed.to_string();
@@ -820,6 +835,7 @@ fn remove_bpm_in_parentheses_from_end(text: &mut String) {
     }
 }
 
+/// Wrap loose text that follows a parenthesis group in its own parentheses.
 fn wrap_text_after_parentheses(text: &mut String) {
     let (start, rest) = if text.starts_with('(') {
         // If the text starts with a parenthesis,
@@ -834,7 +850,7 @@ fn wrap_text_after_parentheses(text: &mut String) {
     };
 
     let mut result = RE_TEXT_AFTER_PARENTHESES
-        .replace_all(rest, |caps: &Captures| format!(") ({}) (", &caps[1]))
+        .replace_all(rest, |captures: &Captures| format!(") ({}) (", &captures[1]))
         .to_string();
 
     if let Some(index) = result.rfind(')')
@@ -847,9 +863,12 @@ fn wrap_text_after_parentheses(text: &mut String) {
     *text = format!("{start}{result}");
 }
 
+/// Split a parenthesis group containing " - " into two separate groups.
 fn replace_dash_in_parentheses(text: &mut String) {
     *text = RE_DASH_IN_PARENTHESES
-        .replace_all(text, |caps: &Captures| format!("({}) ({})", &caps[1], &caps[2]))
+        .replace_all(text, |captures: &Captures| {
+            format!("({}) ({})", &captures[1], &captures[2])
+        })
         .to_string();
 }
 
@@ -951,14 +970,9 @@ mod test_formatting_helpers {
             assert_eq!(input_string, expected);
         }
     }
-}
-
-#[cfg(test)]
-mod bpm_tests {
-    use super::RE_BPM_WITH_KEY;
 
     #[test]
-    fn valid_bpm_with_key() {
+    fn test_valid_bpm_with_key() {
         let valid_cases = [" (50 1A)", "Song (99 12b)", "Something (120 5A)", "Test (100 11a)"];
         for case in valid_cases {
             assert!(RE_BPM_WITH_KEY.is_match(case), "Should match: {case}");
@@ -966,16 +980,24 @@ mod bpm_tests {
     }
 
     #[test]
-    fn invalid_bpm_with_key() {
+    fn test_invalid_bpm_with_key() {
         let invalid_cases = [
-            " (1 A)",      // below 50
-            " (200 A)",    // above 179
-            " (100 5 A)",  // extra number
-            " (abc G)",    // not a number
-            " (60)",       // missing letters
-            " (60  )",     // only number and space
-            " (100 ABCD)", // too many letters
-            " (100)",      // no key
+            // Below 50
+            " (1 A)",
+            // Above 179
+            " (200 A)",
+            // Extra number
+            " (100 5 A)",
+            // Not a number
+            " (abc G)",
+            // Missing letters
+            " (60)",
+            // Only number and space
+            " (60  )",
+            // Too many letters
+            " (100 ABCD)",
+            // No key
+            " (100)",
         ];
         for case in invalid_cases {
             assert!(!RE_BPM_WITH_KEY.is_match(case), "Should not match: {case}");

@@ -78,34 +78,14 @@ impl Track {
         Self::new_with_extension(path, extension, format)
     }
 
-    /// New Track with already extracted extension and file format.
-    /// Note that extension string is necessary in addition to format
-    /// since the file name extension might differ from the one used by `FileFormat`,
-    /// in which case it would not point to the original filename.
-    pub fn new_with_extension(path: &Path, extension: String, format: FileFormat) -> anyhow::Result<Self> {
-        let name = Self::get_nfc_filename_from_path(path)?;
-        let root = path.parent().context("Failed to get file root")?.to_owned();
-        let directory = utils::get_filename_from_path(&root).context("Failed to get parent directory name")?;
-
-        // Rebuild the full path with desired Unicode handling
-        let path = dunce::simplified(root.join(format!("{name}.{extension}")).as_path()).to_path_buf();
-        let metadata = Self::read_metadata(&path)?;
-        Ok(Self {
-            name,
-            extension,
-            directory,
-            format,
-            root,
-            path,
-            metadata,
-            ..Default::default()
-        })
-    }
-
     /// Try to construct a track from a filesystem path.
     #[must_use]
     pub fn try_from_path(path: &Path) -> Option<Self> {
-        let extension = path.extension().and_then(|e| e.to_str()).unwrap_or_default().trim();
+        let extension = path
+            .extension()
+            .and_then(|extension| extension.to_str())
+            .unwrap_or_default()
+            .trim();
         if extension.is_empty() {
             return None;
         }
@@ -135,6 +115,30 @@ impl Track {
             }
         }
         None
+    }
+
+    /// New Track with already extracted extension and file format.
+    /// Note that extension string is necessary in addition to format
+    /// since the file name extension might differ from the one used by `FileFormat`,
+    /// in which case it would not point to the original filename.
+    fn new_with_extension(path: &Path, extension: String, format: FileFormat) -> anyhow::Result<Self> {
+        let name = Self::get_nfc_filename_from_path(path)?;
+        let root = path.parent().context("Failed to get file root")?.to_owned();
+        let directory = utils::get_filename_from_path(&root).context("Failed to get parent directory name")?;
+
+        // Rebuild the full path with desired Unicode handling
+        let path = dunce::simplified(root.join(format!("{name}.{extension}")).as_path()).to_path_buf();
+        let metadata = Self::read_metadata(&path)?;
+        Ok(Self {
+            name,
+            extension,
+            directory,
+            format,
+            root,
+            path,
+            metadata,
+            ..Default::default()
+        })
     }
 
     /// Get the original file name including the file extension.
@@ -280,14 +284,15 @@ impl Track {
             .try_exists()
             .context(format!("File already exists: {output_path_string}").red())?;
 
+        // Never overwrite an existing file and keep all metadata
         let output = Command::new("ffmpeg")
             .args([
                 "-v",
                 "error",
-                "-n", // never overwrite existing file
+                "-n",
                 "-i",
                 path_to_string(&self.path).as_str(),
-                "-map_metadata", // keep all metadata
+                "-map_metadata",
                 "0",
                 "-write_id3v2",
                 "1",
@@ -422,10 +427,10 @@ impl PartialEq<Track> for &str {
 impl fmt::Display for Track {
     // Try to print full filepath relative to current working directory,
     // otherwise fallback to the original path.
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         let relative_path = utils::get_relative_path_from_current_working_directory(&self.root);
         write!(
-            f,
+            formatter,
             "{}",
             dunce::simplified(&relative_path).join(self.filename()).display()
         )
@@ -498,8 +503,8 @@ mod test_track_operations {
 
     #[test]
     fn test_track_display() {
-        let dir = env::current_dir().expect("Failed to get current dir");
-        let track = Track::new(dir.join("artist - title.mp3").as_path()).expect("Failed to create track");
+        let directory = env::current_dir().expect("Failed to get current directory");
+        let track = Track::new(directory.join("artist - title.mp3").as_path()).expect("Failed to create track");
         let displayed = format!("{track}");
         assert!(displayed.contains("artist - title.mp3"));
 
@@ -509,8 +514,8 @@ mod test_track_operations {
 
     #[test]
     fn test_track_display_with_special_characters() {
-        let dir = env::current_dir().expect("Failed to get current dir");
-        let track = Track::new(dir.join("Ääkköset - Test.aif").as_path()).expect("Failed to create track");
+        let directory = env::current_dir().expect("Failed to get current directory");
+        let track = Track::new(directory.join("Ääkköset - Test.aif").as_path()).expect("Failed to create track");
         assert_eq!(track.extension, "aif");
         assert_eq!(track.format, FileFormat::Aif);
 
@@ -540,8 +545,10 @@ mod test_track_operations {
     fn test_mismatch() {
         let track =
             Track::new(PathBuf::from("/users/test/Test - song3.mp3").as_path()).expect("Failed to create track");
-        assert_ne!(track, "Test - song3.wav"); // Different extension
-        assert_ne!(track, "Test - song4.mp3"); // Different name
+        // Different extension
+        assert_ne!(track, "Test - song3.wav");
+        // Different name
+        assert_ne!(track, "Test - song4.mp3");
     }
 
     #[test]
@@ -697,7 +704,7 @@ mod test_track_operations {
         assert!(
             Path::new(&filename_with_extension)
                 .extension()
-                .is_some_and(|ext| ext.eq_ignore_ascii_case("mp3")),
+                .is_some_and(|extension| extension.eq_ignore_ascii_case("mp3")),
             "Expected formatted_filename_with_extension to end with '.mp3', got '{filename_with_extension}'"
         );
     }
@@ -722,7 +729,7 @@ mod test_track_operations {
 }
 
 #[cfg(test)]
-mod test_track_ordering {
+mod test_track_ordering_and_show {
     use super::*;
     use std::cmp::Ordering;
 
@@ -762,11 +769,6 @@ mod test_track_ordering {
             "Expected partial_cmp to return Some(Greater) for Beta vs Alpha"
         );
     }
-}
-
-#[cfg(test)]
-mod test_track_show {
-    use super::*;
 
     #[test]
     fn show_prints_once_and_sets_printed_flag() {
