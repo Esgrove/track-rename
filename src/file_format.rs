@@ -48,18 +48,24 @@ mod test_file_format_parsing {
 
     #[test]
     fn test_from_str_valid_formats() {
-        assert_eq!(FileFormat::from_str("mp3").unwrap(), FileFormat::Mp3);
-        assert_eq!(FileFormat::from_str("Mp3").unwrap(), FileFormat::Mp3);
-        assert_eq!(FileFormat::from_str("MP3").unwrap(), FileFormat::Mp3);
-        assert_eq!(FileFormat::from_str("aif").unwrap(), FileFormat::Aif);
-        assert_eq!(FileFormat::from_str("aiff").unwrap(), FileFormat::Aif);
-        assert_eq!(FileFormat::from_str("Aif").unwrap(), FileFormat::Aif);
-        assert_eq!(FileFormat::from_str("Aiff").unwrap(), FileFormat::Aif);
-        assert_eq!(FileFormat::from_str("AIF").unwrap(), FileFormat::Aif);
-        assert_eq!(FileFormat::from_str("AIFF").unwrap(), FileFormat::Aif);
-        assert_eq!(FileFormat::from_str("flac").unwrap(), FileFormat::Flac);
-        assert_eq!(FileFormat::from_str("Flac").unwrap(), FileFormat::Flac);
-        assert_eq!(FileFormat::from_str("FLAC").unwrap(), FileFormat::Flac);
+        let cases = [
+            ("mp3", FileFormat::Mp3),
+            ("Mp3", FileFormat::Mp3),
+            ("MP3", FileFormat::Mp3),
+            ("aif", FileFormat::Aif),
+            ("aiff", FileFormat::Aif),
+            ("Aif", FileFormat::Aif),
+            ("Aiff", FileFormat::Aif),
+            ("AIF", FileFormat::Aif),
+            ("AIFF", FileFormat::Aif),
+            ("flac", FileFormat::Flac),
+            ("Flac", FileFormat::Flac),
+            ("FLAC", FileFormat::Flac),
+        ];
+        for (extension, expected) in cases {
+            let format = FileFormat::from_str(extension).expect("Extension should parse as a file format");
+            assert_eq!(format, expected, "Unexpected format for {extension}");
+        }
     }
 
     #[test]

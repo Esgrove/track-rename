@@ -384,7 +384,7 @@ mod test_encoding {
     #[test]
     fn encode_utf16be_unicode() {
         let encoded = encode_utf16be("café ☕");
-        let decoded = decode_utf16be(&encoded).unwrap();
+        let decoded = decode_utf16be(&encoded).expect("Should decode UTF-16BE");
         assert_eq!(decoded, "café ☕");
     }
 
@@ -397,20 +397,20 @@ mod test_encoding {
     #[test]
     fn decode_utf16be_ascii() {
         let encoded = encode_utf16be("hello");
-        let decoded = decode_utf16be(&encoded).unwrap();
+        let decoded = decode_utf16be(&encoded).expect("Should decode UTF-16BE");
         assert_eq!(decoded, "hello");
     }
 
     #[test]
     fn decode_utf16be_unicode() {
         let encoded = encode_utf16be("café ☕");
-        let decoded = decode_utf16be(&encoded).unwrap();
+        let decoded = decode_utf16be(&encoded).expect("Should decode UTF-16BE");
         assert_eq!(decoded, "café ☕");
     }
 
     #[test]
     fn decode_utf16be_empty() {
-        let decoded = decode_utf16be(&[]).unwrap();
+        let decoded = decode_utf16be(&[]).expect("Should decode empty data");
         assert_eq!(decoded, "");
     }
 
@@ -429,7 +429,7 @@ mod test_crate_data {
     fn read_tag_basic() {
         let data = make_tag(*b"vrsn", &[0x00, 0x41, 0x00, 0x42]);
         let mut offset = 0;
-        let (tag, value) = read_tag(&data, &mut offset).unwrap();
+        let (tag, value) = read_tag(&data, &mut offset).expect("Should read tag");
         assert_eq!(tag, "vrsn");
         assert_eq!(value, &[0x00, 0x41, 0x00, 0x42]);
         assert_eq!(offset, data.len());
@@ -458,7 +458,7 @@ mod test_crate_data {
         let value = encode_utf16be("hello");
         let tag_bytes = make_tag(*b"ptrk", &value);
         let mut offset = 0;
-        let (tag, parsed_value) = read_tag(&tag_bytes, &mut offset).unwrap();
+        let (tag, parsed_value) = read_tag(&tag_bytes, &mut offset).expect("Should read tag");
         assert_eq!(tag, "ptrk");
         assert_eq!(parsed_value, value);
     }
@@ -526,9 +526,8 @@ mod test_crate_data {
         let encoded_path = encode_utf16be(path_str);
         let ptrk_block = make_tag(*b"ptrk", &encoded_path);
 
-        let result = parse_track_entry(&ptrk_block).unwrap();
-        assert!(result.is_some());
-        let track_path = result.unwrap();
+        let result = parse_track_entry(&ptrk_block).expect("Should parse track entry");
+        let track_path = result.expect("Track entry should contain a path");
 
         if cfg!(target_os = "macos") {
             assert_eq!(track_path, PathBuf::from("/Users/esgrove/Music/test.mp3"));
@@ -551,14 +550,14 @@ mod test_crate_data {
 
         // Parse directly from bytes (replicating from_file logic without filesystem).
         let mut offset = 0;
-        let (tag, value) = read_tag(&data, &mut offset).unwrap();
+        let (tag, value) = read_tag(&data, &mut offset).expect("Should read version tag");
         assert_eq!(tag, "vrsn");
-        let version = decode_utf16be(&value).unwrap();
+        let version = decode_utf16be(&value).expect("Should decode version");
         assert_eq!(version, "1.0/Serato ScratchLive Crate");
 
-        let (tag, value) = read_tag(&data, &mut offset).unwrap();
+        let (tag, value) = read_tag(&data, &mut offset).expect("Should read track tag");
         assert_eq!(tag, "otrk");
-        let track = parse_track_entry(&value).unwrap();
+        let track = parse_track_entry(&value).expect("Should parse track entry");
         assert!(track.is_some());
     }
 
@@ -583,9 +582,9 @@ mod test_crate_data {
         // Write to a temp file and parse.
         let dir = std::env::temp_dir();
         let crate_path = dir.join("TEST%%SUB.crate");
-        fs::write(&crate_path, &data).unwrap();
+        fs::write(&crate_path, &data).expect("Should write temp crate");
 
-        let parsed = SeratoCrate::from_file(&crate_path).unwrap();
+        let parsed = SeratoCrate::from_file(&crate_path).expect("Should parse temp crate");
         assert_eq!(parsed.name, "TEST > SUB");
         assert_eq!(parsed.version, "1.0/Serato ScratchLive Crate");
         assert_eq!(parsed.columns.len(), 1);
