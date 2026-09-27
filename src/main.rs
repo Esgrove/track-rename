@@ -1,3 +1,5 @@
+//! Command-line entry point for formatting and renaming audio tracks.
+
 mod config;
 mod statistics;
 mod track_renamer;

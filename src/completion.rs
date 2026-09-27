@@ -4,6 +4,11 @@ use clap::Command as ClapCommand;
 use clap_complete::Shell;
 
 /// Generate a shell completion script for the given shell.
+///
+/// # Errors
+///
+/// Returns an error when installing the script fails to locate or create a
+/// completion directory, or when the generated file cannot be written.
 pub fn generate_shell_completion(
     shell: Shell,
     mut command: ClapCommand,

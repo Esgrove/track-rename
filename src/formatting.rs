@@ -541,9 +541,8 @@ pub(crate) fn replace_literal(text: &mut String, pattern: &str, replacement: &st
 
 /// Return true if the text ends with the given ASCII suffix, ignoring ASCII case.
 fn ends_with_ignore_ascii_case(text: &str, suffix: &str) -> bool {
-    text.len() >= suffix.len()
-        && text.is_char_boundary(text.len() - suffix.len())
-        && text[text.len() - suffix.len()..].eq_ignore_ascii_case(suffix)
+    text.get(text.len().saturating_sub(suffix.len())..)
+        .is_some_and(|ending| text.len() >= suffix.len() && ending.eq_ignore_ascii_case(suffix))
 }
 
 /// Remove the given ASCII suffix from the text, ignoring ASCII case.
@@ -737,7 +736,11 @@ fn use_parenthesis_for_mix(title: &mut String) {
         index += 2;
 
         // Check for " (" after the replaced part
-        if let Some(insert_index) = title[index..].find(" (").map(|position| position + index) {
+        if let Some(insert_index) = title
+            .get(index..)
+            .and_then(|tail| tail.find(" ("))
+            .map(|position| position + index)
+        {
             title.insert(insert_index, ')');
         } else {
             // Add a closing parenthesis at the end
@@ -798,10 +801,13 @@ fn fix_nested_parentheses(text: &mut String) {
 fn extract_feat_from_parentheses(artist: &mut String) {
     let start_pattern = "(feat. ";
     if let Some(start) = artist.find(start_pattern)
-        && let Some(end) = artist[start..].find(')')
+        && let Some(feature_part) = artist
+            .get(start..)
+            .and_then(|tail| tail.split_once(')').map(|(part, _)| part))
     {
-        let feature_part = &artist[start..=(start + end)];
-        *artist = artist.replacen(feature_part, &feature_part[1..feature_part.len() - 1], 1);
+        let feature_part = format!("{feature_part})");
+        let inner = feature_part.trim_start_matches('(').trim_end_matches(')');
+        *artist = artist.replacen(&feature_part, inner, 1);
     }
 }
 

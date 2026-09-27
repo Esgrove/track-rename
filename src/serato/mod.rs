@@ -202,6 +202,10 @@ fn format_as_byte_string(data: &[u8]) -> String {
 
 /// Debug function to print formatted hexdump
 #[allow(dead_code)]
+#[expect(
+    clippy::indexing_slicing,
+    reason = "the hexdump loop bounds each output line by the input length"
+)]
 fn hexdump(buffer: &[u8], ascii: bool) -> String {
     let mut offset = 0;
     let mut result = String::new();

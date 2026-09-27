@@ -33,6 +33,10 @@ impl Overview {
     /// |    ... |    ... | `01` ... `01` | 16 * `uint8_t` | Frequency information
     /// |  `ef2` |   `10` | `01` ... `01` | 16 * `uint8_t` | Frequency information
     ///
+    #[expect(
+        clippy::indexing_slicing,
+        reason = "each 16-byte block is read only after a length check"
+    )]
     pub fn parse(data: &[u8]) -> Result<Self> {
         if data.len() < 2 {
             return Err(anyhow!("Data too short to contain initial bytes"));
@@ -52,6 +56,10 @@ impl Overview {
     }
 
     /// Convert waveform overview to a minimized text representation for terminal display.
+    #[expect(
+        clippy::indexing_slicing,
+        reason = "the row loop stays within the fixed waveform height"
+    )]
     fn draw_waveform(&self) -> Result<String> {
         let (terminal_width, _) = terminal::size().map_err(|error| anyhow!("Failed to get terminal size: {error}"))?;
         let levels = self.waveform_levels(terminal_width);
@@ -78,6 +86,10 @@ impl Overview {
 
     /// Average frequency bands to the waveform height and downsample columns to fit the terminal,
     /// returning levels normalized to the range 0.0 - 1.0.
+    #[expect(
+        clippy::indexing_slicing,
+        reason = "all row and column indices derive from fixed array dimensions"
+    )]
     fn waveform_levels(&self, terminal_width: u16) -> Vec<[f32; WAVEFORM_HEIGHT]> {
         let bands_per_row = BAND_COUNT / WAVEFORM_HEIGHT;
         let averaged: Vec<[u16; WAVEFORM_HEIGHT]> = self
@@ -130,6 +142,10 @@ impl Display for Overview {
 }
 
 #[cfg(test)]
+#[allow(
+    clippy::indexing_slicing,
+    reason = "tests index expected fixed waveform rows and blocks"
+)]
 mod test_overview {
     use super::*;
 

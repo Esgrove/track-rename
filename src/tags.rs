@@ -278,6 +278,11 @@ pub fn print_tag_data(file_tags: &FileTags) {
 }
 
 /// Write updated tags using the backend that matches the file format.
+///
+/// # Errors
+///
+/// Returns an error if the ID3 or FLAC tags cannot be written or, for ID3 files
+/// with binary frames, re-read and restored after the text-frame write.
 pub fn write_tags(track: &Track, file_tags: &mut FileTags) -> anyhow::Result<()> {
     match file_tags {
         FileTags::Id3(tag) => write_id3_tags(track, tag),
@@ -540,6 +545,10 @@ fn repair_malformed_frame(track: &Track, error: Error, verbose: bool) -> Option<
 /// For each one found, the first content byte is overwritten with `0x00`,
 /// creating the missing delimiter.
 /// Returns a list of `(frame_id, count)` pairs.
+#[expect(
+    clippy::indexing_slicing,
+    reason = "ID3 header and frame bounds are validated before fixed fields are accessed"
+)]
 fn fix_malformed_frames_raw(path: &Path) -> anyhow::Result<Vec<(String, usize)>> {
     let mut data = std::fs::read(path).with_context(|| format!("Failed to read file: {}", path.display()))?;
 
@@ -557,7 +566,10 @@ fn fix_malformed_frames_raw(path: &Path) -> anyhow::Result<Vec<(String, usize)>>
     let flags = id3[5];
 
     let tag_size = decode_synchsafe(&id3[6..10]) as usize;
-    let tag_end = id3_offset + 10 + tag_size;
+    let tag_end = id3_offset
+        .checked_add(10)
+        .and_then(|start| start.checked_add(tag_size))
+        .context("ID3 tag size overflow")?;
     anyhow::ensure!(
         data.len() >= tag_end,
         "File truncated: tag declares {} bytes but file is {} bytes",
@@ -588,7 +600,9 @@ fn fix_malformed_frames_raw(path: &Path) -> anyhow::Result<Vec<(String, usize)>>
             ) as usize
                 + 4
         };
-        offset += extended_header_size;
+        offset = offset
+            .checked_add(extended_header_size)
+            .context("Extended header size overflow")?;
     }
 
     let fixable: Vec<&[u8]> = if version == 2 {
@@ -620,7 +634,7 @@ fn fix_malformed_frames_raw(path: &Path) -> anyhow::Result<Vec<(String, usize)>>
         };
 
         let content_start = offset + frame_header_length;
-        let content_end = content_start + frame_size;
+        let content_end = content_start.checked_add(frame_size).context("Frame size overflow")?;
 
         if content_end > tag_end {
             // Corrupted frame — stop scanning but don't fail; the id3 crate
@@ -661,6 +675,10 @@ fn fix_malformed_frames_raw(path: &Path) -> anyhow::Result<Vec<(String, usize)>>
 /// - **WAV** (`RIFF`): the `ID3` header is inside an `ID3 ` chunk.
 ///
 /// Returns `None` if no `ID3v2` header can be found.
+#[expect(
+    clippy::indexing_slicing,
+    reason = "container headers and chunk sizes are checked before reading fixed-width fields"
+)]
 fn find_id3_header_offset(data: &[u8]) -> Option<usize> {
     // Direct ID3v2 header at the start (MP3 and similar).
     if data.len() >= 10 && &data[0..3] == b"ID3" {
@@ -680,7 +698,7 @@ fn find_id3_header_offset(data: &[u8]) -> Option<usize> {
     // Skip past root header (tag 4 + size 4 + format 4 = 12 bytes).
     let mut position: usize = 12;
 
-    while position + 8 <= data.len() {
+    while position.checked_add(8).is_some_and(|end| end <= data.len()) {
         let chunk_tag = &data[position..position + 4];
         let chunk_size = if big_endian {
             u32::from_be_bytes([
@@ -702,20 +720,24 @@ fn find_id3_header_offset(data: &[u8]) -> Option<usize> {
 
         if chunk_tag == b"ID3 " {
             // The chunk data should start with an ID3v2 header.
-            if chunk_data_start + 10 <= data.len() && &data[chunk_data_start..chunk_data_start + 3] == b"ID3" {
+            if data
+                .get(chunk_data_start..)
+                .is_some_and(|remaining| remaining.len() >= 10 && remaining.starts_with(b"ID3"))
+            {
                 return Some(chunk_data_start);
             }
         }
 
         // Advance to the next chunk (chunks are word-aligned in AIFF/WAV).
-        let padded_size = chunk_size + (chunk_size % 2);
-        position = chunk_data_start + padded_size;
+        let padded_size = chunk_size.checked_add(chunk_size % 2)?;
+        position = chunk_data_start.checked_add(padded_size)?;
     }
 
     None
 }
 
 /// Decode a synchsafe integer (each byte uses only 7 bits, MSB is always 0).
+#[expect(clippy::indexing_slicing, reason = "all callers pass four checked synchsafe bytes")]
 fn decode_synchsafe(data: &[u8]) -> u32 {
     debug_assert_eq!(data.len(), 4);
     (u32::from(data[0]) << 21) | (u32::from(data[1]) << 14) | (u32::from(data[2]) << 7) | u32::from(data[3])
@@ -1362,6 +1384,10 @@ mod test_read_tags {
 }
 
 #[cfg(test)]
+#[allow(
+    clippy::indexing_slicing,
+    reason = "tests assert byte positions in a generated fixed-layout ID3 frame"
+)]
 mod test_fix_malformed_frames {
     use super::*;
 

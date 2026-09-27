@@ -71,6 +71,10 @@ impl BeatGrid {
     /// |   `00` |   `04` |               | `float` (binary32) | Position
     /// |   `04` |   `04` | `00 00 00 04` | `uint32_t`         | Beats till next marker
     ///
+    #[expect(
+        clippy::indexing_slicing,
+        reason = "the header and each marker are length-checked before decoding"
+    )]
     pub fn parse(data: &[u8]) -> Result<Self> {
         if data.len() < 6 {
             return Err(anyhow!("Data is too short to contain valid beatgrid information"));
@@ -123,7 +127,11 @@ impl Display for BeatGrid {
         if self.marker_count == 0 {
             write!(formatter, "Empty")
         } else if self.marker_count == 1 {
-            write!(formatter, "Beatgrid {}", self.markers[0])
+            if let Some(marker) = self.markers.first() {
+                write!(formatter, "Beatgrid {marker}")
+            } else {
+                write!(formatter, "Empty")
+            }
         } else {
             writeln!(formatter, "Beatgrid ({}):", self.marker_count)?;
             for marker in &self.markers {
@@ -135,6 +143,11 @@ impl Display for BeatGrid {
 }
 
 #[cfg(test)]
+#[allow(
+    clippy::indexing_slicing,
+    clippy::panic,
+    reason = "tests deliberately index expected markers and fail on wrong variants"
+)]
 mod test_beatgrid_parse {
     use super::*;
 

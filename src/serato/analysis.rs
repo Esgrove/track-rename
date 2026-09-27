@@ -21,17 +21,13 @@ impl AnalysisVersion {
     /// |   `01` |   `01` |      `01` |           `1` | `unsigned char` | Minor Version
     ///
     pub fn parse(data: &[u8]) -> Result<Self> {
-        if data.len() >= 2 {
-            let major_version = data[0];
-            let minor_version = data[1];
-
-            Ok(Self {
-                major_version,
-                minor_version,
-            })
-        } else {
-            Err(anyhow!("Data is too short to contain version information"))
-        }
+        let [major_version, minor_version, ..] = data else {
+            return Err(anyhow!("Data is too short to contain version information"));
+        };
+        Ok(Self {
+            major_version: *major_version,
+            minor_version: *minor_version,
+        })
     }
 }
 

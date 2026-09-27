@@ -26,6 +26,10 @@ pub fn collect_tracks(root: &Path) -> Vec<Track> {
 /// Ask user to confirm action.
 ///
 /// Note: everything except `n` or `N` is a yes.
+///
+/// # Panics
+///
+/// Panics if standard output cannot be flushed or standard input cannot be read.
 #[must_use]
 pub fn confirm() -> bool {
     print!("Proceed (y/n)? ");
@@ -82,11 +86,12 @@ pub fn contains_subpath(path: &Path, subpath: &Path) -> bool {
         for (index, main_component) in main_components.iter().enumerate() {
             if main_component == first_sub_component {
                 // Check all the subcomponents match starting from this index
-                if main_components[index..]
-                    .iter()
-                    .zip(sub_components.iter())
-                    .all(|(main, sub)| main == sub)
-                {
+                if main_components.get(index..).is_some_and(|components| {
+                    components
+                        .iter()
+                        .zip(sub_components.iter())
+                        .all(|(main, sub)| main == sub)
+                }) {
                     return true;
                 }
             }
@@ -102,6 +107,11 @@ pub fn ffmpeg_available() -> bool {
 }
 
 /// Get file modified time as seconds since unix epoch.
+///
+/// # Errors
+///
+/// Returns an error if metadata or the modification time cannot be read,
+/// or if the time predates the Unix epoch.
 pub fn get_file_modified_time(path: &Path) -> anyhow::Result<u64> {
     let metadata = std::fs::metadata(path)?;
     let modified_time = metadata.modified()?;
@@ -174,6 +184,18 @@ pub fn path_to_string_relative(path: &Path) -> String {
 }
 
 /// Rename track from given path to new path.
+///
+/// # Errors
+///
+/// Returns an error if the filesystem rename fails outside test mode.
+///
+/// # Panics
+///
+/// Panics if the rename fails with `test_mode` enabled.
+#[expect(
+    clippy::panic_in_result_fn,
+    reason = "test mode intentionally panics to fail its rename assertions"
+)]
 pub fn rename_track(path: &Path, new_path: &Path, test_mode: bool) -> anyhow::Result<()> {
     if let Err(error) = std::fs::rename(path, new_path) {
         let message = format!("Failed to rename file: {error}");
@@ -184,6 +206,11 @@ pub fn rename_track(path: &Path, new_path: &Path, test_mode: bool) -> anyhow::Re
 }
 
 /// Resolve optional input path or otherwise use current working directory.
+///
+/// # Errors
+///
+/// Returns an error if the working directory cannot be determined or the
+/// input path does not exist or cannot be canonicalized.
 pub fn resolve_input_path(path: Option<&Path>) -> anyhow::Result<PathBuf> {
     let filepath = match path {
         Some(input_path) => input_path.to_path_buf(),
@@ -200,6 +227,10 @@ pub fn resolve_input_path(path: Option<&Path>) -> anyhow::Result<PathBuf> {
 }
 
 /// Write a txt log file for failed tracks to current working directory.
+///
+/// # Errors
+///
+/// Returns an error if the log cannot be created, written, or canonicalized.
 pub fn write_log_for_failed_files(paths: &[String]) -> anyhow::Result<()> {
     let filepath = Path::new("track-rename-failed.txt");
     let mut file = std::fs::File::create(filepath).context("Failed to create output file")?;
@@ -219,6 +250,10 @@ pub fn is_not_hidden(path: &Path) -> bool {
 }
 
 /// Get filename string for given Path.
+///
+/// # Errors
+///
+/// Returns an error if the path has no filename component.
 pub fn get_filename_from_path(path: &Path) -> anyhow::Result<String> {
     Ok(path
         .file_name()

@@ -526,9 +526,7 @@ log_failures = true
 
         let user_config: UserConfig = toml::from_str(toml_content).expect("Failed to parse TOML into UserConfig");
 
-        assert_eq!(user_config.exclude.len(), 2, "exclude should have 2 items");
-        assert_eq!(user_config.exclude[0], "file1.mp3");
-        assert_eq!(user_config.exclude[1], "file2.aif");
+        assert_eq!(user_config.exclude, ["file1.mp3", "file2.aif"]);
         assert!(user_config.convert_failed, "convert_failed should be true");
         assert!(!user_config.genre_statistics, "genre_statistics should be false");
         assert!(user_config.log_failures, "log_failures should be true");

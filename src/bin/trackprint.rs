@@ -1,3 +1,5 @@
+//! Command-line tool for inspecting audio track tags and Serato data.
+
 use std::path::PathBuf;
 
 use anyhow::Result;

@@ -70,7 +70,9 @@ impl Markers {
             .iter()
             .position(|&byte| byte == b'\x00')
             .ok_or_else(|| anyhow!("No null terminator found"))?;
-        let base64_data = &data[base64_data_start..base64_data_end];
+        let base64_data = data
+            .get(base64_data_start..base64_data_end)
+            .context("Invalid Markers2 base64 data range")?;
 
         // Remove linefeed characters
         let mut base64_data_cleaned = Vec::with_capacity(base64_data.len());
@@ -127,28 +129,24 @@ impl BpmLock {
         if data.len() != 1 {
             return Err(anyhow!("Invalid data length for BpmLock"));
         }
-        Ok(Self { enabled: data[0] != 0 })
+        Ok(Self {
+            enabled: data.first().is_some_and(|&value| value != 0),
+        })
     }
 }
 
 impl Color {
     /// Create a new `RgbColor` from an RGB array [u8; 3].
     pub const fn new(bytes: [u8; 3]) -> Self {
-        Self {
-            red: bytes[0],
-            green: bytes[1],
-            blue: bytes[2],
-        }
+        let [red, green, blue] = bytes;
+        Self { red, green, blue }
     }
 
     /// Create a new `RgbColor` from an ARGB array [u8; 4].
     /// Ignores the alpha channel.
     pub const fn new_argb(bytes: [u8; 4]) -> Self {
-        Self {
-            red: bytes[1],
-            green: bytes[2],
-            blue: bytes[3],
-        }
+        let [_, red, green, blue] = bytes;
+        Self { red, green, blue }
     }
 
     /// Parse track color entry data consisting of four bytes where the first byte is ignored.
@@ -156,11 +154,8 @@ impl Color {
         if data.len() != 4 {
             return Err(anyhow!("Invalid data length for Color"));
         }
-        Ok(Self {
-            red: data[1],
-            green: data[2],
-            blue: data[3],
-        })
+        let bytes: [u8; 4] = data.try_into().context("Invalid data length for Color")?;
+        Ok(Self::new_argb(bytes))
     }
 
     /// Colorize text with this color.
@@ -636,6 +631,13 @@ mod test_markers_parsing {
     use super::*;
     use std::io::Cursor;
     use std::path::Path;
+
+    #[test]
+    fn rejects_null_terminator_before_base64_payload() {
+        for data in [b"\0".as_slice(), b"\x01\0".as_slice()] {
+            assert!(Markers::parse(data).is_err());
+        }
+    }
 
     #[test]
     fn parses_markers_from_extended_tags_file() {

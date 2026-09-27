@@ -1,3 +1,5 @@
+//! Fixture-based tag reading and writing integration tests.
+
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -29,7 +31,7 @@ fn make_temp_fixture_copy(case: &FixtureCase) -> PathBuf {
         "track_rename_test_{}_{}_{}.{}",
         case.fixture_directory, case.extension, unique_suffix, case.extension
     ));
-    std::fs::copy(&source, &temp_path).unwrap_or_else(|_| panic!("Failed to copy fixture: {}", source.display()));
+    std::fs::copy(&source, &temp_path).expect("Failed to copy fixture");
     temp_path
 }
 

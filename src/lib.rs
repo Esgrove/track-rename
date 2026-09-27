@@ -1,7 +1,5 @@
 //! Library support for formatting, renaming, and inspecting audio track metadata.
 
-#![warn(missing_docs)]
-
 #[macro_use]
 /// Colored output helpers and printing macros.
 pub mod output;

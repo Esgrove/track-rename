@@ -1,3 +1,5 @@
+//! Command-line tool for inspecting Serato crate files.
+
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};

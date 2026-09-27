@@ -66,6 +66,11 @@ pub struct TrackMetadata {
 
 impl Track {
     /// New Track from the given path.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the path has no valid extension, its format is
+    /// unsupported, or its file metadata cannot be read.
     pub fn new(path: &Path) -> anyhow::Result<Self> {
         let extension = path
             .extension()
@@ -236,6 +241,10 @@ impl Track {
     }
 
     /// Create new Track from existing Track that has been renamed.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if metadata for the renamed file cannot be read.
     pub fn renamed_track(&self, path: PathBuf, name: String) -> anyhow::Result<Self> {
         let metadata = Self::read_metadata(&path)?;
         Ok(Self {
@@ -277,6 +286,11 @@ impl Track {
 
     /// Convert mp3 file to aif using ffmpeg.
     /// Returns an updated Track if conversion was successful.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if ffmpeg cannot run or convert the file, the output
+    /// cannot be checked or read, or the original cannot be moved to the trash.
     pub fn convert_mp3_to_aif(&self) -> anyhow::Result<Self> {
         let output_path = self.path.with_extension("aif");
         let output_path_string = path_to_string_relative(&output_path);
@@ -343,7 +357,7 @@ impl Track {
         other.len() == expected_length
             && other.starts_with(&self.name)
             && other.as_bytes().get(self.name.len()) == Some(&b'.')
-            && other[self.name.len() + 1..] == self.extension
+            && other.get(self.name.len() + 1..) == Some(self.extension.as_str())
     }
 
     /// Get filename from Path with special characters retained instead of decomposed.

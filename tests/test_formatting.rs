@@ -1,3 +1,5 @@
+//! Integration tests for artist, title, and album formatting.
+
 use track_rename::formatting;
 
 /// Input artist and title with the expected formatted results.

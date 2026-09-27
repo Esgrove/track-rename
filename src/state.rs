@@ -34,6 +34,10 @@ pub struct State {
 
 impl State {
     /// Open (or create) the default on-disk database and initialize the schema.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the directory, database, or schema cannot be created or opened.
     pub fn open() -> Result<Self> {
         let db_path = DB_PATH.clone();
         if let Some(parent) = db_path.parent() {
@@ -47,6 +51,10 @@ impl State {
 
     /// Open an in-memory database and initialize the schema.
     /// Useful for tests and as the `Default` implementation.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if SQLite cannot open the database or initialize its schema.
     pub fn open_in_memory() -> Result<Self> {
         let connection = Connection::open_in_memory().context("Failed to open in-memory database")?;
         Self::initialize(connection, PathBuf::from(":memory:"))
@@ -61,6 +69,10 @@ impl State {
     /// Insert or update a track entry.
     ///
     /// Returns `Ok(true)` if an existing entry was updated, `Ok(false)` if a new entry was added.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the lookup or insert fails in SQLite.
     pub fn insert(&mut self, path: &Path, metadata: &TrackMetadata) -> Result<bool> {
         let path_str = utils::path_to_string(path);
         let modified = u64_to_i64(metadata.modified);
@@ -82,6 +94,10 @@ impl State {
     /// Batch insert or update track entries within a transaction.
     ///
     /// Returns `(added_count, updated_count)`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if starting, executing, or committing the SQLite transaction fails.
     pub fn batch_insert(&mut self, entries: &[(&Path, &TrackMetadata)]) -> Result<(usize, usize)> {
         let tx = self
             .connection
@@ -121,6 +137,10 @@ impl State {
     }
 
     /// Look up a track by path.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the SQLite query fails or its columns cannot be decoded.
     pub fn get(&self, path: &Path) -> Result<Option<TrackMetadata>> {
         let path_str = utils::path_to_string(path);
 
@@ -146,6 +166,10 @@ impl State {
     }
 
     /// Return the number of tracked entries.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if SQLite cannot count the entries.
     pub fn len(&self) -> Result<usize> {
         let count: i64 = self
             .connection
@@ -158,6 +182,10 @@ impl State {
     }
 
     /// Return `true` if the database has no tracked entries.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if SQLite cannot count the entries.
     pub fn is_empty(&self) -> Result<bool> {
         Ok(self.len()? == 0)
     }
@@ -167,6 +195,10 @@ impl State {
     /// Removes entries where the version does not match the current version (pure SQL)
     /// and entries whose path no longer exists on disk (filesystem check in a transaction).
     /// Returns the total number of entries removed.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if a SQLite query, deletion, or transaction commit fails.
     pub fn clean(&mut self) -> Result<usize> {
         // First: remove entries with an outdated version (pure SQL).
         let version_removed: usize = self

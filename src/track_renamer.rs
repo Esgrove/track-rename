@@ -639,11 +639,8 @@ impl TrackRenamer {
             .processed_files
             .iter()
             .filter_map(|(name, indices)| {
-                if indices.len() > 1 {
-                    Some((name, indices.iter().map(|&index| &self.tracks[index]).collect()))
-                } else {
-                    None
-                }
+                let tracks: Vec<_> = indices.iter().filter_map(|&index| self.tracks.get(index)).collect();
+                (tracks.len() > 1).then_some((name, tracks))
             })
             .collect();
 
@@ -660,7 +657,9 @@ impl TrackRenamer {
             );
 
             for (_, tracks) in &duplicate_tracks {
-                print_yellow!("{}", tracks[0].name);
+                if let Some(track) = tracks.first() {
+                    print_yellow!("{}", track.name);
+                }
                 for track in tracks {
                     println!("  {track}");
                 }
@@ -915,7 +914,7 @@ mod test_track_renamer {
             "Zero-size file should not be logged as failed"
         );
         assert!(
-            renamer.tracks[0].not_processed,
+            renamer.tracks.first().is_some_and(|track| track.not_processed),
             "Zero-size file should not be marked processed"
         );
         assert!(renamer.state.is_empty().expect("Failed to check state"));

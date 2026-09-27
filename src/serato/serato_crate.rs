@@ -51,6 +51,11 @@ impl SeratoCrate {
     }
 
     /// Read and parse a Serato `.crate` file.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file cannot be read or contains an empty,
+    /// malformed, or incorrectly encoded crate header or entry.
     pub fn from_file(path: &Path) -> Result<Self> {
         let name = crate_name_from_path(path);
         let data = fs::read(path).with_context(|| format!("Failed to read crate file: {}", path.display()))?;
@@ -146,6 +151,11 @@ impl SeratoCrate {
     /// The filename is derived from the crate name, with ` > ` hierarchy
     /// separators encoded as `%%`.
     /// Returns the path of the written file.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the default directory cannot be found, is absent,
+    /// or the crate file cannot be written there.
     pub fn write_to_default_directory(&self) -> Result<PathBuf> {
         let subcrates_directory = default_subcrates_directory()?;
         ensure!(
@@ -159,6 +169,10 @@ impl SeratoCrate {
     /// Write this crate to the given directory.
     ///
     /// Returns the path of the written file.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the crate file cannot be written in `directory`.
     pub fn write_to_directory(&self, directory: &Path) -> Result<PathBuf> {
         let filename = crate_filename_from_name(&self.name);
         let path = directory.join(filename);
@@ -167,6 +181,10 @@ impl SeratoCrate {
     }
 
     /// Write this crate to the given file path.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file cannot be created or written.
     pub fn write_to_file(&self, path: &Path) -> Result<()> {
         let data = self.to_bytes();
         fs::write(path, &data).with_context(|| format!("Failed to write crate file: {}", path.display()))?;
@@ -193,6 +211,10 @@ impl fmt::Display for SeratoCrate {
 }
 
 /// List all `.crate` files in the given directory, sorted alphabetically.
+///
+/// # Errors
+///
+/// Returns an error if the path is not a directory or its entries cannot be read.
 pub fn list_crates(directory: &Path) -> Result<Vec<PathBuf>> {
     ensure!(
         directory.is_dir(),
@@ -218,6 +240,10 @@ pub fn list_crates(directory: &Path) -> Result<Vec<PathBuf>> {
 }
 
 /// Return the default Serato Subcrates directory path.
+///
+/// # Errors
+///
+/// Returns an error if the user's home directory cannot be determined.
 pub fn default_subcrates_directory() -> Result<PathBuf> {
     let home = dirs::home_dir().context("Failed to determine home directory")?;
     Ok(home.join("Music/_Serato_/Subcrates"))
@@ -277,21 +303,14 @@ fn path_to_crate_string(path: &Path) -> String {
 ///
 /// Returns `(tag_name, value_bytes)` and advances `offset` past the entry.
 fn read_tag(data: &[u8], offset: &mut usize) -> Result<(String, Vec<u8>)> {
-    ensure!(
-        *offset + 8 <= data.len(),
-        "Not enough data for tag header at offset {}",
-        *offset
-    );
+    let header = data
+        .get(*offset..)
+        .and_then(|remaining| remaining.get(..8))
+        .with_context(|| format!("Not enough data for tag header at offset {}", *offset))?;
+    let (tag_bytes, length_bytes) = header.split_at(4);
+    let tag = std::str::from_utf8(tag_bytes).context("Invalid tag name")?.to_string();
 
-    let tag = std::str::from_utf8(&data[*offset..*offset + 4])
-        .context("Invalid tag name")?
-        .to_string();
-
-    let length = u32::from_be_bytes(
-        data[*offset + 4..*offset + 8]
-            .try_into()
-            .context("Failed to read tag length")?,
-    ) as usize;
+    let length = u32::from_be_bytes(length_bytes.try_into().context("Failed to read tag length")?) as usize;
 
     *offset += 8;
 
@@ -302,7 +321,10 @@ fn read_tag(data: &[u8], offset: &mut usize) -> Result<(String, Vec<u8>)> {
         data.len() - *offset
     );
 
-    let value = data[*offset..*offset + length].to_vec();
+    let value = data
+        .get(*offset..*offset + length)
+        .context("Tag value exceeds data")?
+        .to_vec();
     *offset += length;
     Ok((tag, value))
 }
@@ -426,6 +448,10 @@ mod test_encoding {
 }
 
 #[cfg(test)]
+#[allow(
+    clippy::indexing_slicing,
+    reason = "tests directly assert fields at known positions in sample crates"
+)]
 mod test_crate_data {
     use super::*;
 
@@ -445,6 +471,12 @@ mod test_crate_data {
         let data = [0x76, 0x72, 0x73];
         let mut offset = 0;
         assert!(read_tag(&data, &mut offset).is_err());
+    }
+
+    #[test]
+    fn read_tag_rejects_offset_outside_data() {
+        let mut offset = usize::MAX;
+        assert!(read_tag(b"vrsn\0\0\0\0", &mut offset).is_err());
     }
 
     #[test]
@@ -633,6 +665,10 @@ mod test_crate_data {
 }
 
 #[cfg(test)]
+#[allow(
+    clippy::indexing_slicing,
+    reason = "tests directly assert the known columns of a crate fixture"
+)]
 mod test_create_crate {
     use super::*;
 
@@ -701,6 +737,10 @@ mod test_create_crate {
 }
 
 #[cfg(test)]
+#[allow(
+    clippy::indexing_slicing,
+    reason = "tests directly assert the known columns of a crate fixture"
+)]
 mod test_write_crate {
     use super::*;
 
