@@ -8,6 +8,7 @@ use id3::Tag as Id3Tag;
 use id3::{Error, ErrorKind, FrameErrorKind, TagLike};
 use itertools::Itertools;
 use metaflac::Tag as FlacTag;
+use tempfile::Builder;
 
 use crate::file_format::FileFormat;
 use crate::output::{print_diff, print_stacked_diff};
@@ -363,6 +364,27 @@ fn read_flac_tags(track: &Track) -> Option<FileTags> {
 
 /// Write updated ID3 metadata while preserving binary frames.
 fn write_id3_tags(track: &Track, file_tags: &mut Id3Tag) -> anyhow::Result<()> {
+    write_id3_tags_staged(track, |path| write_id3_tags_to_path(path, track, file_tags))
+}
+
+/// Keep the original audio untouched until all staged ID3 writes succeed.
+fn write_id3_tags_staged(track: &Track, write: impl FnOnce(&Path) -> anyhow::Result<()>) -> anyhow::Result<()> {
+    let parent = track.path.parent().context("Track has no parent directory")?;
+    let suffix = format!(".{}", track.extension);
+    let staged_path = Builder::new()
+        .prefix(".track-rename-")
+        .suffix(&suffix)
+        .tempfile_in(parent)?
+        .into_temp_path();
+    std::fs::copy(&track.path, &staged_path)?;
+
+    write(&staged_path)?;
+    staged_path.persist(&track.path).map_err(|error| error.error)?;
+    Ok(())
+}
+
+/// Write both ID3 phases to a staged copy of the source audio file.
+fn write_id3_tags_to_path(path: &Path, track: &Track, file_tags: &mut Id3Tag) -> anyhow::Result<()> {
     // Save binary frames (GEOB/APIC) separately.
     // The id3 crate has a bug where writing text frames together with large
     // GEOB frames (e.g. Serato data) in a single write_to_path call can silently
@@ -394,15 +416,15 @@ fn write_id3_tags(track: &Track, file_tags: &mut Id3Tag) -> anyhow::Result<()> {
     file_tags.set_title(track.tags.formatted_title.clone());
     file_tags.set_album(track.tags.formatted_album.clone());
     file_tags.set_genre(track.tags.formatted_genre.clone());
-    file_tags.write_to_path(&track.path, id3::Version::Id3v24)?;
+    file_tags.write_to_path(path, id3::Version::Id3v24)?;
 
     // Phase 2: Re-read the written tag and add binary frames back.
     if has_binary_frames {
-        let mut written_tag = Id3Tag::read_from_path(&track.path)?;
+        let mut written_tag = Id3Tag::read_from_path(path)?;
         for frame in binary_frames {
             written_tag.add_frame(frame);
         }
-        written_tag.write_to_path(&track.path, id3::Version::Id3v24)?;
+        written_tag.write_to_path(path, id3::Version::Id3v24)?;
     }
 
     Ok(())
@@ -1223,6 +1245,36 @@ mod test_read_tags {
     /// Return the path to the basic tags FLAC test file.
     fn basic_tags_flac_path() -> std::path::PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/basic_tags/Basic Tags - Song - 16-44.flac")
+    }
+
+    #[test]
+    fn failed_binary_frame_restoration_preserves_original_file() {
+        let source =
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/extended_tags/Extended Tags - Song - 16-44.mp3");
+        let path = std::env::temp_dir().join(format!(
+            "track-rename-staged-id3-{}-{}.mp3",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("System clock should be after UNIX_EPOCH")
+                .as_nanos()
+        ));
+        std::fs::copy(&source, &path).expect("Failed to copy fixture");
+        let original = std::fs::read(&path).expect("Failed to read original audio");
+        let track = Track::try_from_path(&path).expect("Failed to create track");
+
+        let result = write_id3_tags_staged(&track, |staged_path| {
+            let mut tag = Id3Tag::read_from_path(staged_path)?;
+            assert!(tag.frames().any(|frame| frame.id() == "GEOB"));
+            tag.remove("GEOB");
+            tag.remove("APIC");
+            tag.write_to_path(staged_path, id3::Version::Id3v24)?;
+            anyhow::bail!("simulated frame restoration failure")
+        });
+
+        assert!(result.is_err());
+        assert_eq!(std::fs::read(&path).expect("Failed to read original audio"), original);
+        std::fs::remove_file(path).expect("Failed to remove temp fixture");
     }
 
     #[test]
