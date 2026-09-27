@@ -1,7 +1,5 @@
 exclude: ^(.idea|.vscode)/
 fail_fast: false
-default_language_version:
-  python: python3.13
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -9,26 +7,14 @@ repos:
     # https://github.com/pre-commit/pre-commit-hooks
     hooks:
       - id: check-added-large-files
-      - id: check-ast
       - id: check-case-conflict
-      - id: check-docstring-first
       - id: check-json
       - id: check-merge-conflict
       - id: check-toml
       - id: check-yaml
-      - id: debug-statements
       - id: end-of-file-fixer
       - id: mixed-line-ending
       - id: trailing-whitespace
-
-  - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: "v0.15.1"
-    hooks:
-      - id: ruff
-        name: python ruff lint
-        args: [ --fix, --exit-non-zero-on-fix ]
-      - id: ruff-format
-        name: python ruff format
 
   - repo: local
     hooks:

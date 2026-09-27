@@ -1,14 +1,9 @@
 # Track Renamer
 
 CLI tool for formatting and renaming audio files.
-Originally written in Python,
-and then re-written in Rust,
-which is now the primary version.
 
 Formats artist and title tags, and renames filenames to match tags.
 If tag data is missing, will try to extract artist and title from the filename.
-
-## Rust version
 
 Supports MP3 and AIFF via ID3 tags, and FLAC via Vorbis comments.
 
@@ -22,7 +17,7 @@ The convert option requires [ffmpeg](https://ffmpeg.org/) to be available in pat
 See the [test data](./tests/test_formatting.rs) for formatting examples.
 The formatting rules and functions are specified in [src/formatting.rs](./src/formatting.rs).
 
-### Usage
+## Usage
 
 ```console
 Usage: trackrename [OPTIONS] [PATH]
@@ -46,20 +41,20 @@ Options:
   -V, --version    Print version
 ```
 
-### User config
+## User config
 
 An optional user config can be put under `~/.config/track-rename.toml`.
 It supports specifying track names to exclude, which will be skipped during the processing.
 These can include a file extension or not, and should _not_ contain a path, just the filename.
 See the [track-rename.toml](./track-rename.toml) template for more details and supported options.
 
-### Tests
+## Tests
 
 ```shell
 cargo test
 ```
 
-### Code Coverage
+## Code Coverage
 
 Code coverage is generated using [cargo-llvm-cov](https://github.com/taiki-e/cargo-llvm-cov)
 with [cargo-nextest](https://nexte.st/).
@@ -77,14 +72,14 @@ cargo llvm-cov nextest --html --open
 
 The HTML report is generated in `target/llvm-cov/html/`.
 
-### Required Tools
+## Required Tools
 
 ```shell
 cargo install --locked cargo-nextest
 cargo install --locked cargo-llvm-cov
 ```
 
-### TODO
+## TODO
 
 - Refactor track renamer functions
 - Support other tag / filetypes as well

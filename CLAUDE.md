@@ -6,7 +6,6 @@ CLI tool for formatting and renaming audio files (MP3, AIF/AIFF).
 Formats artist and title ID3 tags using extensive text-normalization rules,
 and renames filenames to match the formatted tags.
 Falls back to parsing artist and title from the filename when tag data is missing.
-Originally written in Python (still included under `rename/`), now primarily Rust.
 
 ### Binaries
 
@@ -80,7 +79,6 @@ tests/
 ├── test_formatting.rs   # Rust integration tests for text formatting
 ├── test_tag_roundtrip.rs# Rust integration tests for tag read/write
 ├── files/               # Test audio files
-rename/                  # Legacy Python version (pytaglib-based)
 track-rename.toml        # Example user config (placed at ~/.config/track-rename.toml)
 ```
 
