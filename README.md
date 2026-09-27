@@ -20,7 +20,11 @@ The formatting rules and functions are specified in [src/formatting.rs](./src/fo
 ## Usage
 
 ```console
-Usage: trackrename [OPTIONS] [PATH]
+Usage: trackrename [OPTIONS] [PATH] [COMMAND]
+
+Commands:
+  completion  Generate shell completion script
+  help        Print this message or the help of the given subcommand(s)
 
 Arguments:
   [PATH]  Optional input directory or audio file to format
@@ -28,9 +32,12 @@ Arguments:
 Options:
   -a, --all-tags   Resave tags for all files with ID3v2.4
   -c, --convert    Convert failed MP3 files to AIFF using ffmpeg
+  -g, --genre      Collect and save genre statistics
   -d, --debug      Enable debug prints
   -f, --force      Do not ask for confirmation
   -l, --log        Log files that can't be read
+  -n, --no-state   Don't skip unchanged files since last run
+  -o, --overwrite  Overwrite existing files when renaming
   -p, --print      Only print changes without modifying files
   -r, --rename     Rename all audio files
   -S, --silent     Suppress running index and directory output
@@ -52,6 +59,18 @@ See the [track-rename.toml](./track-rename.toml) template for more details and s
 
 ```shell
 cargo test
+```
+
+## Benchmarks
+
+Performance-critical code paths are benchmarked with [Criterion](https://github.com/criterion-rs/criterion.rs).
+
+```shell
+cargo bench
+
+# Compare against a saved baseline
+cargo bench -- --save-baseline before
+cargo bench -- --baseline before
 ```
 
 ## Code Coverage

@@ -18,8 +18,7 @@ Falls back to parsing artist and title from the filename when tag data is missin
 After making code changes, always run:
 
 ```shell
-cargo clippy --fix --allow-dirty
-cargo clippy --fix --allow-dirty --tests
+cargo clippy --fix --allow-dirty --all-targets
 cargo fmt
 cargo test
 ```
@@ -44,6 +43,16 @@ cargo test
 
 # Run tests with coverage report (text output)
 cargo llvm-cov nextest
+
+# Run all benchmarks (Criterion, release profile)
+cargo bench
+
+# Run one benchmark target, optionally filtered by name
+cargo bench --bench formatting -- format_tags
+
+# Save a baseline and compare later changes against it
+cargo bench -- --save-baseline before
+cargo bench -- --baseline before
 ```
 
 ## Project Structure
@@ -77,8 +86,13 @@ src/
     └── serato_crate.rs  # Serato .crate file reader/writer (UTF-16BE TLV format)
 tests/
 ├── test_formatting.rs   # Rust integration tests for text formatting
+├── test_tag_read_write.rs # Tag read/write roundtrip tests for every fixture and format
 ├── test_tag_roundtrip.rs# Rust integration tests for tag read/write
 ├── files/               # Test audio files
+benches/
+├── formatting.rs        # Criterion benchmarks for tag, album, genre and filename formatting
+├── io.rs                # Tag read/write, file collection, state database and read+format pipeline
+├── serato.rs            # Serato tag parsing and crate file encoding
 track-rename.toml        # Example user config (placed at ~/.config/track-rename.toml)
 ```
 
