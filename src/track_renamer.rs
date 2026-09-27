@@ -37,7 +37,7 @@ pub struct TrackRenamer {
     tracks: Vec<Track>,
     tracks_count: usize,
     failed_files: Vec<String>,
-    processed_files: HashMap<String, Vec<Track>>,
+    processed_files: HashMap<String, Vec<usize>>,
     genres: HashMap<String, usize>,
     tag_versions: HashMap<String, usize>,
     checked_genre_mappings: HashSet<String>,
@@ -164,7 +164,8 @@ impl TrackRenamer {
         let mut tracks = std::mem::take(&mut self.tracks);
         let result = tracks
             .iter_mut()
-            .try_for_each(|track| self.process_track(track, &headers));
+            .enumerate()
+            .try_for_each(|(index, track)| self.process_track(index, track, &headers));
         self.tracks = tracks;
         result?;
 
@@ -172,7 +173,7 @@ impl TrackRenamer {
     }
 
     /// Check state, fix tags and rename the file for a single track.
-    fn process_track(&mut self, track: &mut Track, headers: &OutputHeaders) -> Result<()> {
+    fn process_track(&mut self, index: usize, track: &mut Track, headers: &OutputHeaders) -> Result<()> {
         self.print_directory_change(track);
         self.check_genre_mapping(track);
 
@@ -185,7 +186,7 @@ impl TrackRenamer {
         }
 
         if !self.needs_processing(track) {
-            self.record_processed(track.name.clone(), track);
+            self.record_processed(track.name.to_lowercase(), index);
             return Ok(());
         }
 
@@ -220,7 +221,7 @@ impl TrackRenamer {
         if !self.config.tags_only {
             self.rename_file(track, &formatted_name, &formatted_name_lower, headers)?;
         }
-        self.record_processed(formatted_name_lower, track);
+        self.record_processed(formatted_name_lower, index);
         Ok(())
     }
 
@@ -429,9 +430,9 @@ impl TrackRenamer {
         Ok(())
     }
 
-    /// Remember a processed track under its name for duplicate detection.
-    fn record_processed(&mut self, name: String, track: &Track) {
-        self.processed_files.entry(name).or_default().push(track.clone());
+    /// Remember the index of a processed track under its lowercase name for duplicate detection.
+    fn record_processed(&mut self, name: String, index: usize) {
+        self.processed_files.entry(name).or_default().push(index);
     }
 
     /// Print statistics, logs and duplicates after all tracks have been processed.
@@ -533,9 +534,9 @@ impl TrackRenamer {
         let mut duplicate_tracks: Vec<(&String, Vec<&Track>)> = self
             .processed_files
             .iter()
-            .filter_map(|(name, tracks)| {
-                if tracks.len() > 1 {
-                    Some((name, tracks.iter().collect()))
+            .filter_map(|(name, indices)| {
+                if indices.len() > 1 {
+                    Some((name, indices.iter().map(|&index| &self.tracks[index]).collect()))
                 } else {
                     None
                 }
@@ -567,7 +568,7 @@ impl TrackRenamer {
 
     /// Create a Serato "Duplicates" crate containing all duplicate track paths.
     fn write_duplicates_crate(&self, duplicate_tracks: &[(&String, Vec<&Track>)]) {
-        if duplicate_tracks.is_empty() {
+        if duplicate_tracks.is_empty() || self.config.test_mode {
             return;
         }
 
@@ -806,6 +807,60 @@ mod test_track_renamer {
         if let Some(parent) = temp_file.parent() {
             fs::remove_dir(parent).expect("Failed to remove zero-size temp directory");
         }
+    }
+
+    #[test]
+    fn test_duplicates_match_processed_and_unprocessed_tracks_ignoring_case() {
+        let source = BASIC_TAGS_DIR.join("Basic Tags - Song - 16-44.mp3");
+        let mut probe = Track::try_from_path(&source).expect("Failed to create Track for fixture");
+        let file_tags = probe.read_tags(false).expect("Tags should be present");
+        probe.format_tags(&file_tags);
+        let formatted_name = probe.formatted_filename();
+
+        let temp_file = temp_test_file(&source).expect("Failed to create temp file path");
+        let root = temp_file
+            .parent()
+            .expect("Temp file should have a parent")
+            .to_path_buf();
+        let first_directory = root.join("First");
+        let second_directory = root.join("Second");
+        fs::create_dir_all(&first_directory).expect("Failed to create first directory");
+        fs::create_dir_all(&second_directory).expect("Failed to create second directory");
+        copy(&source, first_directory.join("Basic Tags - Song - 16-44.mp3")).expect("Failed to copy test file");
+        copy(
+            &source,
+            second_directory.join(format!("{}.mp3", formatted_name.to_uppercase())),
+        )
+        .expect("Failed to copy test file");
+
+        let mut config = Config::new_for_tests();
+        config.print_only = true;
+        config.silent = true;
+        let mut renamer = TrackRenamer::new_with_config(root.clone(), config);
+        renamer.gather_files().expect("Failed to gather files");
+
+        let unprocessed = renamer
+            .tracks
+            .iter()
+            .find(|track| track.directory == "Second")
+            .expect("Second directory track should exist");
+        renamer
+            .state
+            .insert(&unprocessed.path, &unprocessed.metadata)
+            .expect("Failed to insert state");
+
+        renamer.process_tracks().expect("Processing failed");
+
+        assert_eq!(
+            renamer
+                .processed_files
+                .get(&formatted_name.to_lowercase())
+                .map(Vec::len),
+            Some(2),
+            "Processed and unprocessed tracks with the same name should be detected as duplicates"
+        );
+
+        fs::remove_dir_all(&root).expect("Failed to remove temp directory");
     }
 
     /// Generic test function that takes a function or closure with one `PathBuf` as input argument.
