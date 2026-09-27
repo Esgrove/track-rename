@@ -27,6 +27,23 @@ use track_rename::track::{DJ_MUSIC_PATH, Track};
 use track_rename::utils;
 use track_rename::{print_bold, print_error, print_green, print_yellow};
 
+/// Number of tracks whose tags are read in parallel before processing them in order.
+const PREFETCH_CHUNK_SIZE: usize = 128;
+
+/// File system status of a track.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+enum FileStatus {
+    /// Not checked yet.
+    #[default]
+    Unknown,
+    /// File no longer exists.
+    Missing,
+    /// File exists but is empty, for example a Dropbox online-only placeholder.
+    Empty,
+    /// File exists and has content.
+    Present,
+}
+
 /// Audio track tag and filename formatting.
 #[derive(Debug, Default)]
 pub struct TrackRenamer {
@@ -49,6 +66,25 @@ struct OutputHeaders {
     fix_tags: ColoredString,
     rename_file: ColoredString,
     max_index_width: usize,
+}
+
+/// Track data read ahead of the sequential processing loop.
+#[derive(Default)]
+struct Prefetch {
+    status: FileStatus,
+    needs_processing: Option<bool>,
+    file_tags: Option<FileTags>,
+}
+
+impl FileStatus {
+    /// Check whether the file exists and has content with a single metadata call.
+    fn check(path: &Path) -> Self {
+        match path.metadata() {
+            Err(_) => Self::Missing,
+            Ok(metadata) if metadata.len() == 0 => Self::Empty,
+            Ok(_) => Self::Present,
+        }
+    }
 }
 
 impl TrackRenamer {
@@ -162,18 +198,71 @@ impl TrackRenamer {
 
         let start_instant = Instant::now();
         let mut tracks = std::mem::take(&mut self.tracks);
-        let result = tracks
-            .iter_mut()
-            .enumerate()
-            .try_for_each(|(index, track)| self.process_track(index, track, &headers));
+        let result = self.process_in_chunks(&mut tracks, &headers);
         self.tracks = tracks;
         result?;
 
         self.print_summary(start_instant)
     }
 
+    /// Process tracks in order, reading tags for each chunk in parallel beforehand.
+    fn process_in_chunks(&mut self, tracks: &mut [Track], headers: &OutputHeaders) -> Result<()> {
+        for (chunk_index, chunk) in tracks.chunks_mut(PREFETCH_CHUNK_SIZE).enumerate() {
+            let prefetched = self.prefetch(chunk);
+            for ((offset, track), prefetch) in chunk.iter_mut().enumerate().zip(prefetched) {
+                self.process_track(chunk_index * PREFETCH_CHUNK_SIZE + offset, track, prefetch, headers)?;
+            }
+        }
+        Ok(())
+    }
+
+    /// Check state and read tags in parallel for tracks that will be processed.
+    ///
+    /// Nothing is printed here: any failure is left for the sequential loop to handle and report.
+    fn prefetch(&self, chunk: &[Track]) -> Vec<Prefetch> {
+        // Overwriting renames can replace files later in the same chunk after their tags were read.
+        if self.config.overwrite_existing {
+            return std::iter::repeat_with(Prefetch::default).take(chunk.len()).collect();
+        }
+
+        let needs_processing: Vec<Option<bool>> = chunk
+            .iter()
+            .map(|track| {
+                if self.is_excluded(track) {
+                    None
+                } else {
+                    self.check_state(track).ok()
+                }
+            })
+            .collect();
+
+        chunk
+            .par_iter()
+            .zip(needs_processing)
+            .map(|(track, needs_processing)| {
+                let status = FileStatus::check(&track.path);
+                let file_tags = if status == FileStatus::Present && needs_processing == Some(true) {
+                    FileTags::read_quiet(track)
+                } else {
+                    None
+                };
+                Prefetch {
+                    status,
+                    needs_processing,
+                    file_tags,
+                }
+            })
+            .collect()
+    }
+
     /// Check state, fix tags and rename the file for a single track.
-    fn process_track(&mut self, index: usize, track: &mut Track, headers: &OutputHeaders) -> Result<()> {
+    fn process_track(
+        &mut self,
+        index: usize,
+        track: &mut Track,
+        prefetch: Prefetch,
+        headers: &OutputHeaders,
+    ) -> Result<()> {
         self.print_directory_change(track);
         self.check_genre_mapping(track);
 
@@ -181,16 +270,20 @@ impl TrackRenamer {
             Self::print_running_index(self.tracks_count, track.number, headers.max_index_width);
         }
 
-        if self.should_skip(track, headers.max_index_width) {
+        if self.should_skip(track, prefetch.status, headers.max_index_width) {
             return Ok(());
         }
 
-        if !self.needs_processing(track) {
+        let needs_processing = prefetch
+            .needs_processing
+            .unwrap_or_else(|| self.needs_processing(track));
+        if !needs_processing {
             self.record_processed(track.name.to_lowercase(), index);
             return Ok(());
         }
 
-        let Some(mut file_tags) = self.read_tags_or_convert(track) else {
+        let file_tags = prefetch.file_tags.or_else(|| self.read_tags_or_convert(track));
+        let Some(mut file_tags) = file_tags else {
             return Ok(());
         };
 
@@ -251,13 +344,8 @@ impl TrackRenamer {
     }
 
     /// Return true for excluded, missing, or zero-size tracks, printing the reason.
-    fn should_skip(&self, track: &mut Track, max_index_width: usize) -> bool {
-        if self
-            .config
-            .excluded_tracks
-            .iter()
-            .any(|excluded_file| excluded_file == track)
-        {
+    fn should_skip(&self, track: &mut Track, status: FileStatus, max_index_width: usize) -> bool {
+        if self.is_excluded(track) {
             if self.config.verbose {
                 track.show(self.tracks_count, max_index_width);
                 let message = format!("Skipping track in exclude list: {track}");
@@ -267,44 +355,64 @@ impl TrackRenamer {
             return true;
         }
 
-        // File might have been deleted between gathering files and now,
-        // for example when handling duplicates.
-        if !track.path.exists() {
-            track.show(self.tracks_count, max_index_width);
-            let message = format!("Track no longer exists: {track}");
-            print_error!("{message}");
-            print_divider(&message, 0);
-            return true;
+        let status = if status == FileStatus::Unknown {
+            FileStatus::check(&track.path)
+        } else {
+            status
+        };
+        match status {
+            // File might have been deleted between gathering files and now,
+            // for example when handling duplicates.
+            FileStatus::Missing => {
+                track.show(self.tracks_count, max_index_width);
+                let message = format!("Track no longer exists: {track}");
+                print_error!("{message}");
+                print_divider(&message, 0);
+                true
+            }
+            FileStatus::Empty => {
+                track.not_processed = true;
+                track.show(self.tracks_count, max_index_width);
+                track.print_zero_size_warning();
+                track.print_divider(self.tracks_count, max_index_width);
+                true
+            }
+            FileStatus::Unknown | FileStatus::Present => false,
         }
+    }
 
-        if track.is_zero_size_file() {
-            track.not_processed = true;
-            track.show(self.tracks_count, max_index_width);
-            track.print_zero_size_warning();
-            track.print_divider(self.tracks_count, max_index_width);
-            return true;
-        }
-
-        false
+    /// Return true if the track is in the user config exclude list.
+    fn is_excluded(&self, track: &Track) -> bool {
+        self.config
+            .excluded_tracks
+            .iter()
+            .any(|excluded_file| excluded_file == track)
     }
 
     /// Return true if the track has changed or has not been processed with this version.
     fn needs_processing(&self, track: &Track) -> bool {
-        self.config.no_state
-            || match self.state.get(&track.path) {
-                Ok(Some(state)) => state.modified < track.metadata.modified || state.version != track.metadata.version,
-                Ok(None) => true,
-                Err(err) => {
-                    eprintln!("Failed to read state for {}: {err}", track.path.display());
-                    true
-                }
-            }
+        self.check_state(track).unwrap_or_else(|err| {
+            eprintln!("Failed to read state for {}: {err}", track.path.display());
+            true
+        })
+    }
+
+    /// Compare the track against the stored state without printing errors.
+    fn check_state(&self, track: &Track) -> Result<bool> {
+        if self.config.no_state {
+            return Ok(true);
+        }
+        Ok(self
+            .state
+            .get(&track.path)?
+            .is_none_or(|state| state.modified < track.metadata.modified || state.version != track.metadata.version))
     }
 
     /// Read tags, converting unreadable MP3 files to AIF if enabled.
     fn read_tags_or_convert(&mut self, track: &mut Track) -> Option<FileTags> {
         let verbose = self.config.verbose || self.config.debug;
-        let mut tag_result = track.read_tags(verbose);
+        // Zero-size files have already been skipped, so read directly without checking the size again.
+        let mut tag_result = FileTags::read(track, verbose);
         if tag_result.is_none() && self.config.convert_failed && track.format == FileFormat::Mp3 {
             println!("Converting MP3 to AIF...");
             match track.convert_mp3_to_aif() {

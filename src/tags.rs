@@ -85,6 +85,23 @@ impl FileTags {
         Self::Id3(Id3Tag::new())
     }
 
+    /// Read tags without printing anything or repairing malformed frames.
+    ///
+    /// Returns `None` on any error so the caller can fall back to [`FileTags::read`] for reporting and repair.
+    #[must_use]
+    pub fn read_quiet(track: &Track) -> Option<Self> {
+        match track.format {
+            FileFormat::Flac => FlacTag::read_from_path(&track.path).ok().map(Self::Flac),
+            FileFormat::Mp3 | FileFormat::Aif => match Id3Tag::read_from_path(&track.path) {
+                Ok(tag) => Some(Self::Id3(tag)),
+                Err(Error {
+                    kind: ErrorKind::NoTag, ..
+                }) => Some(Self::empty_id3()),
+                Err(_) => None,
+            },
+        }
+    }
+
     /// Return the artist field if present.
     #[must_use]
     pub fn artist(&self) -> Option<&str> {
@@ -1176,6 +1193,32 @@ mod test_read_tags {
     /// Return the path to the basic tags FLAC test file.
     fn basic_tags_flac_path() -> std::path::PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/basic_tags/Basic Tags - Song - 16-44.flac")
+    }
+
+    #[test]
+    fn read_quiet_matches_read_for_fixtures() {
+        for path in [basic_tags_mp3_path(), basic_tags_flac_path()] {
+            let track = Track::try_from_path(&path).expect("Failed to create Track from fixture");
+            let quiet = FileTags::read_quiet(&track).expect("Quiet read should succeed");
+            let regular = FileTags::read(&track, false).expect("Regular read should succeed");
+            assert_eq!(quiet.artist(), regular.artist());
+            assert_eq!(quiet.title(), regular.title());
+        }
+    }
+
+    #[test]
+    fn read_quiet_returns_empty_tags_for_file_without_tags() {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files/no_tags/No Tags - Song - 16-44.mp3");
+        let track = Track::try_from_path(&path).expect("Failed to create Track from fixture");
+        let tags = FileTags::read_quiet(&track).expect("Missing tags should yield an empty tag");
+        assert!(tags.artist().is_none());
+    }
+
+    #[test]
+    fn read_quiet_returns_none_for_missing_file() {
+        let mut track = Track::try_from_path(&basic_tags_mp3_path()).expect("Failed to create Track from fixture");
+        track.path = std::env::temp_dir().join("track-rename-does-not-exist.mp3");
+        assert!(FileTags::read_quiet(&track).is_none());
     }
 
     #[test]
