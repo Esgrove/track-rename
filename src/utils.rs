@@ -365,6 +365,38 @@ mod test_file_operations {
     use std::fs;
 
     #[test]
+    fn collect_tracks_finds_all_supported_fixtures() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files");
+        let tracks = collect_tracks(&root);
+        assert_eq!(
+            tracks.len(),
+            12,
+            "Expected mp3, aif and flac files in four fixture directories"
+        );
+        assert!(
+            tracks
+                .iter()
+                .all(|track| track.path.extension().is_some_and(|ext| ext != "crate"))
+        );
+    }
+
+    #[test]
+    fn collect_tracks_on_empty_directory_returns_nothing() {
+        let directory = std::env::temp_dir().join(format!("track-rename-empty-{}", std::process::id()));
+        fs::create_dir_all(&directory).expect("should create temp directory");
+        assert!(collect_tracks(&directory).is_empty());
+        fs::remove_dir(&directory).expect("should remove temp directory");
+    }
+
+    #[test]
+    fn modified_time_is_after_epoch() {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("Cargo.toml");
+        let modified = get_file_modified_time(&path).expect("should read modified time");
+        assert!(modified > 0);
+        assert!(get_file_modified_time(Path::new("does/not/exist.mp3")).is_err());
+    }
+
+    #[test]
     fn successful_rename() {
         let temp_directory = std::env::temp_dir();
         let source_path = temp_directory.join("test_rename_track_source_ok.tmp");

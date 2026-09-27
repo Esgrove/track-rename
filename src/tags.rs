@@ -1309,3 +1309,91 @@ mod test_read_tags {
         );
     }
 }
+
+#[cfg(test)]
+mod test_fix_malformed_frames {
+    use super::*;
+
+    /// Encode a value as a four-byte synchsafe integer.
+    fn encode_synchsafe(value: usize) -> [u8; 4] {
+        [
+            ((value >> 21) & 0x7F) as u8,
+            ((value >> 14) & 0x7F) as u8,
+            ((value >> 7) & 0x7F) as u8,
+            (value & 0x7F) as u8,
+        ]
+    }
+
+    /// Build a minimal ID3v2.3 tag with one frame followed by padding.
+    fn build_id3v23_tag(frame_id: [u8; 4], content: &[u8]) -> Vec<u8> {
+        let mut frame = Vec::new();
+        frame.extend_from_slice(&frame_id);
+        frame.extend_from_slice(&u32::try_from(content.len()).expect("Content fits in u32").to_be_bytes());
+        frame.extend_from_slice(&[0, 0]);
+        frame.extend_from_slice(content);
+        frame.extend_from_slice(&[0; 16]);
+
+        let mut data = b"ID3\x03\x00\x00".to_vec();
+        data.extend_from_slice(&encode_synchsafe(frame.len()));
+        data.extend_from_slice(&frame);
+        data
+    }
+
+    /// Write bytes to a unique temp file for the given test.
+    fn write_temp_file(test_name: &str, data: &[u8]) -> std::path::PathBuf {
+        let path = std::env::temp_dir().join(format!("track-rename-{test_name}-{}.mp3", std::process::id()));
+        std::fs::write(&path, data).expect("Failed to write temp file");
+        path
+    }
+
+    #[test]
+    fn fixes_ufid_without_null_terminator() {
+        let content = b"beatport-track-id";
+        let data = build_id3v23_tag(*b"UFID", content);
+        let path = write_temp_file("fix-ufid", &data);
+
+        let fixed = fix_malformed_frames_raw(&path).expect("Malformed UFID frame should be fixed");
+        assert_eq!(fixed, vec![(String::from("UFID"), 1)]);
+
+        let patched = std::fs::read(&path).expect("Failed to read patched file");
+        assert_eq!(patched.len(), data.len(), "Patch must not change the file size");
+        assert_eq!(patched[20], 0x00, "First content byte should become the null delimiter");
+        assert_eq!(&patched[21..20 + content.len()], &content[1..]);
+        assert!(Id3Tag::read_from_path(&path).is_ok(), "Patched tag should parse");
+
+        std::fs::remove_file(&path).expect("Failed to remove temp file");
+    }
+
+    #[test]
+    fn leaves_valid_frames_untouched() {
+        let data = build_id3v23_tag(*b"UFID", b"owner\x00identifier");
+        let path = write_temp_file("valid-ufid", &data);
+
+        assert!(fix_malformed_frames_raw(&path).is_err(), "Nothing should be fixed");
+        assert_eq!(std::fs::read(&path).expect("Failed to read file"), data);
+
+        std::fs::remove_file(&path).expect("Failed to remove temp file");
+    }
+
+    #[test]
+    fn ignores_frames_that_are_not_fixable() {
+        let data = build_id3v23_tag(*b"TIT2", b"\x03Title");
+        let path = write_temp_file("text-frame", &data);
+
+        assert!(
+            fix_malformed_frames_raw(&path).is_err(),
+            "Text frames should not be patched"
+        );
+
+        std::fs::remove_file(&path).expect("Failed to remove temp file");
+    }
+
+    #[test]
+    fn rejects_file_without_id3_header() {
+        let path = write_temp_file("no-header", &[0xFF; 64]);
+
+        assert!(fix_malformed_frames_raw(&path).is_err());
+
+        std::fs::remove_file(&path).expect("Failed to remove temp file");
+    }
+}
