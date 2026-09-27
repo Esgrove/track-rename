@@ -1,35 +1,49 @@
-exclude: ^(.idea|.vscode)/
+exclude: ^(.idea|.vscode)
 fail_fast: false
 
+# Run with prek (https://prek.j178.dev), a fast drop-in replacement for pre-commit.
+# Hooks with the same priority run concurrently, lower priority values run first.
+
 repos:
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: "v6.0.0"
-    # https://github.com/pre-commit/pre-commit-hooks
+  - repo: builtin
+    # Fast Rust implementations of pre-commit-hooks bundled with prek
     hooks:
       - id: check-added-large-files
+        priority: 1
       - id: check-case-conflict
+        priority: 1
       - id: check-json
+        priority: 1
       - id: check-merge-conflict
+        priority: 1
       - id: check-toml
+        priority: 1
       - id: check-yaml
+        args: [--allow-multiple-documents]
+        priority: 1
       - id: end-of-file-fixer
+        priority: 1
       - id: mixed-line-ending
+        priority: 1
       - id: trailing-whitespace
+        priority: 1
 
   - repo: local
     hooks:
       - id: rust-fmt
-        name: rust fmt format
+        name: cargo fmt format
         description: Run cargo fmt on files included in the commit.
         entry: cargo fmt
         pass_filenames: false
-        types: [ file, rust ]
+        types: [file, rust]
         language: system
+        priority: 1
 
       - id: rust-clippy
-        name: rust clippy lint
+        name: cargo clippy lint
         description: Run cargo clippy on files included in the commit.
-        entry: cargo clippy
+        entry: cargo clippy -- -Dwarnings
         pass_filenames: false
-        types: [ file, rust ]
+        types: [file, rust]
         language: system
+        priority: 2
