@@ -58,7 +58,7 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-            rust/target/
+            target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
 
@@ -69,7 +69,7 @@ jobs:
         run: cargo test --no-fail-fast
 
       - name: Lint
-        run: cargo clippy -- -Dwarnings
+        run: cargo clippy --all-targets -- -Dwarnings
 
   format:
     runs-on: ubuntu-latest
