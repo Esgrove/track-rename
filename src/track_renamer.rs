@@ -328,7 +328,9 @@ impl TrackRenamer {
         }
 
         let formatted_name_lower = formatted_name.to_lowercase();
-        if !self.config.tags_only && tag_outcome.allows_rename() {
+        if self.config.tags_only && track.formatted_filename_with_extension() != track.filename() {
+            track.not_processed = true;
+        } else if !self.config.tags_only && tag_outcome.allows_rename() {
             self.rename_file(track, &formatted_name, &formatted_name_lower, headers)?;
         }
         self.record_processed(formatted_name_lower, index);
@@ -416,7 +418,7 @@ impl TrackRenamer {
 
     /// Compare the track against the stored state without printing errors.
     fn check_state(&self, track: &Track) -> Result<bool> {
-        if self.config.no_state {
+        if self.config.no_state || self.config.rename_files || self.config.write_all_tags {
             return Ok(true);
         }
         Ok(self
@@ -475,6 +477,13 @@ impl TrackRenamer {
                 track.tags_updated = true;
                 self.stats.tags_fixed += 1;
             }
+            match utils::get_file_modified_time(&track.path) {
+                Ok(modified) => track.metadata.modified = modified,
+                Err(error) => {
+                    print_error!("Failed to read modified time for {}: {error}", track.path.display());
+                    track.not_processed = true;
+                }
+            }
             TagWriteOutcome::Written
         } else {
             track.not_processed = true;
@@ -525,6 +534,7 @@ impl TrackRenamer {
 
         // Rename files if the flag was given or if tags were not changed
         if !self.config.rename_files && track.tags_updated {
+            track.not_processed = true;
             return Ok(());
         }
 
@@ -918,6 +928,71 @@ mod test_track_renamer {
             let mut renamer = TrackRenamer::new_with_config(temp_file, Config::new_for_tests());
             renamer.run().expect("Rename failed");
         });
+    }
+
+    #[test]
+    fn explicit_actions_bypass_unchanged_state() {
+        let source = BASIC_TAGS_DIRECTORY.join("Basic Tags - Song - 16-44.mp3");
+        let track = Track::try_from_path(&source).expect("Failed to create track");
+        let mut renamer = TrackRenamer::new_with_config(source, Config::default());
+        renamer
+            .state
+            .insert(&track.path, &track.metadata)
+            .expect("Failed to insert state");
+
+        assert!(!renamer.check_state(&track).expect("Failed to check state"));
+        renamer.config.rename_files = true;
+        assert!(renamer.check_state(&track).expect("Failed to check rename state"));
+        renamer.config.rename_files = false;
+        renamer.config.write_all_tags = true;
+        assert!(renamer.check_state(&track).expect("Failed to check all-tags state"));
+    }
+
+    #[test]
+    fn tags_only_does_not_cache_pending_rename() {
+        let source = BASIC_TAGS_DIRECTORY.join("Basic Tags - Song - 16-44.mp3");
+        let temp_file = temp_test_file(&source).expect("Failed to create temp file path");
+        copy(&source, &temp_file).expect("Failed to copy fixture");
+        let mut config = Config::new_for_tests();
+        config.tags_only = true;
+        let mut renamer = TrackRenamer::new_with_config(temp_file.clone(), config);
+        renamer.run().expect("Failed to process tags-only track");
+
+        assert!(renamer.tracks.first().is_some_and(|track| track.not_processed));
+        assert!(renamer.state.get(&temp_file).expect("Failed to read state").is_none());
+        fs::remove_file(&temp_file).expect("Failed to remove temp fixture");
+        fs::remove_dir(temp_file.parent().expect("Temp fixture should have a parent"))
+            .expect("Failed to remove temp directory");
+    }
+
+    #[test]
+    fn tag_write_refreshes_cached_modified_time() {
+        let source = Path::new("tests/files/missing_title/Missing Title - Song - 16-44.mp3");
+        let temp_file = temp_test_file(source).expect("Failed to create temp file path");
+        copy(source, &temp_file).expect("Failed to copy fixture");
+        let previous_modified = std::time::UNIX_EPOCH + std::time::Duration::from_secs(1_600_000_000);
+        File::options()
+            .write(true)
+            .open(&temp_file)
+            .expect("Failed to open temp fixture")
+            .set_times(fs::FileTimes::new().set_modified(previous_modified))
+            .expect("Failed to set modification time");
+
+        let mut config = Config::new_for_tests();
+        config.tags_only = true;
+        let mut renamer = TrackRenamer::new_with_config(temp_file.clone(), config);
+        renamer.run().expect("Failed to update track tags");
+
+        assert_eq!(renamer.stats.tags_fixed, 1);
+        let track = renamer.tracks.first().expect("Processed track should exist");
+        assert_eq!(
+            track.metadata.modified,
+            utils::get_file_modified_time(&temp_file).expect("Failed to read file time")
+        );
+        assert!(track.metadata.modified > 1_600_000_000);
+        fs::remove_file(&temp_file).expect("Failed to remove temp fixture");
+        fs::remove_dir(temp_file.parent().expect("Temp fixture should have a parent"))
+            .expect("Failed to remove temp directory");
     }
 
     #[test]
