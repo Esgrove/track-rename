@@ -98,7 +98,6 @@ const GENRES: &[&str] = &[
 const FILENAMES: &[&str] = &[
     "Kings Of Tomorrow - Finally (Sandy Rivera's Classic Mix)",
     "Various Artists - Big Sean - Dance (A$$)",
-    "No Separator In This Filename",
     "Beyonce\u{301} - Break My Soul (Trayze Acapella In-Out)",
 ];
 

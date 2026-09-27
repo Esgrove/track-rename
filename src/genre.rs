@@ -560,27 +560,29 @@ static RE_HOUSE: LazyLock<Regex> =
 pub fn format_genre(genre: &str) -> String {
     let mut formatted_genre = genre.trim().to_string();
     if formatted_genre.chars().count() < 3 {
-        formatted_genre = String::new();
+        return String::new();
     }
 
     for (pattern, replacement) in &COMMON_SUBSTITUTES {
-        formatted_genre = formatted_genre.replace(pattern, replacement);
+        formatting::replace_literal(&mut formatted_genre, pattern, replacement);
     }
 
     for (regex, replacement) in REGEX_SUBSTITUTES.iter() {
-        formatted_genre = regex.replace_all(&formatted_genre, *replacement).to_string();
+        formatting::replace_regex(&mut formatted_genre, regex, replacement);
     }
 
     for (regex, replacement) in REGEX_MAPPINGS.iter() {
-        formatted_genre = regex.replace_all(&formatted_genre, *replacement).to_string();
+        formatting::replace_regex(&mut formatted_genre, regex, replacement);
     }
 
-    formatted_genre = formatted_genre.replace("Original Samples / ", "").replace(" / ", ", ");
+    formatting::replace_literal(&mut formatted_genre, "Original Samples / ", "");
+    formatting::replace_literal(&mut formatted_genre, " / ", ", ");
 
     reorder_house_genres(&mut formatted_genre);
     formatting::fix_whitespace(&mut formatted_genre);
 
-    formatted_genre.replace(" / ", ", ")
+    formatting::replace_literal(&mut formatted_genre, " / ", ", ");
+    formatted_genre
 }
 
 /// Reorder house genres to start with "House".

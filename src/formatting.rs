@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::cmp::Ordering;
 use std::sync::LazyLock;
 
@@ -408,38 +409,33 @@ pub fn format_tags_for_artist_and_title(artist: &str, title: &str) -> (String, S
     let mut formatted_title = title.to_string();
 
     // Remove an extra file extension from the end
-
     for ext in &FILE_EXTENSIONS {
-        if formatted_artist.to_lowercase().ends_with(ext) {
-            formatted_artist = formatted_artist[0..formatted_artist.len() - ext.len()].to_string();
-        }
-        if formatted_title.to_lowercase().ends_with(ext) {
-            formatted_title = formatted_title[0..formatted_title.len() - ext.len()].to_string();
-        }
+        strip_suffix_ignore_ascii_case(&mut formatted_artist, ext);
+        strip_suffix_ignore_ascii_case(&mut formatted_title, ext);
     }
 
     for (pattern, replacement) in &COMMON_SUBSTITUTES {
-        formatted_artist = formatted_artist.replace(pattern, replacement);
-        formatted_title = formatted_title.replace(pattern, replacement);
+        replace_literal(&mut formatted_artist, pattern, replacement);
+        replace_literal(&mut formatted_title, pattern, replacement);
     }
 
     for (pattern, replacement) in &TITLE_SUBSTITUTES {
-        formatted_title = formatted_title.replace(pattern, replacement);
+        replace_literal(&mut formatted_title, pattern, replacement);
     }
 
     for (regex, replacement) in REGEX_COMMON_SUBSTITUTES.iter() {
-        formatted_artist = regex.replace_all(&formatted_artist, *replacement).to_string();
-        formatted_title = regex.replace_all(&formatted_title, *replacement).to_string();
+        replace_regex(&mut formatted_artist, regex, replacement);
+        replace_regex(&mut formatted_title, regex, replacement);
     }
 
     for (regex, replacement) in REGEX_NAME_SUBSTITUTES.iter() {
-        formatted_artist = regex.replace_all(&formatted_artist, *replacement).to_string();
-        formatted_title = regex.replace_all(&formatted_title, *replacement).to_string();
+        replace_regex(&mut formatted_artist, regex, replacement);
+        replace_regex(&mut formatted_title, regex, replacement);
     }
 
     for (regex, replacement) in REGEX_SUBSTITUTES.iter() {
-        formatted_artist = regex.replace_all(&formatted_artist, *replacement).to_string();
-        formatted_title = regex.replace_all(&formatted_title, *replacement).to_string();
+        replace_regex(&mut formatted_artist, regex, replacement);
+        replace_regex(&mut formatted_title, regex, replacement);
     }
 
     // Artist name should not start with a dot since this will make it a hidden file
@@ -461,29 +457,27 @@ pub fn format_tags_for_artist_and_title(artist: &str, title: &str) -> (String, S
     balance_parenthesis(&mut formatted_title);
 
     for (regex, replacement) in REGEX_SUBSTITUTES.iter() {
-        formatted_artist = regex.replace_all(&formatted_artist, *replacement).to_string();
-        formatted_title = regex.replace_all(&formatted_title, *replacement).to_string();
+        replace_regex(&mut formatted_artist, regex, replacement);
+        replace_regex(&mut formatted_title, regex, replacement);
     }
 
     for (regex, replacement) in REGEX_COMMON_SUBSTITUTES.iter() {
-        formatted_artist = regex.replace_all(&formatted_artist, *replacement).to_string();
-        formatted_title = regex.replace_all(&formatted_title, *replacement).to_string();
+        replace_regex(&mut formatted_artist, regex, replacement);
+        replace_regex(&mut formatted_title, regex, replacement);
     }
 
     for (pattern, replacement) in &COMMON_SUBSTITUTES {
-        formatted_artist = formatted_artist.replace(pattern, replacement);
-        formatted_title = formatted_title.replace(pattern, replacement);
+        replace_literal(&mut formatted_artist, pattern, replacement);
+        replace_literal(&mut formatted_title, pattern, replacement);
     }
 
-    if formatted_title == formatted_title.to_uppercase()
-        && formatted_title.chars().count() > 10
-        && !RE_CHARS_AND_DOTS.is_match(&formatted_title)
-    {
+    let is_abbreviation = RE_CHARS_AND_DOTS.is_match(&formatted_title);
+    if is_uppercase(&formatted_title) && formatted_title.chars().count() > 10 && !is_abbreviation {
         formatted_title = titlecase::titlecase(&formatted_title);
-        if formatted_artist == formatted_artist.to_uppercase() && formatted_artist.chars().count() > 8 {
+        if is_uppercase(&formatted_artist) && formatted_artist.chars().count() > 8 {
             formatted_artist = titlecase::titlecase(&formatted_artist);
         }
-    } else if RE_CHARS_AND_DOTS.is_match(&formatted_title) {
+    } else if is_abbreviation {
         formatted_title = formatted_title.to_uppercase();
     }
 
@@ -497,8 +491,8 @@ pub fn format_filename(artist: &str, title: &str) -> (String, String) {
     let mut formatted_title = title.replace('"', "''");
 
     for (regex, replacement) in REGEX_FILENAME_SUBSTITUTES.iter() {
-        formatted_artist = regex.replace_all(&formatted_artist, *replacement).to_string();
-        formatted_title = regex.replace_all(&formatted_title, *replacement).to_string();
+        replace_regex(&mut formatted_artist, regex, replacement);
+        replace_regex(&mut formatted_title, regex, replacement);
     }
 
     (formatted_artist.trim().to_string(), formatted_title.trim().to_string())
@@ -509,14 +503,14 @@ pub fn format_album(album: &str) -> String {
     let mut formatted_album = album.trim().to_string();
 
     for (pattern, replacement) in &COMMON_SUBSTITUTES {
-        formatted_album = formatted_album.replace(pattern, replacement);
+        replace_literal(&mut formatted_album, pattern, replacement);
     }
 
     for (regex, replacement) in REGEX_COMMON_SUBSTITUTES.iter() {
-        formatted_album = regex.replace_all(&formatted_album, *replacement).to_string();
+        replace_regex(&mut formatted_album, regex, replacement);
     }
 
-    formatted_album = RE_WWW.replace(&formatted_album, "").to_string();
+    replace_regex(&mut formatted_album, &RE_WWW, "");
     fix_duplicate_parentheses(&mut formatted_album);
     fix_whitespace(&mut formatted_album);
     formatted_album
@@ -524,8 +518,45 @@ pub fn format_album(album: &str) -> String {
 
 /// Collapse repeated whitespace and trim the string in place.
 pub fn fix_whitespace(text: &mut String) {
-    let replaced = RE_MULTIPLE_SPACES.replace_all(text, " ");
-    *text = replaced.trim().to_string();
+    replace_regex(text, &RE_MULTIPLE_SPACES, " ");
+    let trimmed = text.trim();
+    if trimmed.len() != text.len() {
+        *text = trimmed.to_string();
+    }
+}
+
+/// Apply a regex replacement in place, allocating only when the pattern matches.
+pub(crate) fn replace_regex(text: &mut String, regex: &Regex, replacement: &str) {
+    if let Cow::Owned(replaced) = regex.replace_all(text, replacement) {
+        *text = replaced;
+    }
+}
+
+/// Replace a literal pattern in place, allocating only when the pattern is present.
+pub(crate) fn replace_literal(text: &mut String, pattern: &str, replacement: &str) {
+    if text.contains(pattern) {
+        *text = text.replace(pattern, replacement);
+    }
+}
+
+/// Return true if the text ends with the given ASCII suffix, ignoring ASCII case.
+fn ends_with_ignore_ascii_case(text: &str, suffix: &str) -> bool {
+    text.len() >= suffix.len()
+        && text.is_char_boundary(text.len() - suffix.len())
+        && text[text.len() - suffix.len()..].eq_ignore_ascii_case(suffix)
+}
+
+/// Remove the given ASCII suffix from the text, ignoring ASCII case.
+fn strip_suffix_ignore_ascii_case(text: &mut String, suffix: &str) {
+    if ends_with_ignore_ascii_case(text, suffix) {
+        text.truncate(text.len() - suffix.len());
+    }
+}
+
+/// Return true if uppercasing the text would not change it.
+fn is_uppercase(text: &str) -> bool {
+    text.chars()
+        .all(|character| character.to_uppercase().eq(std::iter::once(character)))
 }
 
 /// Check parenthesis counts match and insert missing.
@@ -763,12 +794,10 @@ fn extract_feat_from_parentheses(artist: &mut String) {
 fn remove_bpm_in_parentheses_from_end(text: &mut String) {
     // Skip some valid titles
     let suffixes = [" (4u)", "33rpm)", "45rpm)", " mix)", " dub)", " eq)", " rip)"];
-    let text_lower = text.to_lowercase();
-    if suffixes.iter().any(|suffix| text_lower.ends_with(suffix)) {
+    if suffixes.iter().any(|suffix| ends_with_ignore_ascii_case(text, suffix)) {
         return;
     }
 
-    let mut result = text.clone();
     let regexes = [
         &RE_BPM_IN_PARENTHESES,
         &RE_BPM_WITH_TEXT,
@@ -777,14 +806,17 @@ fn remove_bpm_in_parentheses_from_end(text: &mut String) {
         &RE_BPM_WITH_EXTRA_TEXT,
     ];
     for re in regexes {
-        if re.is_match(&result) {
-            result = re.replace_all(&result, "").to_string();
-            break;
+        if let Cow::Owned(result) = re.replace_all(text, "") {
+            let trimmed = result.trim();
+            if !trimmed.is_empty() {
+                *text = trimmed.to_string();
+            }
+            return;
         }
     }
-    result = result.trim().to_string();
-    if !result.is_empty() {
-        *text = result;
+    let trimmed = text.trim();
+    if !trimmed.is_empty() && trimmed.len() != text.len() {
+        *text = trimmed.to_string();
     }
 }
 
