@@ -96,14 +96,38 @@ benches/
 track-rename.toml        # Example user config (placed at ~/.config/track-rename.toml)
 ```
 
-## Code organization
+## Code Organization
 
-- All enums before structs
-- Put all struct definitions before any implementations.
-- Implementations only after last struct definition in the order of struct definitions.
-- Functions after implementations
-- In implementations, Order public methods before private methods
-- In implementations, put associated functions last
+Organize Rust source files in this order:
+
+1. Structs (public before private)
+2. Enums (public before private)
+3. Trait implementations and impl blocks (in the order the types are defined)
+4. Public functions
+5. Private functions
+6. Root-level test modules
+
+Within implementation blocks:
+
+- Methods creating a new instance of `Self` come first,
+  `new` always first when there is one and similar methods such as `from_*` after that
+- Public methods before private methods
+- Other associated functions (those without `self` that are not constructors) after instance methods
+
+### Module size and boundaries
+
+- Review a source file when its non-test code exceeds roughly 1000 lines.
+  This is a signal to look for separate concerns, not a hard limit.
+  Long test sections or one tightly coupled implementation do not require splitting.
+- Split along independent concerns when doing so makes ownership clearer.
+  Give each new Rust file module-level `//!` documentation describing its purpose.
+- Keep helpers specific to one binary in that binary's modules
+  (`src/main.rs` with `config.rs`, `statistics.rs` and `track_renamer.rs`, or `src/bin/*.rs`).
+  Put reusable helpers in the shared `track_rename` library (modules exported from `src/lib.rs`)
+  rather than copying them across binaries.
+- Use the narrowest practical visibility.
+  Prefer `pub(crate)` or `pub(super)` when only sibling modules need an item.
+- Keep test modules at the root of their source module and avoid nesting test modules.
 
 ## Code Style and Conventions
 
@@ -113,11 +137,12 @@ track-rename.toml        # Example user config (placed at ~/.config/track-rename
 - Use `anyhow` for error handling with `Result<T>` return types
 - Use `clap` with derive macros for CLI argument parsing
 - Use `colored` crate for terminal output coloring
-- Common helper functions and macros like `print_error!` and `print_warning!` are defined in `src/lib.rs`
+- Common output helpers and macros like `print_error!` and `print_yellow!` are defined in `src/output.rs`
 - Use descriptive variable and function names. No single character variables.
 - Prefer full names over abbreviations. For example: `directories` instead of `dirs`.
 - Create docstrings for structs and functions.
 - Avoid trailing comments.
+- All `use` imports must be at the top of the file. Never import inside functions.
 
 ## Testing
 
@@ -188,14 +213,16 @@ mod test_clean {
 These commands can permanently destroy uncommitted work.
 If you need to undo changes, ask the user to do it manually.
 
-## Documentation
+## Updating CLI Usage
 
-When changing CLI arguments or adding new binaries, update the usage output in `README.md`.
-Use the short `-h` flag to get concise output and replace the `.exe` suffix with the plain binary name:
+After changing CLI arguments, flags, or subcommands in any binary (`trackrename`, `trackprint`, `crateprint`):
 
-```shell
-cargo run --bin <name> -- -h
-```
+1. Run the binary with `-h` to get the short help output: `cargo run --bin <name> -- -h`
+2. Update the corresponding `README.md` usage sections with the new output
+3. Also update subcommand help sections by running `cargo run --bin <name> -- <subcommand> -h`
+
+Use the short help flag (`-h`), not the long help flag (`--help`).
+Replace the `.exe` suffix with the plain binary name in the pasted output.
 
 ## Configuration
 
