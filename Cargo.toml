@@ -1,6 +1,6 @@
 [package]
 name = "track-rename"
-version = "2.6.1"
+version = "3.0.0"
 edition = "2024"
 authors = ["Esgrove <esgrove@outlook.com>"]
 description = "CLI tool for formatting and renaming audio tracks"
@@ -16,8 +16,8 @@ rust-version = "1.98"
 anyhow = { version = "1.0.104", features = ["backtrace"] }
 base64 = "0.23.1"
 byteorder = "1.5.0"
-clap = { version = "4.6.6", features = ["derive"] }
-clap_complete = "4.6.9"
+clap = { version = "4.6.7", features = ["derive"] }
+clap_complete = "4.6.11"
 colored = "3.1.1"
 crossterm = "0.29.0"
 difference = "2.0.0"
@@ -26,14 +26,14 @@ dunce = "1.0.5"
 id3 = { git = "https://github.com/Esgrove/rust-id3/" }
 itertools = "0.15.0"
 metaflac = "0.2.8"
-rand = "0.10.2"
+rand = "0.10.3"
 rayon = "1.12.0"
 regex = "1.13.1"
 rusqlite = { version = "0.40.2", features = ["bundled"] }
 serde = { version = "1.0.229", features = ["derive"] }
 titlecase = "3.6.0"
-toml = "1.1.5"
-trash = "5.2.7"
+toml = "1.1.6"
+trash = "5.2.9"
 unicode-normalization = "0.1.25"
 walkdir = "2.5.0"
 
