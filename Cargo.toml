@@ -37,6 +37,9 @@ trash = "5.2.7"
 unicode-normalization = "0.1.25"
 walkdir = "2.5.0"
 
+[dev-dependencies]
+criterion = "0.8.2"
+
 [[bin]]
 name = "trackrename"
 path = "src/main.rs"
@@ -49,6 +52,18 @@ path = "src/bin/trackprint.rs"
 name = "crateprint"
 path = "src/bin/crateprint.rs"
 
+[[bench]]
+name = "formatting"
+harness = false
+
+[[bench]]
+name = "serato"
+harness = false
+
+[[bench]]
+name = "io"
+harness = false
+
 [profile.dev]
 incremental = true
 
@@ -58,7 +73,7 @@ lto = true
 codegen-units = 1
 
 [lints.rust]
-unsafe_code = "forbid"
+unsafe_code = "deny"
 
 [lints.clippy]
 # https://rust-lang.github.io/rust-clippy/master/index.html
