@@ -6,6 +6,12 @@ use anyhow::anyhow;
 use colored::Colorize;
 use crossterm::terminal;
 
+/// Number of frequency bands in each overview block.
+const BAND_COUNT: usize = 16;
+
+/// Number of rows in the rendered terminal waveform.
+const WAVEFORM_HEIGHT: usize = 8;
+
 /// Contains the waveform overview data.
 /// It seems the length will always be 240 time slices,
 /// regardless of the track length.
@@ -13,7 +19,7 @@ use crossterm::terminal;
 /// with the byte value corresponding to the strength of that frequency band.
 #[derive(Debug, Clone, Default)]
 pub struct Overview {
-    blocks: Vec<[u8; 16]>,
+    blocks: Vec<[u8; BAND_COUNT]>,
 }
 
 impl Overview {
@@ -48,80 +54,13 @@ impl Overview {
     /// Convert waveform overview to a minimized text representation for terminal display.
     fn draw_waveform(&self) -> Result<String> {
         let (terminal_width, _) = terminal::size().map_err(|e| anyhow!("Failed to get terminal size: {e}"))?;
-        let width = self.blocks.len();
+        let levels = self.waveform_levels(terminal_width);
 
         let mut waveform = String::new();
-
-        // Calculate average for consecutive values to reduce height from original 16 to specified height
-        let height = 8;
-        let ratio = 16 / height;
-        let mut averaged_blocks: Vec<Vec<u8>> = vec![vec![0; height]; width];
-
-        for (x, column) in averaged_blocks.iter_mut().enumerate().take(width) {
-            for (y, value) in column.iter_mut().enumerate().take(height) {
-                let avg: u16 = self.blocks[x][ratio * y..ratio * y + ratio]
-                    .iter()
-                    .map(|&v| u16::from(v))
-                    .sum::<u16>()
-                    / height as u16;
-                *value = avg as u8;
-            }
-        }
-
-        // Adjust width if needed to fit into available terminal width
-        let resampled_blocks = if terminal_width >= 240 {
-            averaged_blocks
-        } else if terminal_width >= 120 {
-            // Downsample by two, 240 -> 120
-            (0..width / 2)
-                .map(|i| {
-                    (0..height)
-                        .map(|y| {
-                            u16::midpoint(
-                                u16::from(averaged_blocks[2 * i][y]),
-                                u16::from(averaged_blocks[2 * i + 1][y]),
-                            ) as u8
-                        })
-                        .collect()
-                })
-                .collect()
-        } else {
-            // Downsample by three, 240 -> 80
-            (0..width / 3)
-                .map(|i| {
-                    (0..height)
-                        .map(|y| {
-                            ((u16::from(averaged_blocks[3 * i][y])
-                                + u16::from(averaged_blocks[3 * i + 1][y])
-                                + u16::from(averaged_blocks[3 * i + 2][y]))
-                                / 3) as u8
-                        })
-                        .collect()
-                })
-                .collect()
-        };
-
-        let max_value = resampled_blocks
-            .iter()
-            .flat_map(|row| row.iter())
-            .copied()
-            .max()
-            .unwrap_or(1);
-
-        // Normalize values to range 0.0 - 1.0
-        let normalized_blocks: Vec<Vec<f32>> = resampled_blocks
-            .iter()
-            .map(|row| {
-                row.iter()
-                    .map(|&value| f32::from(value) / f32::from(max_value))
-                    .collect()
-            })
-            .collect();
-
         // Iterate in reverse so first values of the vertical block go to the bottom of the waveform
-        for y in (0..height).rev() {
-            for block in &normalized_blocks {
-                let (symbol, color) = match block[y] {
+        for y in (0..WAVEFORM_HEIGHT).rev() {
+            for column in &levels {
+                let (symbol, color) = match column[y] {
                     value if value <= 0.06 => ('░', "blue"),
                     value if value <= 0.20 => ('░', "cyan"),
                     value if value <= 0.42 => ('▒', "green"),
@@ -135,6 +74,43 @@ impl Overview {
         }
 
         Ok(waveform)
+    }
+
+    /// Average frequency bands to the waveform height and downsample columns to fit the terminal,
+    /// returning levels normalized to the range 0.0 - 1.0.
+    fn waveform_levels(&self, terminal_width: u16) -> Vec<[f32; WAVEFORM_HEIGHT]> {
+        let bands_per_row = BAND_COUNT / WAVEFORM_HEIGHT;
+        let averaged: Vec<[u16; WAVEFORM_HEIGHT]> = self
+            .blocks
+            .iter()
+            .map(|block| {
+                std::array::from_fn(|y| {
+                    block[bands_per_row * y..bands_per_row * (y + 1)]
+                        .iter()
+                        .map(|&value| u16::from(value))
+                        .sum::<u16>()
+                        / bands_per_row as u16
+                })
+            })
+            .collect();
+
+        let columns_per_output = match terminal_width {
+            240.. => 1,
+            120.. => 2,
+            _ => 3,
+        };
+        let resampled: Vec<[u16; WAVEFORM_HEIGHT]> = averaged
+            .chunks_exact(columns_per_output)
+            .map(|group| {
+                std::array::from_fn(|y| group.iter().map(|column| column[y]).sum::<u16>() / columns_per_output as u16)
+            })
+            .collect();
+
+        let max_value = resampled.iter().flatten().copied().max().unwrap_or(0).max(1);
+        resampled
+            .iter()
+            .map(|column| std::array::from_fn(|y| f32::from(column[y]) / f32::from(max_value)))
+            .collect()
     }
 }
 
@@ -261,5 +237,40 @@ mod test_overview {
             !display_output.is_empty(),
             "Display output for empty overview should not be empty"
         );
+    }
+
+    #[test]
+    fn waveform_levels_downsample_to_terminal_width() {
+        let overview = build_overview_with_blocks(240);
+        assert_eq!(overview.waveform_levels(300).len(), 240);
+        assert_eq!(overview.waveform_levels(160).len(), 120);
+        assert_eq!(overview.waveform_levels(100).len(), 80);
+    }
+
+    #[test]
+    fn waveform_levels_average_band_pairs() {
+        let mut block = [0u8; 16];
+        block[0] = 10;
+        block[1] = 30;
+        block[14] = 40;
+        block[15] = 40;
+        let overview = Overview { blocks: vec![block] };
+        let levels = overview.waveform_levels(300);
+        assert_eq!(levels.len(), 1);
+        assert!((levels[0][0] - 0.5).abs() < f32::EPSILON, "Expected (10 + 30) / 2 / 40");
+        assert!(
+            (levels[0][7] - 1.0).abs() < f32::EPSILON,
+            "Loudest row should normalize to 1.0"
+        );
+        assert!(levels[0][1..7].iter().all(|&level| level == 0.0));
+    }
+
+    #[test]
+    fn waveform_levels_handle_silence() {
+        let overview = Overview {
+            blocks: vec![[0u8; 16]; 240],
+        };
+        let levels = overview.waveform_levels(300);
+        assert!(levels.iter().flatten().all(|&level| level == 0.0));
     }
 }

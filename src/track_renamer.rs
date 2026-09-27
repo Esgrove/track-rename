@@ -489,7 +489,8 @@ impl TrackRenamer {
     #[inline]
     fn print_running_index(total_tracks: usize, number: usize, max_index_width: usize) {
         print!("\r{number:>max_index_width$}/{total_tracks}");
-        io::stdout().flush().expect("Failed to flush stdout");
+        // Progress output is best effort, e.g. stdout may be a closed pipe.
+        let _ = io::stdout().flush();
     }
 
     /// Count and print the total number of each file extension in the file list.
