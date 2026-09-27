@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use anyhow::{Context, Result};
-use colored::Colorize;
+use colored::{ColoredString, Colorize};
 use itertools::Itertools;
 use rayon::prelude::*;
 
@@ -42,6 +42,13 @@ pub struct TrackRenamer {
     tag_versions: HashMap<String, usize>,
     checked_genre_mappings: HashSet<String>,
     current_path: PathBuf,
+}
+
+/// Terminal output settings shared by all tracks during processing.
+struct OutputHeaders {
+    fix_tags: ColoredString,
+    rename_file: ColoredString,
+    max_index_width: usize,
 }
 
 impl TrackRenamer {
@@ -126,7 +133,7 @@ impl TrackRenamer {
         Ok(())
     }
 
-    // Format tags and rename files if needed.
+    /// Format tags and rename files if needed.
     pub fn process_tracks(&mut self) -> Result<()> {
         if self.config.verbose {
             if self.tracks_count == 0 {
@@ -145,242 +152,290 @@ impl TrackRenamer {
         } else {
             ""
         };
-        let fix_tags_header = format!("Fix tags{dryrun_header}:").blue().bold();
-        let rename_file_header = format!("Rename file{dryrun_header}:").cyan().bold();
-        let max_index_width: usize = self.tracks_count.checked_ilog10().unwrap_or(0) as usize + 1;
+        let headers = OutputHeaders {
+            fix_tags: format!("Fix tags{dryrun_header}:").blue().bold(),
+            rename_file: format!("Rename file{dryrun_header}:").cyan().bold(),
+            max_index_width: self.tracks_count.checked_ilog10().unwrap_or(0) as usize + 1,
+        };
 
         self.current_path = self.root.clone();
 
         let start_instant = Instant::now();
-        for track in &mut self.tracks {
-            if !self.config.silent && !self.config.sort_files {
-                // Print current directory when iterating in directory order
-                if self.current_path != track.root {
-                    self.current_path.clone_from(&track.root);
-                    let path = utils::path_to_string_relative(&self.current_path);
-                    if !path.is_empty() {
-                        println!("\n{}", path.magenta());
-                    }
-                }
-            }
+        let mut tracks = std::mem::take(&mut self.tracks);
+        let result = tracks
+            .iter_mut()
+            .try_for_each(|track| self.process_track(track, &headers));
+        self.tracks = tracks;
+        result?;
 
-            // If this is a DJ MUSIC subdirectory, check genre mappings
-            if !self.checked_genre_mappings.contains(track.directory.as_str())
-                && utils::contains_subpath(&track.root, DJ_MUSIC_PATH.as_path())
-            {
-                if !GENRE_MAPPINGS.contains_key(track.directory.as_str()) {
-                    print_yellow!("\nWARNING: DJ music folder missing genre mapping: {}", track.directory);
-                } else if GENRE_MAPPINGS.get(track.directory.as_str()).unwrap_or(&"").is_empty() {
-                    print_yellow!("\nWARNING: Empty genre mapping for: {}", track.directory);
-                }
-                self.checked_genre_mappings.insert(track.directory.clone());
-            }
+        self.print_summary(start_instant)
+    }
 
-            if !self.config.silent {
-                Self::print_running_index(self.tracks_count, track.number, max_index_width);
-            }
+    /// Check state, fix tags and rename the file for a single track.
+    fn process_track(&mut self, track: &mut Track, headers: &OutputHeaders) -> Result<()> {
+        self.print_directory_change(track);
+        self.check_genre_mapping(track);
 
-            // Skip filenames in user configs exclude list
-            if self
-                .config
-                .excluded_tracks
-                .iter()
-                .any(|excluded_file| excluded_file == track)
-            {
-                if self.config.verbose {
-                    track.show(self.tracks_count, max_index_width);
-                    let message = format!("Skipping track in exclude list: {track}");
-                    print_yellow!("{message}");
-                    print_divider(&message, 0);
-                }
-                continue;
-            }
+        if !self.config.silent {
+            Self::print_running_index(self.tracks_count, track.number, headers.max_index_width);
+        }
 
-            // File might have been deleted between gathering files and now,
-            // for example when handling duplicates.
-            if !track.path.exists() {
-                track.show(self.tracks_count, max_index_width);
-                let message = format!("Track no longer exists: {track}");
-                print_error!("{message}");
-                print_divider(&message, 0);
-                continue;
-            }
+        if self.should_skip(track, headers.max_index_width) {
+            return Ok(());
+        }
 
-            if track.is_zero_size_file() {
-                track.not_processed = true;
-                track.show(self.tracks_count, max_index_width);
-                track.print_zero_size_warning();
-                track.print_divider(self.tracks_count, max_index_width);
-                continue;
-            }
+        if !self.needs_processing(track) {
+            self.record_processed(track.name.clone(), track);
+            return Ok(());
+        }
 
-            let needs_processing = self.config.no_state
-                || match self.state.get(&track.path) {
-                    Ok(Some(state)) => {
-                        state.modified < track.metadata.modified || state.version != track.metadata.version
-                    }
-                    Ok(None) => true,
-                    Err(err) => {
-                        eprintln!("Failed to read state for {}: {err}", track.path.display());
-                        true
-                    }
-                };
+        let Some(mut file_tags) = self.read_tags_or_convert(track) else {
+            return Ok(());
+        };
 
-            if needs_processing {
-                let mut tag_result = track.read_tags(self.config.verbose || self.config.debug);
-                if tag_result.is_none() && self.config.convert_failed && track.format == FileFormat::Mp3 {
-                    println!("Converting MP3 to AIF...");
-                    match track.convert_mp3_to_aif() {
-                        Ok(aif_track) => {
-                            self.stats.converted += 1;
-                            *track = aif_track;
-                            tag_result = track.read_tags(self.config.verbose || self.config.debug);
-                        }
-                        Err(error) => {
-                            eprintln!("{error}");
-                        }
-                    }
-                }
-                let Some(mut file_tags) = tag_result else {
-                    self.stats.failed += 1;
-                    if self.config.log_failures {
-                        self.failed_files.push(utils::path_to_string(&track.path));
-                    }
-                    continue;
-                };
+        *self.tag_versions.entry(file_tags.version_label()).or_insert(0) += 1;
 
-                // Store id3 tag version count
-                *self.tag_versions.entry(file_tags.version_label()).or_insert(0) += 1;
-
-                if self.config.debug && self.config.verbose {
-                    println!();
-                    tags::print_tag_data(&file_tags);
-                    if let Some(id3_tag) = file_tags.get_id3() {
-                        serato::print_serato_tags(id3_tag);
-                    }
-                }
-
-                track.format_tags(&file_tags);
-                let formatted_name = track.formatted_filename();
-                let formatted_name_lower = formatted_name.to_lowercase();
-                if formatted_name.is_empty() {
-                    print_error!("\nFormatted name should never be empty: {}", track.path.display());
-                    continue;
-                }
-                let tags_changed = track.tags.changed();
-                if tags_changed || self.config.write_all_tags {
-                    if tags_changed {
-                        track.show(self.tracks_count, max_index_width);
-                        self.stats.tags += 1;
-                        println!("{fix_tags_header}");
-                        track.tags.show_diff();
-                    }
-                    if !self.config.print_only
-                        && (self.config.force || utils::confirm())
-                        && Self::write_tags(track, &mut file_tags)
-                    {
-                        if tags_changed {
-                            track.tags_updated = true;
-                            self.stats.tags_fixed += 1;
-                        }
-                    } else {
-                        track.not_processed = true;
-                    }
-                    if tags_changed {
-                        track.print_divider(self.tracks_count, max_index_width);
-                    }
-                }
-
-                // Store unique genre count
-                if !track.tags.formatted_genre.is_empty() {
-                    *self.genres.entry(track.tags.formatted_genre.clone()).or_insert(0) += 1;
-                }
-
-                if self.config.tags_only {
-                    self.processed_files
-                        .entry(formatted_name_lower.clone())
-                        .or_default()
-                        .push(track.clone());
-
-                    continue;
-                }
-
-                let formatted_file_name = format!("{formatted_name}.{}", track.format);
-                let formatted_path = track.path_with_new_name(&formatted_file_name);
-
-                // Convert paths to strings for additional comparisons.
-                // macOS and Windows paths are case-insensitive by default,
-                // so `is_file()` will ignore differences in capitalization.
-                let formatted_path_string = utils::path_to_string_relative(&formatted_path);
-                let original_path_string = utils::path_to_string_relative(&track.path);
-
-                if formatted_path_string != original_path_string {
-                    // File path contains only capitalization changes:
-                    // Need to use a temp file to workaround case-insensitive file systems.
-                    let capitalization_change_only =
-                        formatted_path_string.to_lowercase() == original_path_string.to_lowercase();
-                    if !formatted_path.is_file() || self.config.overwrite_existing || capitalization_change_only {
-                        // Rename files if the flag was given or if tags were not changed
-                        if self.config.rename_files || !track.tags_updated {
-                            track.show(self.tracks_count, max_index_width);
-                            println!("{rename_file_header}");
-                            print_stacked_diff(&track.filename(), &formatted_file_name);
-                            self.stats.to_rename += 1;
-                            if !self.config.print_only && (self.config.force || utils::confirm()) {
-                                let is_overwrite = formatted_path.is_file()
-                                    && self.config.overwrite_existing
-                                    && !capitalization_change_only;
-                                if is_overwrite {
-                                    print_yellow!("Overwriting existing file: {formatted_path_string}");
-                                }
-                                if capitalization_change_only {
-                                    let temp_file =
-                                        formatted_path.with_extension(format!("{}.{}", track.format, "tmp"));
-                                    utils::rename_track(&track.path, &temp_file, self.config.test_mode)?;
-                                    utils::rename_track(&temp_file, &formatted_path, self.config.test_mode)?;
-                                } else {
-                                    utils::rename_track(&track.path, &formatted_path, self.config.test_mode)?;
-                                }
-                                if self.config.test_mode && formatted_path.exists() {
-                                    fs::remove_file(formatted_path).context("Failed to remove renamed file")?;
-                                } else {
-                                    // Update track data with the renamed path
-                                    let renamed_track = track.renamed_track(formatted_path, formatted_name.clone())?;
-                                    *track = renamed_track;
-                                }
-                                self.stats.renamed += 1;
-                                if is_overwrite {
-                                    self.stats.overwritten += 1;
-                                    // Remove the pre-existing entry so it is not counted as a duplicate
-                                    self.processed_files.remove(&formatted_name_lower);
-                                }
-                            } else {
-                                track.not_processed = true;
-                            }
-                            track.print_divider(self.tracks_count, max_index_width);
-                        }
-                    } else if formatted_path != track.path {
-                        // A file with the formatted name already exists
-                        track.show(self.tracks_count, max_index_width);
-                        println!("{}", "Duplicate:".bright_red().bold());
-                        println!("Rename:   {original_path_string}");
-                        println!("Existing: {formatted_path_string}");
-                        track.print_divider(self.tracks_count, max_index_width);
-                        self.stats.duplicates += 1;
-                    }
-                }
-                self.processed_files
-                    .entry(formatted_name_lower)
-                    .or_default()
-                    .push(track.clone());
-            } else {
-                self.processed_files
-                    .entry(track.name.clone())
-                    .or_default()
-                    .push(track.clone());
+        if self.config.debug && self.config.verbose {
+            println!();
+            tags::print_tag_data(&file_tags);
+            if let Some(id3_tag) = file_tags.get_id3() {
+                serato::print_serato_tags(id3_tag);
             }
         }
 
+        track.format_tags(&file_tags);
+        let formatted_name = track.formatted_filename();
+        if formatted_name.is_empty() {
+            print_error!("\nFormatted name should never be empty: {}", track.path.display());
+            return Ok(());
+        }
+
+        self.fix_tags(track, &mut file_tags, headers);
+
+        if !track.tags.formatted_genre.is_empty() {
+            *self.genres.entry(track.tags.formatted_genre.clone()).or_insert(0) += 1;
+        }
+
+        let formatted_name_lower = formatted_name.to_lowercase();
+        if !self.config.tags_only {
+            self.rename_file(track, &formatted_name, &formatted_name_lower, headers)?;
+        }
+        self.record_processed(formatted_name_lower, track);
+        Ok(())
+    }
+
+    /// Print the current directory when iterating in directory order.
+    fn print_directory_change(&mut self, track: &Track) {
+        if !self.config.silent && !self.config.sort_files && self.current_path != track.root {
+            self.current_path.clone_from(&track.root);
+            let path = utils::path_to_string_relative(&self.current_path);
+            if !path.is_empty() {
+                println!("\n{}", path.magenta());
+            }
+        }
+    }
+
+    /// Warn once per DJ music subdirectory that is missing a genre mapping.
+    fn check_genre_mapping(&mut self, track: &Track) {
+        if !self.checked_genre_mappings.contains(track.directory.as_str())
+            && utils::contains_subpath(&track.root, DJ_MUSIC_PATH.as_path())
+        {
+            if !GENRE_MAPPINGS.contains_key(track.directory.as_str()) {
+                print_yellow!("\nWARNING: DJ music folder missing genre mapping: {}", track.directory);
+            } else if GENRE_MAPPINGS.get(track.directory.as_str()).unwrap_or(&"").is_empty() {
+                print_yellow!("\nWARNING: Empty genre mapping for: {}", track.directory);
+            }
+            self.checked_genre_mappings.insert(track.directory.clone());
+        }
+    }
+
+    /// Return true for excluded, missing, or zero-size tracks, printing the reason.
+    fn should_skip(&self, track: &mut Track, max_index_width: usize) -> bool {
+        if self
+            .config
+            .excluded_tracks
+            .iter()
+            .any(|excluded_file| excluded_file == track)
+        {
+            if self.config.verbose {
+                track.show(self.tracks_count, max_index_width);
+                let message = format!("Skipping track in exclude list: {track}");
+                print_yellow!("{message}");
+                print_divider(&message, 0);
+            }
+            return true;
+        }
+
+        // File might have been deleted between gathering files and now,
+        // for example when handling duplicates.
+        if !track.path.exists() {
+            track.show(self.tracks_count, max_index_width);
+            let message = format!("Track no longer exists: {track}");
+            print_error!("{message}");
+            print_divider(&message, 0);
+            return true;
+        }
+
+        if track.is_zero_size_file() {
+            track.not_processed = true;
+            track.show(self.tracks_count, max_index_width);
+            track.print_zero_size_warning();
+            track.print_divider(self.tracks_count, max_index_width);
+            return true;
+        }
+
+        false
+    }
+
+    /// Return true if the track has changed or has not been processed with this version.
+    fn needs_processing(&self, track: &Track) -> bool {
+        self.config.no_state
+            || match self.state.get(&track.path) {
+                Ok(Some(state)) => state.modified < track.metadata.modified || state.version != track.metadata.version,
+                Ok(None) => true,
+                Err(err) => {
+                    eprintln!("Failed to read state for {}: {err}", track.path.display());
+                    true
+                }
+            }
+    }
+
+    /// Read tags, converting unreadable MP3 files to AIF if enabled.
+    fn read_tags_or_convert(&mut self, track: &mut Track) -> Option<FileTags> {
+        let verbose = self.config.verbose || self.config.debug;
+        let mut tag_result = track.read_tags(verbose);
+        if tag_result.is_none() && self.config.convert_failed && track.format == FileFormat::Mp3 {
+            println!("Converting MP3 to AIF...");
+            match track.convert_mp3_to_aif() {
+                Ok(aif_track) => {
+                    self.stats.converted += 1;
+                    *track = aif_track;
+                    tag_result = track.read_tags(verbose);
+                }
+                Err(error) => {
+                    eprintln!("{error}");
+                }
+            }
+        }
+        if tag_result.is_none() {
+            self.stats.failed += 1;
+            if self.config.log_failures {
+                self.failed_files.push(utils::path_to_string(&track.path));
+            }
+        }
+        tag_result
+    }
+
+    /// Show tag changes and write them to the file if confirmed.
+    fn fix_tags(&mut self, track: &mut Track, file_tags: &mut FileTags, headers: &OutputHeaders) {
+        let tags_changed = track.tags.changed();
+        if !tags_changed && !self.config.write_all_tags {
+            return;
+        }
+        if tags_changed {
+            track.show(self.tracks_count, headers.max_index_width);
+            self.stats.tags += 1;
+            println!("{}", headers.fix_tags);
+            track.tags.show_diff();
+        }
+        if !self.config.print_only && (self.config.force || utils::confirm()) && Self::write_tags(track, file_tags) {
+            if tags_changed {
+                track.tags_updated = true;
+                self.stats.tags_fixed += 1;
+            }
+        } else {
+            track.not_processed = true;
+        }
+        if tags_changed {
+            track.print_divider(self.tracks_count, headers.max_index_width);
+        }
+    }
+
+    /// Rename the file to match the formatted name if needed.
+    fn rename_file(
+        &mut self,
+        track: &mut Track,
+        formatted_name: &str,
+        formatted_name_lower: &str,
+        headers: &OutputHeaders,
+    ) -> Result<()> {
+        let formatted_file_name = format!("{formatted_name}.{}", track.format);
+        let formatted_path = track.path_with_new_name(&formatted_file_name);
+
+        // Convert paths to strings for additional comparisons.
+        // macOS and Windows paths are case-insensitive by default,
+        // so `is_file()` will ignore differences in capitalization.
+        let formatted_path_string = utils::path_to_string_relative(&formatted_path);
+        let original_path_string = utils::path_to_string_relative(&track.path);
+
+        if formatted_path_string == original_path_string {
+            return Ok(());
+        }
+
+        // File path contains only capitalization changes:
+        // Need to use a temp file to workaround case-insensitive file systems.
+        let capitalization_change_only = formatted_path_string.to_lowercase() == original_path_string.to_lowercase();
+        if formatted_path.is_file() && !self.config.overwrite_existing && !capitalization_change_only {
+            if formatted_path != track.path {
+                // A file with the formatted name already exists
+                track.show(self.tracks_count, headers.max_index_width);
+                println!("{}", "Duplicate:".bright_red().bold());
+                println!("Rename:   {original_path_string}");
+                println!("Existing: {formatted_path_string}");
+                track.print_divider(self.tracks_count, headers.max_index_width);
+                self.stats.duplicates += 1;
+            }
+            return Ok(());
+        }
+
+        // Rename files if the flag was given or if tags were not changed
+        if !self.config.rename_files && track.tags_updated {
+            return Ok(());
+        }
+
+        track.show(self.tracks_count, headers.max_index_width);
+        println!("{}", headers.rename_file);
+        print_stacked_diff(&track.filename(), &formatted_file_name);
+        self.stats.to_rename += 1;
+        if !self.config.print_only && (self.config.force || utils::confirm()) {
+            let is_overwrite =
+                formatted_path.is_file() && self.config.overwrite_existing && !capitalization_change_only;
+            if is_overwrite {
+                print_yellow!("Overwriting existing file: {formatted_path_string}");
+            }
+            if capitalization_change_only {
+                let temp_file = formatted_path.with_extension(format!("{}.{}", track.format, "tmp"));
+                utils::rename_track(&track.path, &temp_file, self.config.test_mode)?;
+                utils::rename_track(&temp_file, &formatted_path, self.config.test_mode)?;
+            } else {
+                utils::rename_track(&track.path, &formatted_path, self.config.test_mode)?;
+            }
+            if self.config.test_mode && formatted_path.exists() {
+                fs::remove_file(formatted_path).context("Failed to remove renamed file")?;
+            } else {
+                // Update track data with the renamed path
+                *track = track.renamed_track(formatted_path, formatted_name.to_string())?;
+            }
+            self.stats.renamed += 1;
+            if is_overwrite {
+                self.stats.overwritten += 1;
+                // Remove the pre-existing entry so it is not counted as a duplicate
+                self.processed_files.remove(formatted_name_lower);
+            }
+        } else {
+            track.not_processed = true;
+        }
+        track.print_divider(self.tracks_count, headers.max_index_width);
+        Ok(())
+    }
+
+    /// Remember a processed track under its name for duplicate detection.
+    fn record_processed(&mut self, name: String, track: &Track) {
+        self.processed_files.entry(name).or_default().push(track.clone());
+    }
+
+    /// Print statistics, logs and duplicates after all tracks have been processed.
+    fn print_summary(&self, start_instant: Instant) -> Result<()> {
         print_green!("\nFinished");
         if self.config.debug {
             let duration = start_instant.elapsed();
