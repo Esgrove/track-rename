@@ -305,7 +305,7 @@ impl TrackRenamer {
                     continue;
                 }
 
-                let formatted_file_name = track.formatted_filename_with_extension();
+                let formatted_file_name = format!("{formatted_name}.{}", track.format);
                 let formatted_path = track.path_with_new_name(&formatted_file_name);
 
                 // Convert paths to strings for additional comparisons.

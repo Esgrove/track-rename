@@ -32,7 +32,7 @@ impl Overview {
             return Err(anyhow!("Data too short to contain initial bytes"));
         }
 
-        let mut frequency_info = Vec::new();
+        let mut frequency_info = Vec::with_capacity((data.len() - 2) / 16);
         let mut offset = 2;
 
         while offset + 16 <= data.len() {

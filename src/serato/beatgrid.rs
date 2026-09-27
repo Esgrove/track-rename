@@ -66,7 +66,7 @@ impl BeatGrid {
             return Err(anyhow!("Data is too short to contain valid beatgrid information"));
         }
 
-        let mut markers = Vec::new();
+        let mut markers = Vec::with_capacity((num_markers as usize).min((data.len() - 6) / 8));
         let mut offset = 6;
 
         for _ in 0..num_markers {

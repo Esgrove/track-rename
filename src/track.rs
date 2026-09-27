@@ -181,11 +181,13 @@ impl Track {
         let mut formatted_album = formatting::format_album(&tags.current_album);
         let mut formatted_genre = genre::format_genre(&tags.current_genre);
 
-        if formatted_album.is_empty() && self.directory.to_lowercase().starts_with("djcity") {
-            formatted_album = "DJCity.com".to_string();
-        }
-        if formatted_album.is_empty() && self.directory.to_lowercase().starts_with("trayze") {
-            formatted_album = "djtrayze.com".to_string();
+        if formatted_album.is_empty() {
+            let directory = self.directory.to_lowercase();
+            if directory.starts_with("djcity") {
+                formatted_album = "DJCity.com".to_string();
+            } else if directory.starts_with("trayze") {
+                formatted_album = "djtrayze.com".to_string();
+            }
         }
 
         if formatted_genre.is_empty()
