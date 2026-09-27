@@ -10,6 +10,26 @@ use clap_complete::Shell;
 
 use crate::track_renamer::TrackRenamer;
 
+/// Subcommands for trackrename.
+#[derive(Subcommand)]
+enum RenamerCommand {
+    /// Generate shell completion script
+    #[command(name = "completion")]
+    Completion {
+        /// Shell to generate completion for
+        #[arg(value_enum)]
+        shell: Shell,
+
+        /// Install completion script to the shell's completion directory
+        #[arg(short = 'I', long)]
+        install: bool,
+
+        /// Print verbose output
+        #[arg(short, long)]
+        verbose: bool,
+    },
+}
+
 #[derive(Parser)]
 #[command(author, about, version)]
 pub struct RenamerArgs {
@@ -75,26 +95,6 @@ pub struct RenamerArgs {
     /// Verbose output
     #[arg(short, long)]
     verbose: bool,
-}
-
-/// Subcommands for trackrename.
-#[derive(Subcommand)]
-enum RenamerCommand {
-    /// Generate shell completion script
-    #[command(name = "completion")]
-    Completion {
-        /// Shell to generate completion for
-        #[arg(value_enum)]
-        shell: Shell,
-
-        /// Install completion script to the shell's completion directory
-        #[arg(short = 'I', long)]
-        install: bool,
-
-        /// Print verbose output
-        #[arg(short, long)]
-        verbose: bool,
-    },
 }
 
 fn main() -> Result<()> {

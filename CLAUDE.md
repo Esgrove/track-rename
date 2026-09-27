@@ -100,8 +100,8 @@ track-rename.toml        # Example user config (placed at ~/.config/track-rename
 
 Organize Rust source files in this order:
 
-1. Structs (public before private)
-2. Enums (public before private)
+1. Enums (public before private)
+2. Structs (public before private)
 3. Trait implementations and impl blocks (in the order the types are defined)
 4. Public functions
 5. Private functions
