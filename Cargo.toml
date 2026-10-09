@@ -33,7 +33,7 @@ rusqlite = { version = "0.40.2", features = ["bundled"] }
 serde = { version = "1.0.229", features = ["derive"] }
 tempfile = "3.27.0"
 titlecase = "3.6.0"
-toml = "1.1.6"
+toml = "1.1.8"
 trash = "5.2.9"
 unicode-normalization = "0.1.25"
 walkdir = "2.5.0"

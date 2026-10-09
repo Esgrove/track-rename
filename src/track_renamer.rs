@@ -889,8 +889,8 @@ mod test_track_renamer {
         run_test_on_files(&BASIC_TAGS_DIRECTORY, |temp_file| {
             let track = Track::try_from_path(&temp_file).expect("Failed to create Track for temp file");
             let file_tags = track.read_tags(true).expect("Tags should be present");
-            assert!(!file_tags.artist().expect("Artist should be present").is_empty());
-            assert!(!file_tags.title().expect("Title should be present").is_empty());
+            assert_ne!(file_tags.artist().expect("Artist should be present"), "");
+            assert_ne!(file_tags.title().expect("Title should be present"), "");
             fs::remove_file(temp_file).expect("Failed to remove temp file");
         });
     }
@@ -900,8 +900,8 @@ mod test_track_renamer {
         run_test_on_files(&EXTENDED_TAGS_DIRECTORY, |temp_file| {
             let track = Track::try_from_path(&temp_file).expect("Failed to create Track for temp file");
             let file_tags = track.read_tags(true).expect("Tags should be present");
-            assert!(!file_tags.artist().expect("Artist should be present").is_empty());
-            assert!(!file_tags.title().expect("Title should be present").is_empty());
+            assert_ne!(file_tags.artist().expect("Artist should be present"), "");
+            assert_ne!(file_tags.title().expect("Title should be present"), "");
             fs::remove_file(temp_file).expect("Failed to remove temp file");
         });
     }

@@ -637,7 +637,7 @@ another_unknown = 42
         // serde silently ignores unknown fields by default
         let user_config: UserConfig = toml::from_str(toml_content).expect("Should parse TOML with unknown fields");
         assert!(!user_config.convert_failed);
-        assert!(user_config.exclude.is_empty());
+        assert_eq!(user_config.exclude, [] as [std::string::String; 0]);
     }
 
     #[test]
