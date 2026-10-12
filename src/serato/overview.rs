@@ -1,3 +1,7 @@
+//! Parses the small embedded Serato Overview raster and provides a heuristic terminal visualization.
+//! Comparisons with matching Serato screenshots support indexed-color cells, not frequency-band strengths.
+//! The terminal renderer currently scales numeric indices into levels and does not decode Serato's palette.
+
 use std::fmt;
 use std::fmt::Display;
 
@@ -6,33 +10,34 @@ use anyhow::anyhow;
 use colored::Colorize;
 use crossterm::terminal;
 
-/// Number of frequency bands in each overview block.
+/// Number of vertical indexed-color cells in each overview column.
 const BAND_COUNT: usize = 16;
 
 /// Number of rows in the rendered terminal waveform.
 const WAVEFORM_HEIGHT: usize = 8;
 
-/// Contains the waveform overview data.
-/// It seems the length will always be 240 time slices,
-/// regardless of the track length.
-/// Each time slice is divided into 16 frequency bands,
-/// with the byte value corresponding to the strength of that frequency band.
+/// Contains raw columns from the embedded Serato Overview raster.
+/// Tested `01 05` payloads contain 240 time columns with 16 vertical palette indices per column.
+/// The column count is an observation, not a format constraint enforced by this parser.
+/// The indices are not independent frequency strengths or amplitude measurements.
 #[derive(Debug, Clone, Default)]
 pub struct Overview {
     blocks: Vec<[u8; BAND_COUNT]>,
 }
 
 impl Overview {
-    /// Parse the waveform overview.
-    /// The overview is build of 16 byte blocks that contain the frequency data for each time slice.
+    /// Reads complete 16-byte overview columns after the two-byte header.
+    /// This parser retains its permissive behavior: it does not validate the header,
+    /// accepts header-only data and ignores a partial trailing column.
     ///
     /// | Offset | Length | Raw Value     | Type           | Description
     /// | ------ | ------ | ------------- | -------------- | -----------
-    /// |   `00` |   `02` | `01 05`       |                |
-    /// |   `02` |   `10` | `01` ... `01` | 16 * `uint8_t` | Frequency information
-    /// |    ... |    ... | `01` ... `01` | 16 * `uint8_t` | Frequency information
-    /// |  `ef2` |   `10` | `01` ... `01` | 16 * `uint8_t` | Frequency information
+    /// |   `00` |   `02` | `01 05`       |                | Observed header
+    /// |   `02` |   `10` | Varies        | 16 * `uint8_t` | First vertical palette column
+    /// |    ... |    ... | Varies        | 16 * `uint8_t` | Subsequent palette columns
+    /// |  `ef2` |   `10` | Varies        | 16 * `uint8_t` | Last column in a 240-column payload
     ///
+    /// Palette evidence and rendering limitations are documented in `docs/serato-overview.md`.
     #[expect(
         clippy::indexing_slicing,
         reason = "each 16-byte block is read only after a length check"
@@ -55,7 +60,8 @@ impl Overview {
         Ok(Self { blocks: frequency_info })
     }
 
-    /// Convert waveform overview to a minimized text representation for terminal display.
+    /// Produces the existing heuristic terminal view, not a palette-faithful Serato waveform.
+    /// Numeric indices are normalized and assigned threshold colors rather than decoded as RGB.
     #[expect(
         clippy::indexing_slicing,
         reason = "the row loop stays within the fixed waveform height"
@@ -84,8 +90,9 @@ impl Overview {
         Ok(waveform)
     }
 
-    /// Average frequency bands to the waveform height and downsample columns to fit the terminal,
-    /// returning levels normalized to the range 0.0 - 1.0.
+    /// Averages numeric cell indices into terminal rows and downsamples columns.
+    /// Returned levels are normalized to 0.0 - 1.0 for the legacy terminal heuristic.
+    /// They do not represent frequency strength or audio amplitude.
     #[expect(
         clippy::indexing_slicing,
         reason = "all row and column indices derive from fixed array dimensions"
