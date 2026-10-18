@@ -417,7 +417,7 @@ mod test_encoding {
     #[test]
     fn encode_utf16be_empty() {
         let encoded = encode_utf16be("");
-        assert!(encoded.is_empty());
+        assert_eq!(encoded, [] as [u8; 0]);
     }
 
     #[test]
@@ -679,7 +679,7 @@ mod test_create_crate {
         assert_eq!(serato_crate.version, DEFAULT_VERSION);
         assert_eq!(serato_crate.columns.len(), DEFAULT_COLUMNS.len());
         assert_eq!(serato_crate.columns[0].0, "song");
-        assert!(serato_crate.tracks.is_empty());
+        assert_eq!(serato_crate.tracks, [] as [PathBuf; 0]);
     }
 
     #[test]

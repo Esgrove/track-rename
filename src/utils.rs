@@ -397,6 +397,7 @@ mod test_string_and_path_helpers {
 #[cfg(test)]
 mod test_file_operations {
     use super::*;
+    use crate::track::Track;
     use std::fs;
 
     #[test]
@@ -419,7 +420,7 @@ mod test_file_operations {
     fn collect_tracks_on_empty_directory_returns_nothing() {
         let directory = std::env::temp_dir().join(format!("track-rename-empty-{}", std::process::id()));
         fs::create_dir_all(&directory).expect("should create temp directory");
-        assert!(collect_tracks(&directory).is_empty());
+        assert_eq!(collect_tracks(&directory), [] as [Track; 0]);
         fs::remove_dir(&directory).expect("should remove temp directory");
     }
 
