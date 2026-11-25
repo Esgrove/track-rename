@@ -1126,7 +1126,7 @@ mod test_track_renamer {
                 let temp_file = temp_test_file(&path).expect("Failed to create temp file path");
                 copy(&path, &temp_file).expect("Failed to copy test file");
                 assert!(temp_file.exists());
-                test_func(temp_file.clone());
+                test_func(temp_file);
             }
         }
     }
