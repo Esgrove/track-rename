@@ -255,8 +255,7 @@ pub fn default_subcrates_directory() -> Result<PathBuf> {
 #[must_use]
 pub fn crate_name_from_path(path: &Path) -> String {
     path.file_stem()
-        .map(|stem| stem.to_string_lossy().replace("%%", " > "))
-        .unwrap_or_default()
+        .map_or_default(|stem| stem.to_string_lossy().replace("%%", " > "))
 }
 
 /// Derive a `.crate` filename from a display name.
